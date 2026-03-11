@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H2GO - 수소거래 대시보드</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 네비게이션 -->
+    <nav class="navbar">
+        <a href="dashboard.html" class="logo dashboard-brand" aria-label="H2GO 홈(대시보드)">
+            <!-- 로고: 이미지(검정 배경 포함) 대신 텍스트 로고로 통일 -->
+            <div class="brand-mark brand-mark--lg" aria-label="H2GO 로고">
+                <span class="brand-h2">H2</span><span class="brand-go">GO</span>
+            </div>
+        </a>
+
+        <!-- 사업자명 표시 (로그인한 계정의 name) -->
+        <div id="bizName" class="dashboard-biz-name">사업자</div>
+
+        <ul class="nav-links dashboard-nav">
+            <!-- 요청하신 순서: (로고가 홈 역할) → 모드 토글 → 로그아웃 -->
+            <li class="role-switcher">
+                <select id="roleSelect" class="role-select">
+                    <option value="consumer">수요모드</option>
+                    <option value="supplier">공급모드</option>
+                </select>
+            </li>
+            <li><button id="logoutBtn" type="button" class="btn btn-secondary btn-tiny">로그아웃</button></li>
+        </ul>
+    </nav>
+
+    <main class="dashboard-main">
+        <!-- ========== 수요자 화면 ========== -->
+        <section id="consumerView" class="dashboard-view active">
+            <div class="view-header">
+                <h1>수소 주문</h1>
+                <p>생산자에게 수소 주문을 요청하세요</p>
+            </div>
+            
+            <div class="consumer-content">
+                <div class="order-form-card">
+                    <h3>새 주문 등록</h3>
+                    <form id="orderForm" class="order-form">
+                        <div class="form-row form-row-3">
+                            <div class="form-group">
+                                <label>연도</label>
+                                <input type="number" id="orderYear" min="2025" max="2030" value="2025" required>
+                            </div>
+                            <div class="form-group">
+                                <label>월</label>
+                                <input type="number" id="orderMonth" min="1" max="12" required>
+                            </div>
+                            <div class="form-group">
+                                <label>일</label>
+                                <input type="number" id="orderDay" min="1" max="31" required>
+                            </div>
+                        </div>
+                        <div class="form-row form-row-time">
+                            <div class="form-group">
+                                <label>희망 납품 시각 (30분 단위)</label>
+                                <div class="time-input-group">
+                                    <input type="number" id="orderHour" min="0" max="23" placeholder="시" required>
+                                    <span class="time-separator">:</span>
+                                    <select id="orderMinute">
+                                        <option value="00">00</option>
+                                        <option value="30">30</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>튜브트레일러 대수</label>
+                                <input type="number" id="orderTrailers" min="1" max="10" placeholder="예: 2" required>
+                            </div>
+                        </div>
+                        <!-- 공급자 선택: 기본은 현재 사업자, 변경 버튼으로 다른 공급자 선택 가능 -->
+                        <div class="form-group">
+                            <label>공급자</label>
+                            <div class="supplier-select-row">
+                                <input type="text" id="orderSupplierName" readonly>
+                                <button type="button" class="btn btn-secondary btn-tiny" id="changeSupplierBtn">변경</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>납품 주소</label>
+                            <input type="text" id="orderAddress" placeholder="예: 서울시 강남구 테헤란로 123" required>
+                        </div>
+                        <div class="form-group">
+                            <label>요청 사항</label>
+                            <textarea id="orderNote" rows="2" placeholder="특별 요청사항을 입력하세요"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">주문 요청</button>
+                    </form>
+                </div>
+                
+                <div class="my-orders-card">
+                    <h3>내 주문 현황</h3>
+                    <div id="consumerOrdersList" class="orders-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== 공급자 화면 (생산+운송 통합) ========== -->
+        <section id="supplierView" class="dashboard-view">
+            <div class="view-header">
+                <h1>공급자 대시보드</h1>
+                <p>주문 취합, 생산계획, 운송계획을 한 화면에서 관리하세요</p>
+            </div>
+            
+            <div class="supplier-content">
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <span class="summary-label">총 주문 건수</span>
+                        <span class="summary-value" id="totalOrders">0</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="summary-label">총 튜브트레일러</span>
+                        <span class="summary-value" id="totalTrailers">0</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="summary-label">납품 예정</span>
+                        <span class="summary-value" id="deliveryRange">-</span>
+                    </div>
+                </div>
+                
+                <div class="orders-table-card">
+                    <h3>전체 주문 취합</h3>
+                    <div class="table-wrapper">
+                        <table class="orders-table">
+                            <thead>
+                                <tr>
+                                    <th>주문번호</th>
+                                    <th>수요처</th>
+                                    <th>연/월/일</th>
+                                    <th>시각</th>
+                                    <th>트레일러</th>
+                                    <th>납품지</th>
+                                    <th>운송시간</th>
+                                    <th>상태</th>
+                                    <th>작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="supplierOrdersTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="supplier-bottom-grid">
+                    <div class="production-plan-card">
+                        <h3>생산계획 요약</h3>
+                        <div id="productionPlanSummary" class="plan-summary"></div>
+                    </div>
+                    <div class="transport-section">
+                        <div class="transport-resources-card">
+                            <h3>운송 자원 현황</h3>
+                            <div class="resources-grid">
+                                <div class="resource-item">
+                                    <label>가용 운송기사</label>
+                                    <input type="number" id="availableDrivers" value="5" min="1" max="20">
+                                    <span>명</span>
+                                </div>
+                                <div class="resource-item">
+                                    <label>가용 수소튜브트레일러</label>
+                                    <input type="number" id="availableTrailers" value="3" min="1" max="15">
+                                    <span>대</span>
+                                </div>
+                                <div class="resource-item">
+                                    <label>트레일러 1대당 용량</label>
+                                    <input type="number" id="trailerCapacity" value="400" min="200" max="600">
+                                    <span>kg</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-secondary" id="recalculateBtn">운송계획 재계산</button>
+                        </div>
+                        <div class="ai-plan-card">
+                            <h3>🤖 AI 운송계획 제안</h3>
+                            <div id="aiTransportPlan" class="ai-plan-content"></div>
+                        </div>
+                        <div class="transport-schedule-card">
+                            <h3>배송 스케줄</h3>
+                            <div id="transportSchedule" class="schedule-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 주문 지도 모달 -->
+    <div id="orderMapModal" class="modal">
+        <div class="modal-content modal-content-map">
+            <button class="modal-close" aria-label="닫기">&times;</button>
+            <h3 id="orderMapTitle">주문 배송 경로</h3>
+            <div id="orderMapInfo" class="map-order-info"></div>
+            <div id="orderMap" class="order-map-container"></div>
+        </div>
+    </div>
+
+    <!-- 변경 요청 모달 (수요자/공급자 공통) -->
+    <div id="changeRequestModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="닫기">&times;</button>
+            <h3 id="changeModalTitle">변경 요청</h3>
+            <form id="changeRequestForm" class="order-form">
+                <input type="hidden" id="changeOrderId">
+                <input type="hidden" id="changeRequestedBy">
+                <div class="form-row form-row-3">
+                    <div class="form-group">
+                        <label>연도</label>
+                        <input type="number" id="changeYear" min="2025" max="2030">
+                    </div>
+                    <div class="form-group">
+                        <label>월</label>
+                        <input type="number" id="changeMonth" min="1" max="12">
+                    </div>
+                    <div class="form-group">
+                        <label>일</label>
+                        <input type="number" id="changeDay" min="1" max="31">
+                    </div>
+                </div>
+                            <div class="form-row form-row-time">
+                                <div class="form-group">
+                                    <label>시각 (30분 단위)</label>
+                                    <div class="time-input-group">
+                                        <input type="number" id="changeHour" min="0" max="23" placeholder="시">
+                                        <span class="time-separator">:</span>
+                                        <select id="changeMinute">
+                                            <option value="00">00</option>
+                                            <option value="30">30</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>튜브트레일러 대수</label>
+                                    <input type="number" id="changeTrailers" min="1" max="10">
+                                </div>
+                            </div>
+                <div class="form-group">
+                    <label>납품 주소</label>
+                    <input type="text" id="changeAddress">
+                </div>
+                <button type="submit" class="btn btn-primary">변경 요청 제출</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 변경 동의/거절 모달 -->
+    <div id="changeApprovalModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="닫기">&times;</button>
+            <h3 id="approvalModalTitle">변경 요청 검토</h3>
+            <div id="approvalModalBody" class="approval-body"></div>
+            <div class="approval-actions">
+                <button type="button" class="btn btn-primary" id="approveChangeBtn">변경 확정</button>
+                <button type="button" class="btn btn-secondary" id="rejectChangeBtn">거절</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 공급자 선택 모달 -->
+    <div id="supplierSelectModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="닫기">&times;</button>
+            <h3>공급자 선택</h3>
+            <div id="supplierList" class="supplier-list"></div>
+            <div class="form-group">
+                <label for="supplierManualInput">직접 입력</label>
+                <input type="text" id="supplierManualInput" placeholder="공급자명을 입력하세요">
+            </div>
+            <button type="button" class="btn btn-primary btn-full" id="supplierManualApplyBtn">적용</button>
+        </div>
+    </div>
+
+    <!-- AI 챗봇 -->
+    <button id="chatbotFab" class="chatbot-fab" type="button" aria-label="AI 챗봇 열기">
+        AI
+    </button>
+    <section id="chatbotPanel" class="chatbot-panel" aria-label="AI 챗봇" aria-hidden="true">
+        <header class="chatbot-header">
+            <div class="chatbot-title">
+                <strong>H2GO AI</strong>
+                <span class="chatbot-subtitle">무엇을 도와드릴까요?</span>
+            </div>
+            <button id="chatbotClose" class="chatbot-close" type="button" aria-label="닫기">&times;</button>
+        </header>
+        <div id="chatbotMessages" class="chatbot-messages" role="log" aria-live="polite"></div>
+        <form id="chatbotForm" class="chatbot-form" autocomplete="off">
+            <textarea id="chatbotInput" class="chatbot-input" rows="1" placeholder="메시지를 입력하세요 (Enter 전송, Shift+Enter 줄바꿈)"></textarea>
+            <button id="chatbotSend" class="chatbot-send" type="submit">전송</button>
+        </form>
+        <div id="chatbotStatus" class="chatbot-status" aria-live="polite"></div>
+    </section>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="dashboard.js"></script>
+    <script src="chatbot.js"></script>
+</body>
+</html>

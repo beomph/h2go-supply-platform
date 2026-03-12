@@ -85,7 +85,7 @@ body::after {
     position: fixed;
     inset: auto;
     pointer-events: none;
-    z-index: -1;
+    z-index: 0;
     filter: blur(10px);
 }
 
@@ -363,7 +363,7 @@ body::after {
 .navbar,
 .dashboard-main {
     position: relative;
-    z-index: 1;
+    z-index: 2;
 }
 
 @media (prefers-reduced-motion: reduce) {

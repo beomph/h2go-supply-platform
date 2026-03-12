@@ -124,6 +124,9 @@
 }
 
 .dashboard-main {
+    position: relative;
+    z-index: 2;
+    min-height: 100vh;
     padding: 6rem 2rem 4rem;
     max-width: 1200px;
     margin: 0 auto;
@@ -224,6 +227,7 @@
         max-width: 1400px;
         margin-left: var(--h2go-sidebar-w);
         padding: 2rem 2.25rem 3.5rem;
+        min-height: 100vh;
     }
 }
 

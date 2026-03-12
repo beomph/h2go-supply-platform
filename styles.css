@@ -14,6 +14,12 @@
     --text-white: #f8fafc;
     --text-muted: #94a3b8;
     --border-color: #27272a;
+    --surface-overlay: rgba(10, 10, 10, 0.9);
+    --surface-soft: rgba(255, 255, 255, 0.03);
+    --surface-soft-border: rgba(255, 255, 255, 0.06);
+    --surface-deep: rgba(15, 23, 42, 0.72);
+    --surface-deep-strong: rgba(15, 23, 42, 0.86);
+    --field-readonly: rgba(10, 10, 10, 0.6);
 }
 
 /* 라이트 모드 – 기존 구성과 톤은 유지하면서 밝기만 반전 */
@@ -24,6 +30,12 @@ body.theme-light {
     --text-white: #020617;
     --text-muted: #64748b;
     --border-color: #d4dbe8;
+    --surface-overlay: rgba(255, 255, 255, 0.88);
+    --surface-soft: rgba(37, 99, 235, 0.06);
+    --surface-soft-border: rgba(148, 163, 184, 0.22);
+    --surface-deep: rgba(226, 232, 240, 0.95);
+    --surface-deep-strong: rgba(203, 213, 225, 0.95);
+    --field-readonly: rgba(226, 232, 240, 0.95);
 }
 
 /* 명시적으로 다크 모드를 지정하고 싶을 때 사용 (기본값과 동일) */
@@ -34,6 +46,12 @@ body.theme-dark {
     --text-white: #f8fafc;
     --text-muted: #94a3b8;
     --border-color: #27272a;
+    --surface-overlay: rgba(10, 10, 10, 0.9);
+    --surface-soft: rgba(255, 255, 255, 0.03);
+    --surface-soft-border: rgba(255, 255, 255, 0.06);
+    --surface-deep: rgba(15, 23, 42, 0.72);
+    --surface-deep-strong: rgba(15, 23, 42, 0.86);
+    --field-readonly: rgba(10, 10, 10, 0.6);
 }
 
 * {
@@ -153,7 +171,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 1rem 2rem;
-    background: rgba(10, 10, 10, 0.9);
+    background: var(--surface-overlay);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border-color);
     z-index: 1000;

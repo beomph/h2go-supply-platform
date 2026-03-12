@@ -51,3 +51,26 @@ python openai_test_server.py
 - 배포 플랫폼(Render/Fly.io/Railway 등)에서 `OPENAI_API_KEY`를 **환경변수로 설정**하면,
   사용자들은 키를 볼 수 없고 챗봇만 사용하게 됩니다.
 
+### Render로 배포하기
+
+1. **GitHub에 코드 푸시**  
+   이 저장소를 GitHub에 올린 뒤, Render가 접근할 수 있도록 합니다.
+
+2. **Render 대시보드에서 서비스 생성**
+   - [Render](https://render.com) 로그인 후 **New → Web Service**
+   - 연결할 GitHub 저장소 선택 (예: `beomph/h2go-supply-platform`)
+   - 루트에 `render.yaml`이 있으면 **Blueprint**로 자동 인식되거나, 수동으로 다음처럼 설정합니다.
+
+3. **수동 설정 시**
+   - **Runtime:** Python 3
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `python openai_test_server.py`
+   - **Environment Variables** 에서 다음 변수를 추가합니다.
+
+4. **필수 환경 변수**
+   - `OPENAI_API_KEY` — OpenAI 플랫폼에서 발급한 API 키 (Secret로 저장)
+   - `H2GO_CHAT_ACCESS_CODE` — (선택) 챗봇 접속 코드. 설정하면 사용자가 채팅창에 `/access` 입력 후 이 코드를 넣어야 챗봇 사용 가능.
+
+5. **배포 후**
+   - Render가 `pip install -r requirements.txt`로 `openai` 패키지를 설치하고, `python openai_test_server.py`로 서버를 실행합니다.
+   - 발급된 URL(예: `https://h2go-supply-platform.onrender.com`)로 접속하면 랜딩·대시보드·AI 챗봇이 같은 도메인에서 동작합니다.

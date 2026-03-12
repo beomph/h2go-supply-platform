@@ -1,0 +1,13 @@
+# Render 배포 설정 (H2GO 랜딩 + AI 챗봇)
+# https://docs.render.com/blueprint-spec
+services:
+  - type: web
+    name: h2go-supply-platform
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python openai_test_server.py
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: H2GO_CHAT_ACCESS_CODE
+        sync: false

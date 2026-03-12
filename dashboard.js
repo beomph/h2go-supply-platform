@@ -4,6 +4,7 @@
 const AUTH_KEY = "h2go_auth";
 const DEFAULT_ROLES = ["consumer", "supplier"];
 const USERS_KEY = "h2go_users";
+const THEME_KEY = "h2go_theme";
 
 function safeJsonParse(raw, fallback) {
     try {
@@ -103,6 +104,50 @@ let pendingApprovalOrderId = null;
 let selectedSupplierName = null;
 let lastOrdersSnapshot = deepClone(orders);
 
+// ========== 테마(라이트/다크) ==========
+function applyThemeClass(themeClass) {
+    const body = document.body;
+    if (!body) return;
+    const next = themeClass === 'theme-light' ? 'theme-light' : 'theme-dark';
+    body.classList.remove('theme-light', 'theme-dark');
+    body.classList.add(next);
+    try {
+        localStorage.setItem(THEME_KEY, next);
+    } catch (_) {}
+    updateThemeToggleUI(next);
+}
+
+function updateThemeToggleUI(themeClass) {
+    const btn = document.getElementById('themeToggle');
+    if (!btn) return;
+    const isLight = themeClass === 'theme-light';
+    btn.dataset.theme = isLight ? 'light' : 'dark';
+    const labelEl = btn.querySelector('.theme-toggle-label');
+    if (labelEl) {
+        labelEl.textContent = isLight ? 'Light' : 'Dark';
+    }
+    btn.setAttribute('aria-label', isLight ? '다크 모드로 전환' : '라이트 모드로 전환');
+}
+
+function initTheme() {
+    let stored = null;
+    try {
+        stored = localStorage.getItem(THEME_KEY);
+    } catch (_) {}
+    const initial = stored === 'theme-light' || stored === 'theme-dark' ? stored : 'theme-dark';
+    applyThemeClass(initial);
+
+    const btn = document.getElementById('themeToggle');
+    if (btn) {
+        btn.addEventListener('click', () => {
+            const current = document.body.classList.contains('theme-light') ? 'theme-light' : 'theme-dark';
+            const next = current === 'theme-light' ? 'theme-dark' : 'theme-light';
+            applyThemeClass(next);
+        });
+        updateThemeToggleUI(initial);
+    }
+}
+
 // ========== 주문 결정 알림(상대방 탭에서 1회만) ==========
 function getNotifyKeyPrefix() {
     const a = getAuth();
@@ -194,18 +239,6 @@ try {
 
 // 수요모드 주문 시 기본 공급자(초기값): 현재 사업자
 selectedSupplierName = currentUser.name;
-
-// ========== 30분 단위 시각 옵션 생성 ==========
-function buildTimeOptions() {
-    const options = [];
-    for (let h = 0; h < 24; h++) {
-        options.push(`${h.toString().padStart(2, '0')}:00`);
-        options.push(`${h.toString().padStart(2, '0')}:30`);
-    }
-    return options;
-}
-
-const TIME_OPTIONS = buildTimeOptions();
 
 // ========== 유틸리티 ==========
 function generateOrderId() {
@@ -401,23 +434,31 @@ function normalizeStatus(status) {
 
 // ========== 재고 현황 & 발주 예측 ==========
 const INVENTORY_KEY = 'h2go_inventory';
-const INV_MAX_PRESSURE = 200; // bar
-const INV_KG_PER_TRAILER = 400; // kg (만충 기준)
+const INV_MAX_PRESSURE = 200;       // bar (튜브트레일러 만충 압력)
+const INV_KG_PER_TRAILER = 180;    // kg (1회 운송량 180kg 기준)
+const AVG_FILL_PER_CAR_KG = 5;     // kg (수소차 1대당 평균 충전량)
 
 function defaultInventory() {
     return {
         trailers: [
-            { id: 1, pressure: 200 },
-            { id: 2, pressure: 155 },
-            { id: 3, pressure: 70 }
+            { id: 1, pressure: 200 },   // 180kg — 만충
+            { id: 2, pressure: 140 },   // 126kg — 70%
+            { id: 3, pressure: 55 },    //  49kg — 27%
         ],
-        waitingVehicles: 0,
-        leadTimeDays: 2
+        waitingCustomers: 0,
     };
 }
 
 function readInventory() {
-    return safeJsonParse(localStorage.getItem(INVENTORY_KEY), null) || defaultInventory();
+    const raw = safeJsonParse(localStorage.getItem(INVENTORY_KEY), null);
+    if (!raw) return defaultInventory();
+    // 구 데이터 마이그레이션 (waitingVehicles → waitingCustomers)
+    if (raw.waitingVehicles !== undefined && raw.waitingCustomers === undefined) {
+        raw.waitingCustomers = 0;
+        delete raw.waitingVehicles;
+        delete raw.leadTimeDays;
+    }
+    return raw;
 }
 
 function saveInventory(data) {
@@ -429,12 +470,45 @@ function getAvgDailyConsumptionKg() {
     const myOrders = orders.filter(o =>
         o.consumerName === me && o.status !== 'cancelled' && o.createdAt
     );
-    if (myOrders.length === 0) return 100;
+    if (myOrders.length === 0) return 150; // 기본값: 일평균 150kg
     const cutoff = Date.now() - 30 * 86400000;
     const recent = myOrders.filter(o => new Date(o.createdAt).getTime() > cutoff);
-    if (recent.length === 0) return 100;
+    if (recent.length === 0) return 150;
     const totalKg = recent.reduce((s, o) => s + (o.tubeTrailers || 1) * INV_KG_PER_TRAILER, 0);
     return Math.max(1, totalKg / 30);
+}
+
+// 최근 주문 주소를 기반으로 납품 소요 시간 계산
+function calcLeadTimeInfo() {
+    const me = auth?.name || currentUser.name;
+    const myOrders = orders
+        .filter(o => o.consumerName === me && o.address)
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    if (myOrders.length === 0) {
+        return { minutes: 60, label: '약 1시간', hint: '기본값 (주문 후 자동 계산)' };
+    }
+    const addr = myOrders[0].address;
+    const minutes = getTravelTimeFromAddress(addr);
+
+    let label;
+    if (minutes < 60) {
+        label = `약 ${minutes}분`;
+    } else if (minutes === 60) {
+        label = '약 1시간';
+    } else {
+        label = `약 ${(minutes / 60).toFixed(1)}시간`;
+    }
+
+    const regionMap = [
+        { key: '강남', name: '강남' }, { key: '인천', name: '인천' },
+        { key: '수원', name: '수원' }, { key: '안산', name: '안산' },
+        { key: '부천', name: '부천' },
+    ];
+    const region = regionMap.find(r => addr.includes(r.key));
+    const hint = region ? `${region.name} 기준` : '최근 주문 기준';
+
+    return { minutes, label, hint };
 }
 
 function renderInventoryPanel() {
@@ -485,41 +559,79 @@ function renderInventoryPanel() {
         });
     });
 
-    const waitEl = document.getElementById('waitingVehicles');
-    if (waitEl && document.activeElement !== waitEl) waitEl.value = inv.waitingVehicles;
-    const leadEl = document.getElementById('leadTimeDays');
-    if (leadEl && document.activeElement !== leadEl) leadEl.value = inv.leadTimeDays;
+    // 충전 대기 고객 표시
+    const waitEl = document.getElementById('waitingCustomers');
+    if (waitEl && document.activeElement !== waitEl) waitEl.value = inv.waitingCustomers || 0;
 
-    renderPrediction(inv);
+    // 납품 소요시간 (주소 기반 계산값 표시)
+    const leadInfo = calcLeadTimeInfo();
+    const leadDisplay = document.getElementById('leadTimeDisplay');
+    const leadHint = document.getElementById('leadTimeHint');
+    if (leadDisplay) leadDisplay.textContent = leadInfo.label;
+    if (leadHint) leadHint.textContent = leadInfo.hint;
+
+    renderPrediction(inv, leadInfo);
 }
 
-function renderPrediction(inv) {
+function renderPrediction(inv, leadInfo) {
     const predEl = document.getElementById('predictionDisplay');
     if (!predEl) return;
 
+    if (!leadInfo) leadInfo = calcLeadTimeInfo();
+
     const kgPerBar = INV_KG_PER_TRAILER / INV_MAX_PRESSURE;
     const trailerKg = inv.trailers.reduce((s, t) => s + t.pressure * kgPerBar, 0);
-    const incomingKg = (inv.waitingVehicles || 0) * INV_KG_PER_TRAILER;
-    const totalKg = trailerKg + incomingKg;
+
+    // 충전 대기 고객의 즉시 수요
+    const waitingCustomers = inv.waitingCustomers || 0;
+    const immediateDemandKg = waitingCustomers * AVG_FILL_PER_CAR_KG;
+
+    // 즉시 수요 처리 후 실효 잔량
+    const effectiveKg = Math.max(0, trailerKg - immediateDemandKg);
 
     const dailyKg = getAvgDailyConsumptionKg();
-    const daysLeft = dailyKg > 0 ? totalKg / dailyKg : Infinity;
-    const leadDays = inv.leadTimeDays || 2;
-    const daysToOrder = daysLeft - leadDays;
+    const daysLeft = dailyKg > 0 ? effectiveKg / dailyKg : Infinity;
+
+    // 납품 소요시간을 일(day) 단위로 변환
+    const leadTimeDays = leadInfo.minutes / (24 * 60);
+    const daysToOrder = daysLeft - leadTimeDays;
 
     const now = new Date();
     const fmtDate = d => {
         const wd = ['일','월','화','수','목','금','토'][d.getDay()];
         return `${d.getMonth()+1}/${d.getDate()}(${wd})`;
     };
-    const depleteDate = new Date(now.getTime() + daysLeft * 86400000);
-    const orderDate = new Date(now.getTime() + Math.max(0, daysToOrder) * 86400000);
+    const fmtTime = d =>
+        `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
 
-    const urgency = daysToOrder <= 0 ? 'critical' : daysToOrder <= 1.5 ? 'warning' : 'safe';
-    const urgencyLabel = { safe: '여유 — 재고 충분', warning: '주의 — 곧 발주 필요', critical: '긴급 — 즉시 발주!' }[urgency];
+    const depleteDate = new Date(now.getTime() + daysLeft * 86400000);
+    const orderDate   = new Date(now.getTime() + Math.max(0, daysToOrder) * 86400000);
+
+    // 소진까지 시간이 1일 이내면 시간 단위로 표시
+    const daysLeftDisplay = isFinite(daysLeft)
+        ? daysLeft < 1
+            ? `약 ${Math.round(daysLeft * 24)}시간 후 (${fmtDate(depleteDate)} ${fmtTime(depleteDate)})`
+            : `${fmtDate(depleteDate)} (약 ${daysLeft.toFixed(1)}일 후)`
+        : '충분';
+
+    const orderDisplay = daysToOrder <= 0
+        ? '⚡ 즉시 발주 필요!'
+        : daysToOrder * 24 < 24
+            ? `오늘 ${fmtTime(orderDate)} 이전 (약 ${Math.round(daysToOrder * 24)}시간 후)`
+            : `${fmtDate(orderDate)} (약 ${daysToOrder.toFixed(1)}일 후)`;
+
+    // 긴급도: 발주해야 하는 시간 기준
+    const urgency = daysToOrder <= 0 ? 'critical'
+        : daysToOrder * 24 <= 6 ? 'warning'
+        : 'safe';
+    const urgencyLabel = {
+        safe:     '여유 — 재고 충분',
+        warning:  '주의 — 곧 발주 필요',
+        critical: '긴급 — 즉시 발주!',
+    }[urgency];
     const urgencyIcon = { safe: '✅', warning: '⚠️', critical: '🚨' }[urgency];
 
-    const isDefaultConsumption = orders.filter(o =>
+    const isDefault = orders.filter(o =>
         o.consumerName === (auth?.name || currentUser.name) && o.status !== 'cancelled'
     ).length === 0;
 
@@ -528,37 +640,36 @@ function renderPrediction(inv) {
 
         <div class="pred-stat-grid">
             <div class="pred-stat">
-                <span class="pred-stat-label">현재 잔량</span>
-                <span class="pred-stat-val">${Math.round(trailerKg).toLocaleString()} kg</span>
+                <span class="pred-stat-label">트레일러 잔량</span>
+                <span class="pred-stat-val">${Math.round(trailerKg)} kg</span>
             </div>
             <div class="pred-stat">
-                <span class="pred-stat-label">입고 예정</span>
-                <span class="pred-stat-val">${incomingKg.toLocaleString()} kg</span>
+                <span class="pred-stat-label">대기 수요 (${waitingCustomers}대)</span>
+                <span class="pred-stat-val">${immediateDemandKg} kg</span>
             </div>
             <div class="pred-stat">
-                <span class="pred-stat-label">총 가용량</span>
-                <span class="pred-stat-val accent">${Math.round(totalKg).toLocaleString()} kg</span>
+                <span class="pred-stat-label">실효 가용량</span>
+                <span class="pred-stat-val accent">${Math.round(effectiveKg)} kg</span>
             </div>
             <div class="pred-stat">
-                <span class="pred-stat-label">일평균 소비${isDefaultConsumption ? ' *' : ''}</span>
-                <span class="pred-stat-val">${Math.round(dailyKg).toLocaleString()} kg</span>
+                <span class="pred-stat-label">일평균 판매${isDefault ? ' *' : ''}</span>
+                <span class="pred-stat-val">${Math.round(dailyKg)} kg</span>
             </div>
         </div>
 
         <div class="pred-timeline">
             <div class="pred-timeline-item">
                 <span class="pred-timeline-label">재고 소진 예상</span>
-                <span class="pred-timeline-date ${urgency}">
-                    ${isFinite(daysLeft) ? fmtDate(depleteDate) + ' (약 ' + daysLeft.toFixed(1) + '일 후)' : '충분'}
-                </span>
+                <span class="pred-timeline-date ${urgency}">${daysLeftDisplay}</span>
             </div>
             <div class="pred-timeline-item order-rec">
                 <span class="pred-timeline-label">⚡ 권장 발주 시점</span>
-                <span class="pred-timeline-date ${urgency}">
-                    ${daysToOrder <= 0 ? '즉시 발주 필요!' : fmtDate(orderDate) + ' (약 ' + daysToOrder.toFixed(1) + '일 후)'}
-                </span>
+                <span class="pred-timeline-date ${urgency}">${orderDisplay}</span>
             </div>
-            <p class="pred-lead-note">납품 소요 ${leadDays}일 기준${isDefaultConsumption ? ' · * 주문 이력 없어 일소비 100kg 가정' : ' · 최근 30일 주문 기반'}</p>
+            <p class="pred-lead-note">
+                납품 소요 ${leadInfo.label} (${leadInfo.hint}) 기준
+                ${isDefault ? '· * 이력 없어 150kg/일 기본 적용' : '· 최근 30일 주문 기반'}
+            </p>
         </div>
     `;
 }
@@ -916,9 +1027,14 @@ function applyChange(orderId, approved) {
 
 // ========== 이벤트 ==========
 function initTimeInputs() {
+    const now = new Date();
     const hourEl = document.getElementById('orderHour');
+    const minuteEl = document.getElementById('orderMinute');
     if (hourEl && !hourEl.value) {
-        hourEl.value = new Date().getHours();
+        hourEl.value = now.getHours();
+    }
+    if (minuteEl && !minuteEl.value) {
+        minuteEl.value = now.getMinutes().toString().padStart(2, '0');
     }
 }
 
@@ -1184,18 +1300,11 @@ document.getElementById('addTrailerBtn')?.addEventListener('click', () => {
     renderInventoryPanel();
 });
 
-document.getElementById('waitingVehicles')?.addEventListener('change', (e) => {
+document.getElementById('waitingCustomers')?.addEventListener('change', (e) => {
     const inv = readInventory();
-    inv.waitingVehicles = Math.max(0, parseInt(e.target.value) || 0);
+    inv.waitingCustomers = Math.max(0, parseInt(e.target.value) || 0);
     saveInventory(inv);
-    renderPrediction(inv);
-});
-
-document.getElementById('leadTimeDays')?.addEventListener('change', (e) => {
-    const inv = readInventory();
-    inv.leadTimeDays = Math.max(1, parseInt(e.target.value) || 2);
-    saveInventory(inv);
-    renderPrediction(inv);
+    renderInventoryPanel();
 });
 
 // 초기화
@@ -1207,6 +1316,7 @@ roleSelectEl.value = initialRole;
 roleSelectEl.disabled = false;
 roleSelectEl.title = "수요/공급 모드를 전환할 수 있습니다.";
 
+initTheme();
 initFormDefaults();
 initTimeInputs();
 setSupplierName(currentUser.name);

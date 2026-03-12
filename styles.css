@@ -7,6 +7,27 @@
     --h2-blue-dark: #2563EB;
     --go-gray: #6B7280;
     --go-gray-dark: #4B5563;
+    /* 기본(다크) 테마 값 */
+    --bg-black: #0a0a0a;
+    --bg-dark: #111111;
+    --bg-card: #1a1a1a;
+    --text-white: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-color: #27272a;
+}
+
+/* 라이트 모드 – 기존 구성과 톤은 유지하면서 밝기만 반전 */
+body.theme-light {
+    --bg-black: #f5f7ff;
+    --bg-dark: #e5e9f5;
+    --bg-card: #ffffff;
+    --text-white: #020617;
+    --text-muted: #64748b;
+    --border-color: #d4dbe8;
+}
+
+/* 명시적으로 다크 모드를 지정하고 싶을 때 사용 (기본값과 동일) */
+body.theme-dark {
     --bg-black: #0a0a0a;
     --bg-dark: #111111;
     --bg-card: #1a1a1a;

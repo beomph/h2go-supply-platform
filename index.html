@@ -9,9 +9,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="auth-only">
+<body class="auth-only theme-dark">
     <main class="auth-only-main">
         <section class="auth-only-card" aria-label="로그인">
+            <div class="auth-only-toolbar">
+                <button id="themeToggle" type="button" class="theme-toggle-switch" aria-label="라이트/다크 모드 전환" data-theme="dark">
+                    <span class="theme-toggle-track">
+                        <span class="theme-toggle-thumb"></span>
+                    </span>
+                    <span class="theme-toggle-label">Dark</span>
+                </button>
+            </div>
             <div class="auth-only-brand">
                 <!-- 로고: 이미지(검정 배경 포함) 대신 텍스트 로고로 통일 -->
                 <div class="brand-mark brand-mark--xl" aria-label="H2GO 로고">

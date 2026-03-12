@@ -4,6 +4,7 @@
 const USERS_KEY = "h2go_users";
 const AUTH_KEY = "h2go_auth";
 const DEFAULT_ROLES = ["consumer", "supplier"];
+const THEME_KEY = "h2go_theme";
 
 function safeJsonParse(raw, fallback) {
     try {
@@ -75,6 +76,45 @@ function clearAuth() {
     } catch (_) {}
 }
 
+function updateThemeToggleUI(themeClass) {
+    const btn = document.getElementById("themeToggle");
+    if (!btn) return;
+    const isLight = themeClass === "theme-light";
+    btn.dataset.theme = isLight ? "light" : "dark";
+    const labelEl = btn.querySelector(".theme-toggle-label");
+    if (labelEl) labelEl.textContent = isLight ? "Light" : "Dark";
+    btn.setAttribute("aria-label", isLight ? "다크 모드로 전환" : "라이트 모드로 전환");
+}
+
+function applyThemeClass(themeClass) {
+    const body = document.body;
+    if (!body) return;
+    const next = themeClass === "theme-light" ? "theme-light" : "theme-dark";
+    body.classList.remove("theme-light", "theme-dark");
+    body.classList.add(next);
+    try {
+        localStorage.setItem(THEME_KEY, next);
+    } catch (_) {}
+    updateThemeToggleUI(next);
+}
+
+function initTheme() {
+    let stored = null;
+    try {
+        stored = localStorage.getItem(THEME_KEY);
+    } catch (_) {}
+    const initial = stored === "theme-light" || stored === "theme-dark" ? stored : "theme-dark";
+    applyThemeClass(initial);
+
+    const btn = document.getElementById("themeToggle");
+    if (btn) {
+        btn.addEventListener("click", () => {
+            const current = document.body.classList.contains("theme-light") ? "theme-light" : "theme-dark";
+            applyThemeClass(current === "theme-light" ? "theme-dark" : "theme-light");
+        });
+    }
+}
+
 function normalizeId(id) {
     return String(id || "").trim().toLowerCase();
 }
@@ -103,6 +143,7 @@ function ensureDemoUsers() {
 // 구버전 데이터가 있어도 roles 구조로 정리
 migrateUsersInPlace();
 ensureDemoUsers();
+initTheme();
 
 // 로그인 상태면 로그인 페이지 대신 대시보드로
 try {

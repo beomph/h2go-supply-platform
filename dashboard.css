@@ -652,11 +652,11 @@
 .order-datetime-row {
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
-    padding: 0.45rem 0.8rem;
-    border-radius: 8px;
+    gap: 0.4rem;
+    padding: 0.45rem 0.55rem;
+    border-radius: 14px;
     border: 1px solid var(--border-color);
-    background: var(--bg-black);
+    background: var(--surface-soft);
     flex-wrap: nowrap;
     max-width: 100%;
 }
@@ -664,31 +664,41 @@
 .order-datetime-field {
     display: inline-flex;
     align-items: center;
-    gap: 0.2rem;
-    padding: 0.15rem 0.45rem;
-    background: var(--surface-deep);
-    border-radius: 999px;
-    border: 1px solid var(--surface-soft-border);
+    gap: 0;
+    min-height: 2.4rem;
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.order-datetime-field:focus-within {
+    border-color: var(--h2-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
 .order-datetime-row input {
-    width: 3.4rem;
-    padding: 0.3rem 0.4rem;
+    width: 3.2rem;
+    padding: 0.45rem 0.35rem;
     background: transparent;
     border: none;
-    border-radius: 6px;
     color: var(--text-white);
     text-align: center;
-    font-size: 0.82rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1;
 }
 
 .order-datetime-row input#orderYear {
-    width: 4.2rem;
+    width: 4.35rem;
 }
 
+.order-datetime-row input#orderMonth,
+.order-datetime-row input#orderDay,
 .order-datetime-row input#orderHour,
 .order-datetime-row input#orderMinute {
-    width: 3.1rem;
+    width: 3.2rem;
 }
 
 .order-datetime-row input:focus {
@@ -708,50 +718,74 @@
 
 .order-datetime-sep {
     color: var(--text-muted);
-    font-size: 0.85rem;
+    font-size: 0.95rem;
+    font-weight: 600;
 }
 
 .order-datetime-sep.at {
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    opacity: 0.85;
+}
+
+.order-datetime-unit {
+    min-width: 1.25rem;
+    padding-right: 0.25rem;
+    color: var(--text-muted);
     font-size: 0.8rem;
-    opacity: 0.9;
+    font-weight: 600;
+    text-align: center;
 }
 
 .dt-toggle {
-    width: 1.4rem;
-    height: 1.4rem;
-    border-radius: 999px;
-    border: 1px solid var(--surface-soft-border);
-    background: var(--surface-deep-strong);
+    width: 2rem;
+    height: 2.4rem;
+    border: none;
+    border-radius: 0;
+    background: transparent;
     color: var(--text-muted);
-    font-size: 0.78rem;
+    font-size: 1rem;
+    font-weight: 500;
     line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    transition: background 0.16s ease, color 0.16s ease;
+}
+
+.dt-toggle--minus {
+    border-right: 1px solid var(--border-color);
 }
 
 .dt-toggle--plus {
-    color: var(--h2-blue-light);
+    border-left: 1px solid var(--border-color);
 }
 
-.dt-toggle:hover {
-    border-color: var(--h2-blue);
+.dt-toggle:hover,
+.dt-toggle:focus-visible {
+    background: var(--surface-soft);
+    color: var(--h2-blue);
+    outline: none;
 }
 
-.order-datetime-hint {
-    display: block;
-    margin-top: 0.4rem;
-    font-size: 0.75rem;
+.order-datetime-inline-help {
+    margin-left: 0.35rem;
     color: var(--text-muted);
+    font-size: 0.76rem;
+    font-weight: 500;
 }
 
 @media (max-width: 480px) {
     .order-datetime-row {
         width: 100%;
-        justify-content: space-between;
-        row-gap: 0.25rem;
+        justify-content: flex-start;
+        row-gap: 0.35rem;
         flex-wrap: wrap;
+    }
+
+    .dt-toggle {
+        width: 1.8rem;
     }
 }
 

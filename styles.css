@@ -434,6 +434,15 @@ body::after {
     box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
 }
 
+.btn-secondary {
+    background: var(--go-gray);
+    color: #fff;
+}
+
+.btn-secondary:hover {
+    background: var(--go-gray-dark);
+}
+
 .hero-visual {
     position: absolute;
     bottom: 10%;

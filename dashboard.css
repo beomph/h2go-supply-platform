@@ -41,6 +41,12 @@
    - `dashboard.html`의 `<main class="dashboard-main"> ... </main>`
 ------------------------------------------------------------ */
 
+/* 공통 styles.css에서 `.navbar`를 relative로 덮어쓰는 규칙을
+   대시보드에서는 다시 고정 네비게이션으로 복원 */
+.navbar {
+    position: fixed;
+}
+
 .role-select {
     padding: 0.5rem 1rem;
     background: var(--bg-card);
@@ -241,7 +247,13 @@
         padding: 0.9rem 1rem;
     }
 
-    .nav-links {
+    .dashboard-nav {
+        /* styles.css 모바일 규칙(.nav-links { display:none }) 무효화 */
+        display: flex;
+        position: static;
+        background: transparent;
+        border-bottom: none;
+        padding: 0;
         /* 상단바에서 한 줄에 우겨넣지 않고, 필요한 만큼 줄바꿈 */
         width: 100%;
         flex-wrap: wrap;
@@ -265,7 +277,7 @@
 
     .dashboard-main {
         /* 상단바 높이 고려 */
-        padding: 7.5rem 1rem 3rem;
+        padding: 8.5rem 1rem 3rem;
     }
 
     .dashboard-biz-name {

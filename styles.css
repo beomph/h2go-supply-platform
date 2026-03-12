@@ -20,6 +20,9 @@
     --surface-deep: rgba(15, 23, 42, 0.72);
     --surface-deep-strong: rgba(15, 23, 42, 0.86);
     --field-readonly: rgba(10, 10, 10, 0.6);
+    --ambient-primary: rgba(59, 130, 246, 0.18);
+    --ambient-secondary: rgba(96, 165, 250, 0.12);
+    --ambient-grid: rgba(148, 163, 184, 0.08);
 }
 
 /* 라이트 모드 – 기존 구성과 톤은 유지하면서 밝기만 반전 */
@@ -36,6 +39,9 @@ body.theme-light {
     --surface-deep: rgba(226, 232, 240, 0.95);
     --surface-deep-strong: rgba(203, 213, 225, 0.95);
     --field-readonly: rgba(226, 232, 240, 0.95);
+    --ambient-primary: rgba(59, 130, 246, 0.12);
+    --ambient-secondary: rgba(56, 189, 248, 0.09);
+    --ambient-grid: rgba(148, 163, 184, 0.1);
 }
 
 /* 명시적으로 다크 모드를 지정하고 싶을 때 사용 (기본값과 동일) */
@@ -52,6 +58,9 @@ body.theme-dark {
     --surface-deep: rgba(15, 23, 42, 0.72);
     --surface-deep-strong: rgba(15, 23, 42, 0.86);
     --field-readonly: rgba(10, 10, 10, 0.6);
+    --ambient-primary: rgba(59, 130, 246, 0.18);
+    --ambient-secondary: rgba(96, 165, 250, 0.12);
+    --ambient-grid: rgba(148, 163, 184, 0.08);
 }
 
 * {
@@ -66,6 +75,67 @@ body {
     color: var(--text-white);
     line-height: 1.6;
     overflow-x: hidden;
+    position: relative;
+    isolation: isolate;
+}
+
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    inset: auto;
+    pointer-events: none;
+    z-index: -1;
+    filter: blur(10px);
+}
+
+body::before {
+    top: -10vh;
+    left: -8vw;
+    width: 42vw;
+    height: 42vw;
+    min-width: 320px;
+    min-height: 320px;
+    background:
+        radial-gradient(circle at 35% 35%, var(--ambient-primary) 0%, transparent 42%),
+        radial-gradient(circle at 68% 60%, var(--ambient-secondary) 0%, transparent 30%);
+    animation: ambientFloatA 18s ease-in-out infinite alternate;
+}
+
+body::after {
+    right: -10vw;
+    bottom: -14vh;
+    width: 46vw;
+    height: 46vw;
+    min-width: 360px;
+    min-height: 360px;
+    background:
+        radial-gradient(circle at 40% 40%, var(--ambient-secondary) 0%, transparent 36%),
+        radial-gradient(circle at 62% 58%, var(--ambient-primary) 0%, transparent 28%),
+        linear-gradient(var(--ambient-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--ambient-grid) 1px, transparent 1px);
+    background-size: auto, auto, 28px 28px, 28px 28px;
+    background-position: center, center, center, center;
+    opacity: 0.9;
+    animation: ambientFloatB 22s ease-in-out infinite alternate;
+}
+
+@keyframes ambientFloatA {
+    0% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    100% {
+        transform: translate3d(4vw, 5vh, 0) scale(1.08);
+    }
+}
+
+@keyframes ambientFloatB {
+    0% {
+        transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+    100% {
+        transform: translate3d(-3vw, -4vh, 0) rotate(4deg);
+    }
 }
 
 /* ------------------------------------------------------------
@@ -97,7 +167,7 @@ body {
     justify-content: center;
     padding: 2rem;
     background:
-        radial-gradient(ellipse 70% 50% at 50% -10%, rgba(59, 130, 246, 0.18), transparent),
+        radial-gradient(ellipse 70% 50% at 50% -10%, var(--ambient-primary), transparent),
         var(--bg-black);
 }
 
@@ -287,6 +357,20 @@ body {
     background: 
         radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.15), transparent),
         var(--bg-black);
+}
+
+.auth-only-main,
+.navbar,
+.dashboard-main {
+    position: relative;
+    z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body::before,
+    body::after {
+        animation: none;
+    }
 }
 
 .hero-content {

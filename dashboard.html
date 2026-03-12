@@ -60,17 +60,37 @@
                             <div class="form-group">
                                 <label>희망 납품 일시</label>
                                 <div class="order-datetime-row">
-                                    <input type="number" id="orderYear" min="2025" max="2030" value="2025" required placeholder="연">
+                                    <div class="order-datetime-field">
+                                        <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderYear" data-step="-1">-</button>
+                                        <input type="number" id="orderYear" min="2025" max="2030" value="2025" required placeholder="연">
+                                        <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderYear" data-step="1">+</button>
+                                    </div>
                                     <span class="order-datetime-sep">/</span>
-                                    <input type="number" id="orderMonth" min="1" max="12" required placeholder="월">
+                                    <div class="order-datetime-field">
+                                        <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderMonth" data-step="-1">-</button>
+                                        <input type="number" id="orderMonth" min="1" max="12" required placeholder="월">
+                                        <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderMonth" data-step="1">+</button>
+                                    </div>
                                     <span class="order-datetime-sep">/</span>
-                                    <input type="number" id="orderDay" min="1" max="31" required placeholder="일">
+                                    <div class="order-datetime-field">
+                                        <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderDay" data-step="-1">-</button>
+                                        <input type="number" id="orderDay" min="1" max="31" required placeholder="일">
+                                        <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderDay" data-step="1">+</button>
+                                    </div>
                                     <span class="order-datetime-sep at">@</span>
-                                    <input type="number" id="orderHour" min="0" max="23" placeholder="시" required>
+                                    <div class="order-datetime-field">
+                                        <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderHour" data-step="-1">-</button>
+                                        <input type="number" id="orderHour" min="0" max="23" placeholder="시" required>
+                                        <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderHour" data-step="1">+</button>
+                                    </div>
                                     <span class="time-separator">:</span>
-                                    <input type="number" id="orderMinute" min="0" max="59" placeholder="분" required>
+                                    <div class="order-datetime-field">
+                                        <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderMinute" data-step="-1">-</button>
+                                        <input type="number" id="orderMinute" min="0" max="59" placeholder="분" required>
+                                        <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderMinute" data-step="1">+</button>
+                                    </div>
                                 </div>
-                                <small class="order-datetime-hint">연/월/일/시각을 한 번에 설정합니다. (1분 단위)</small>
+                                <small class="order-datetime-hint">연/월/일/시/분을 가로 한 줄에서 숫자 입력 또는 ± 토글로 조절합니다. (1분 단위)</small>
                             </div>
                             <div class="form-group">
                                 <label>공급자</label>

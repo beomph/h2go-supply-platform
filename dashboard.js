@@ -1076,6 +1076,29 @@ function initFormDefaults() {
     if (dayEl) dayEl.value = today.day;
 }
 
+function adjustNumericField(id, delta) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const current = parseInt(el.value || el.min || "0", 10);
+    const min = el.min !== "" ? parseInt(el.min, 10) : -Infinity;
+    const max = el.max !== "" ? parseInt(el.max, 10) : Infinity;
+    let next = isNaN(current) ? 0 : current + delta;
+    if (next < min) next = min;
+    if (next > max) next = max;
+    el.value = next;
+}
+
+function initDateTimeToggles() {
+    document.querySelectorAll('.dt-toggle[data-target][data-step]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.getAttribute('data-target');
+            const step = parseInt(btn.getAttribute('data-step') || "0", 10);
+            if (!target || !step) return;
+            adjustNumericField(target, step);
+        });
+    });
+}
+
 // ========== 공급자 선택(수요모드) ==========
 function setSupplierName(name) {
     selectedSupplierName = String(name || "").trim();
@@ -1358,6 +1381,7 @@ roleSelectEl.title = "수요/공급 모드를 전환할 수 있습니다.";
 initTheme();
 initFormDefaults();
 initTimeInputs();
+initDateTimeToggles();
 setSupplierName(currentUser.name);
 showView(initialRole);
 if (initialRole === 'consumer') renderConsumerView();

@@ -57,27 +57,20 @@
                     <div class="order-form-card">
                         <h3>새 주문</h3>
                         <form id="orderForm" class="order-form">
-                            <div class="form-row form-row-3">
-                                <div class="form-group">
-                                    <label>연도</label>
-                                    <input type="number" id="orderYear" min="2025" max="2030" value="2025" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>월</label>
-                                    <input type="number" id="orderMonth" min="1" max="12" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>일</label>
-                                    <input type="number" id="orderDay" min="1" max="31" required>
-                                </div>
-                            </div>
                             <div class="form-group">
-                                <label>희망 납품 시각 <small style="font-weight:400;color:var(--text-muted)">(1분 단위)</small></label>
-                                <div class="time-input-group time-compact">
+                                <label>희망 납품 일시</label>
+                                <div class="order-datetime-row">
+                                    <input type="number" id="orderYear" min="2025" max="2030" value="2025" required placeholder="연">
+                                    <span class="order-datetime-sep">/</span>
+                                    <input type="number" id="orderMonth" min="1" max="12" required placeholder="월">
+                                    <span class="order-datetime-sep">/</span>
+                                    <input type="number" id="orderDay" min="1" max="31" required placeholder="일">
+                                    <span class="order-datetime-sep at">@</span>
                                     <input type="number" id="orderHour" min="0" max="23" placeholder="시" required>
                                     <span class="time-separator">:</span>
                                     <input type="number" id="orderMinute" min="0" max="59" placeholder="분" required>
                                 </div>
+                                <small class="order-datetime-hint">연/월/일/시각을 한 번에 설정합니다. (1분 단위)</small>
                             </div>
                             <div class="form-group">
                                 <label>공급자</label>
@@ -99,7 +92,14 @@
                     </div>
 
                     <div class="my-orders-card">
-                        <h3>주문 현황</h3>
+                        <div class="my-orders-header">
+                            <h3>주문 현황</h3>
+                            <div class="orders-filter">
+                                <label for="ordersDateFilter">조회일</label>
+                                <input type="date" id="ordersDateFilter">
+                                <button type="button" class="btn btn-tiny btn-secondary" id="ordersDateReset">전체</button>
+                            </div>
+                        </div>
                         <div id="consumerOrdersList" class="orders-list"></div>
                     </div>
                 </div>

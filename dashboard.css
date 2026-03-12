@@ -648,6 +648,66 @@
     color: var(--text-muted);
 }
 
+/* 새 주문 - 희망 납품 일시 한 줄 배치 */
+.order-datetime-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-black);
+    flex-wrap: wrap;
+}
+
+.order-datetime-row input {
+    width: 4.3rem;
+    padding: 0.4rem 0.5rem;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-white);
+    text-align: center;
+}
+
+.order-datetime-row input#orderYear {
+    width: 4.8rem;
+}
+
+.order-datetime-row input#orderHour,
+.order-datetime-row input#orderMinute {
+    width: 3.6rem;
+}
+
+.order-datetime-row input:focus {
+    outline: none;
+}
+
+.order-datetime-sep {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.order-datetime-sep.at {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
+.order-datetime-hint {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+@media (max-width: 480px) {
+    .order-datetime-row {
+        width: 100%;
+        justify-content: space-between;
+        row-gap: 0.25rem;
+    }
+}
+
 .order-form input,
 .order-form select,
 .order-form textarea {
@@ -728,6 +788,56 @@
 .orders-list {
     max-height: 400px;
     overflow-y: auto;
+}
+
+/* 주문 현황 헤더 + 일별 필터 */
+.my-orders-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    gap: 1rem;
+}
+
+.my-orders-header h3 {
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.orders-filter {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.orders-filter label {
+    color: var(--text-muted);
+}
+
+.orders-filter input[type="date"] {
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-black);
+    color: var(--text-white);
+    font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+    .my-orders-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .orders-filter {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
 }
 
 /* 모바일: 리스트 높이를 화면에 맞게 자연스럽게(잘림/스크롤 피로 감소)

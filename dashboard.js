@@ -251,7 +251,8 @@ function getTodayParts() {
 }
 
 function getConsumerOrders(consumerName) {
-    return orders.filter(o => o.consumerName === consumerName && o.status !== 'cancelled');
+    // 수요자별 전체 주문 이력 (취소 포함)
+    return orders.filter(o => o.consumerName === consumerName);
 }
 
 function getSupplierOrders(supplierName) {
@@ -676,10 +677,37 @@ function renderPrediction(inv, leadInfo) {
 
 function renderConsumerView() {
     const list = document.getElementById('consumerOrdersList');
-    const myOrders = getConsumerOrders(currentUser.name);
+    const allMyOrders = getConsumerOrders(currentUser.name);
+
+    // 조회일 필터(일별 조회)
+    let myOrders = allMyOrders;
+    const filterInput = document.getElementById('ordersDateFilter');
+    if (filterInput && filterInput.value) {
+        const [y, m, d] = filterInput.value.split('-').map(v => parseInt(v, 10));
+        if (y && m && d) {
+            myOrders = allMyOrders.filter(o =>
+                o.year === y &&
+                o.month === m &&
+                o.day === d
+            );
+        }
+    }
+
+    // 최신순 정렬
+    myOrders = myOrders.slice().sort((a, b) => {
+        const da = new Date(a.year, a.month - 1, a.day);
+        const db = new Date(b.year, b.month - 1, b.day);
+        if (da.getTime() !== db.getTime()) return db - da;
+        return (b.time || '').localeCompare(a.time || '');
+    });
 
     if (myOrders.length === 0) {
-        list.innerHTML = '<div class="empty-state"><p>등록된 주문이 없습니다.</p><p>새 주문을 등록하세요.</p></div>';
+        if (!allMyOrders.length) {
+            list.innerHTML = '<div class="empty-state"><p>등록된 주문이 없습니다.</p><p>새 주문을 등록하세요.</p></div>';
+        } else {
+            const label = (filterInput && filterInput.value) ? filterInput.value : '선택한 날짜';
+            list.innerHTML = `<div class="empty-state"><p>${label}에는 주문 이력이 없습니다.</p><p>다른 날짜를 선택하거나 전체 보기를 이용해 보세요.</p></div>`;
+        }
         renderInventoryPanel();
         return;
     }
@@ -1305,6 +1333,17 @@ document.getElementById('waitingCustomers')?.addEventListener('change', (e) => {
     inv.waitingCustomers = Math.max(0, parseInt(e.target.value) || 0);
     saveInventory(inv);
     renderInventoryPanel();
+});
+
+// 주문 현황 - 일별 필터 이벤트
+document.getElementById('ordersDateFilter')?.addEventListener('change', () => {
+    renderConsumerView();
+});
+
+document.getElementById('ordersDateReset')?.addEventListener('click', () => {
+    const el = document.getElementById('ordersDateFilter');
+    if (el) el.value = '';
+    renderConsumerView();
 });
 
 // 초기화

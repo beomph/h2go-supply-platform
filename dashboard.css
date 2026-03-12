@@ -51,6 +51,65 @@
     cursor: pointer;
 }
 
+/* 테마 토글 스위치 (라이트/다크) */
+.theme-switcher {
+    display: flex;
+    align-items: center;
+}
+
+.theme-toggle-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.theme-toggle-track {
+    position: relative;
+    width: 34px;
+    height: 18px;
+    border-radius: 999px;
+    background: var(--bg-black);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+}
+
+.theme-toggle-thumb {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--h2-blue-light);
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+    transition: transform 0.18s ease;
+}
+
+.theme-toggle-switch[data-theme="light"] .theme-toggle-thumb {
+    transform: translateX(14px);
+}
+
+.theme-toggle-label {
+    min-width: 40px;
+    text-align: left;
+}
+
+.theme-toggle-switch[data-theme="light"] .theme-toggle-label {
+    color: var(--h2-blue-dark);
+}
+
+.theme-toggle-switch[data-theme="dark"] .theme-toggle-label {
+    color: var(--text-muted);
+}
+
 .role-select:focus {
     outline: none;
     border-color: var(--h2-blue);
@@ -446,6 +505,16 @@
 .inv-setting-hint {
     color: var(--text-muted);
     font-size: 0.75rem;
+}
+
+.inv-lead-display {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
 }
 
 /* 발주 예측 패널 */

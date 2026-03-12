@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="theme-dark">
     <!-- 네비게이션 -->
     <nav class="navbar">
         <a href="dashboard.html" class="logo dashboard-brand" aria-label="H2GO 홈(대시보드)">
@@ -24,12 +24,20 @@
         <div id="bizName" class="dashboard-biz-name">사업자</div>
 
         <ul class="nav-links dashboard-nav">
-            <!-- 요청하신 순서: (로고가 홈 역할) → 모드 토글 → 로그아웃 -->
+            <!-- 요청하신 순서: (로고가 홈 역할) → 모드 토글 → 화면 모드(라이트/다크) → 로그아웃 -->
             <li class="role-switcher">
                 <select id="roleSelect" class="role-select">
                     <option value="consumer">수요모드</option>
                     <option value="supplier">공급모드</option>
                 </select>
+            </li>
+            <li class="theme-switcher">
+                <button id="themeToggle" type="button" class="theme-toggle-switch" aria-label="라이트/다크 모드 전환" data-theme="dark">
+                    <span class="theme-toggle-track">
+                        <span class="theme-toggle-thumb"></span>
+                    </span>
+                    <span class="theme-toggle-label">Dark</span>
+                </button>
             </li>
             <li><button id="logoutBtn" type="button" class="btn btn-secondary btn-tiny">로그아웃</button></li>
         </ul>
@@ -64,14 +72,11 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label>희망 납품 시각 <small style="font-weight:400;color:var(--text-muted)">(30분 단위)</small></label>
+                                <label>희망 납품 시각 <small style="font-weight:400;color:var(--text-muted)">(1분 단위)</small></label>
                                 <div class="time-input-group time-compact">
                                     <input type="number" id="orderHour" min="0" max="23" placeholder="시" required>
                                     <span class="time-separator">:</span>
-                                    <select id="orderMinute">
-                                        <option value="00">00</option>
-                                        <option value="30">30</option>
-                                    </select>
+                                    <input type="number" id="orderMinute" min="0" max="59" placeholder="분" required>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -110,19 +115,17 @@
                         <div id="trailerStatusList" class="trailer-list"></div>
                         <div class="inv-settings">
                             <div class="inv-setting-row">
-                                <label>입고 대기 차량</label>
+                                <label>충전 대기 고객</label>
                                 <div class="inv-setting-input">
-                                    <input type="number" id="waitingVehicles" min="0" max="20" value="0">
+                                    <input type="number" id="waitingCustomers" min="0" max="99" value="0">
                                     <span>대</span>
                                 </div>
-                                <span class="inv-setting-hint">발주 완료 후 납품 대기 중</span>
+                                <span class="inv-setting-hint">현재 충전 대기 중인 수소차</span>
                             </div>
                             <div class="inv-setting-row">
                                 <label>납품 소요 시간</label>
-                                <div class="inv-setting-input">
-                                    <input type="number" id="leadTimeDays" min="1" max="14" value="2">
-                                    <span>일</span>
-                                </div>
+                                <span id="leadTimeDisplay" class="inv-lead-display">—</span>
+                                <span class="inv-setting-hint" id="leadTimeHint"></span>
                             </div>
                         </div>
                     </div>
@@ -257,14 +260,11 @@
                 </div>
                             <div class="form-row form-row-time">
                                 <div class="form-group">
-                                    <label>시각 (30분 단위)</label>
+                                    <label>시각 (1분 단위)</label>
                                     <div class="time-input-group">
                                         <input type="number" id="changeHour" min="0" max="23" placeholder="시">
                                         <span class="time-separator">:</span>
-                                        <select id="changeMinute">
-                                            <option value="00">00</option>
-                                            <option value="30">30</option>
-                                        </select>
+                                        <input type="number" id="changeMinute" min="0" max="59" placeholder="분">
                                     </div>
                                 </div>
                                 <div class="form-group">

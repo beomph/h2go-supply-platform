@@ -1666,6 +1666,19 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     border-left-color: #f59e0b;
 }
 
+.order-item-clickable {
+    cursor: pointer;
+}
+
+.order-item-clickable:hover {
+    background: rgba(59, 130, 246, 0.06);
+}
+
+.order-transport-info {
+    font-size: 0.82rem;
+    color: var(--h2-blue-light);
+}
+
 .order-change-note {
     font-size: 0.85rem;
     color: #f59e0b;
@@ -1734,6 +1747,96 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
 
 .orders-table tr.row-change-request td {
     background: rgba(245, 158, 11, 0.08);
+}
+
+/* 주문 상세 모달 */
+#orderDetailModal.modal,
+#transportStartModal.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+#orderDetailModal.modal.active,
+#transportStartModal.modal.active {
+    display: flex;
+}
+
+.modal-content-order-detail {
+    max-width: 520px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.order-detail-section {
+    margin-bottom: 1.5rem;
+}
+
+.order-detail-section:last-child {
+    margin-bottom: 0;
+}
+
+.order-detail-section h4 {
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-muted);
+}
+
+.order-detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.order-detail-row {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.order-detail-row.full {
+    grid-template-columns: 1fr;
+}
+
+.order-detail-row .label {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.order-detail-history {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.6;
+}
+
+.order-detail-history li {
+    padding: 0.35rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.order-detail-history li:last-child {
+    border-bottom: none;
+}
+
+.order-detail-empty {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    padding: 0.5rem 0;
 }
 
 /* 대시보드 모달 */

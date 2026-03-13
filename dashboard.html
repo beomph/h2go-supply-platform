@@ -252,6 +252,35 @@
         </section>
     </main>
 
+    <!-- 주문 상세 팝업 (기본정보, 변경이력, 상태상세) -->
+    <div id="orderDetailModal" class="modal">
+        <div class="modal-content modal-content-order-detail">
+            <button class="modal-close" aria-label="닫기">&times;</button>
+            <h3 id="orderDetailTitle">주문 상세</h3>
+            <div id="orderDetailBody"></div>
+        </div>
+    </div>
+
+    <!-- 운송 시작 입력 모달 (T/T 번호, 운송기사) -->
+    <div id="transportStartModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="닫기">&times;</button>
+            <h3>운송 시작 정보 입력</h3>
+            <form id="transportStartForm" class="order-form">
+                <input type="hidden" id="transportStartOrderId">
+                <div class="form-group">
+                    <label for="transportTrailerNumbers">튜브트레일러(T/T) 번호</label>
+                    <input type="text" id="transportTrailerNumbers" placeholder="예: T-01, T-02 (쉼표로 구분)" required>
+                </div>
+                <div class="form-group">
+                    <label for="transportDriverName">운송기사</label>
+                    <input type="text" id="transportDriverName" placeholder="예: 홍길동" required>
+                </div>
+                <button type="submit" class="btn btn-primary">운송 시작</button>
+            </form>
+        </div>
+    </div>
+
     <!-- 주문 지도 모달 -->
     <div id="orderMapModal" class="modal">
         <div class="modal-content modal-content-map">

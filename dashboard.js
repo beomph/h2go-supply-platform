@@ -871,14 +871,12 @@ function renderConsumerView() {
         const canRequestCancel = !hasPendingCancel && !hasPendingChange && !hasRejectedCancel && !['completed', 'cancelled', 'collecting'].includes(status);
         const immediateCancelable = canRequestCancel && canImmediateCancelOrder(order, 'consumer');
 
-        // 상대방(공급자)이 요청한 변경/취소는 수요모드에서 확정/거절 가능
         const canApproveChange = hasPendingChange && cr.requestedBy === 'supplier';
         const canApproveCancel = hasPendingCancel && cancelReq.requestedBy === 'supplier';
         const hasDecisionRequest = canApproveChange || canApproveCancel;
 
         const changeBadge = getChangeBadgeText(order);
         const cancelBadge = getCancelBadgeText(order);
-        const noteText = String(order.note || '').trim();
         const actionButtons = `
             ${canRequestChange ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
             ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''}
@@ -889,11 +887,12 @@ function renderConsumerView() {
             ${canApproveCancel ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${order.id}">승인</button>
             <button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${order.id}">거절</button>` : ''}
         `.trim();
-        const hasFoot = Boolean(changeBadge || cancelBadge || actionButtons);
 
-        const trailerDetailText = Number(order.tubeTrailers || 0) > 1 ? ` · 트레일러 ${order.tubeTrailers}대` : '';
+        const transportInfo = order.transportInfo;
+        const transportInfoText = transportInfo ? `T/T: ${(transportInfo.trailerNumbers || []).join(', ')} · 기사: ${transportInfo.driverName || '-'}` : '';
+
         return `
-        <div class="order-item ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}">
+        <div class="order-item order-item-clickable ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
             <div class="order-item-head">
                 <div class="order-id">${order.id}</div>
                 ${hasDecisionRequest
@@ -904,21 +903,26 @@ function renderConsumerView() {
                     : `<span class="order-status ${status}">${getStatusLabel(order.status)}</span>`
                 }
             </div>
-            <div class="order-detail">${formatOrderDateTime(order)}${trailerDetailText}</div>
+            <div class="order-detail">${formatOrderDateTime(order)}</div>
             <div class="order-detail">공급자: ${order.supplierName || '-'}</div>
             <div class="order-detail">${order.address}</div>
-            ${noteText ? `<div class="order-detail order-note">메모: ${noteText}</div>` : ''}
-            ${hasFoot ? `
+            ${transportInfoText ? `<div class="order-detail order-transport-info">${transportInfoText}</div>` : ''}
+            ${(changeBadge || cancelBadge || actionButtons) ? `
             <div class="order-item-foot">
-                <div class="order-item-badges">
-                    ${changeBadge ? `<div class="change-summary">${changeBadge}</div>` : ''}
-                    ${cancelBadge ? `<div class="change-summary">${cancelBadge}</div>` : ''}
-                </div>
+                ${(changeBadge || cancelBadge) ? `<div class="order-item-badges"><div class="change-summary">${changeBadge || ''} ${cancelBadge || ''}</div></div>` : ''}
                 ${actionButtons ? `<div class="order-actions order-actions--inline">${actionButtons}</div>` : ''}
             </div>
             ` : ''}
         </div>
     `}).join('');
+
+    list.querySelectorAll('.order-item-clickable[data-order-id]').forEach(el => {
+        el.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return;
+            const orderId = el.dataset.orderId;
+            openOrderDetailModal(orderId);
+        });
+    });
 
     renderInventoryPanel();
 }
@@ -962,6 +966,7 @@ function renderOrdersTable(tbodyId, showActions) {
                 ${noteText ? `<div class="change-summary">메모: ${noteText}</div>` : ''}
                 ${changeBadge ? `<div class="change-summary">${changeBadge}</div>` : ''}
                 ${cancelBadge ? `<div class="change-summary">${cancelBadge}</div>` : ''}
+                ${o.transportInfo ? `<div class="change-summary">T/T: ${(o.transportInfo.trailerNumbers || []).join(', ')} · 기사: ${o.transportInfo.driverName || '-'}</div>` : ''}
             </td>
             <td class="table-actions">
                 ${advanceAction ? `<button type="button" class="btn btn-tiny btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : ''}
@@ -975,12 +980,12 @@ function renderOrdersTable(tbodyId, showActions) {
         </tr>
     `}).join('') || `<tr><td colspan="${colspan}" class="empty-state">주문이 없습니다.</td></tr>`;
 
-    // 주문 행 클릭 → 지도 모달
+    // 주문 행 클릭 → 주문 상세 팝업
     tbody.querySelectorAll('.order-row[data-order-id]').forEach(row => {
         row.addEventListener('click', (e) => {
             if (e.target.closest('button')) return;
             const orderId = row.dataset.orderId;
-            openOrderMapModal(orderId);
+            openOrderDetailModal(orderId);
         });
     });
 }
@@ -1143,6 +1148,163 @@ function closeOrderMapModal() {
         orderMapInstance.remove();
         orderMapInstance = null;
     }
+}
+
+// ========== 주문 상세 팝업 ==========
+function formatIsoDateTime(isoOrTs) {
+    if (isoOrTs == null || isoOrTs === '') return '-';
+    try {
+        const d = new Date(isoOrTs);
+        if (isNaN(d.getTime())) return '-';
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    } catch (_) { return '-'; }
+}
+
+function getActorName(order, role) {
+    if (!order) return '-';
+    return role === 'consumer' ? (order.consumerName || '수요자') : (order.supplierName || '공급자');
+}
+
+function buildOrderChangeHistory(order) {
+    const history = [];
+    if (!order) return history;
+
+    const add = (text, at) => {
+        if (at) history.push({ text, at: new Date(at).getTime() });
+        else history.push({ text, at: 0 });
+    };
+
+    if (order.changeHistory && Array.isArray(order.changeHistory)) {
+        order.changeHistory.forEach(h => history.push(h));
+    } else {
+        const cr = order.changeRequest;
+        if (cr) {
+            const who = getActorName(order, cr.requestedBy);
+            add(`${who}가 ${formatIsoDateTime(cr.requestedAt)}에 변경 요청`, cr.requestedAt);
+            if (cr.status === 'approved' || (order.lastChange && order.lastChange.result === 'approved')) {
+                const lc = order.lastChange;
+                const decider = lc ? getActorName(order, lc.decidedBy) : '-';
+                add(`${decider}가 ${formatIsoDateTime(lc?.decidedAt)}에 승인`, lc?.decidedAt);
+            } else if (cr.status === 'rejected' || (order.lastChange && order.lastChange.result === 'rejected')) {
+                const lc = order.lastChange;
+                const decider = lc ? getActorName(order, lc.decidedBy) : '-';
+                add(`${decider}가 ${formatIsoDateTime(cr.decidedAt || lc?.decidedAt)}에 거절`, cr.decidedAt || lc?.decidedAt);
+            }
+        }
+        const cancelReq = order.cancelRequest;
+        if (cancelReq) {
+            const who = getActorName(order, cancelReq.requestedBy);
+            add(`${who}가 ${formatIsoDateTime(cancelReq.requestedAt)}에 취소 요청`, cancelReq.requestedAt);
+            if (cancelReq.status === 'rejected' && order.lastCancel) {
+                const lc = order.lastCancel;
+                const decider = getActorName(order, lc.decidedBy);
+                add(`${decider}가 ${formatIsoDateTime(lc.decidedAt)}에 거절`, lc.decidedAt);
+            }
+        }
+        if (order.lastChange && !cr) {
+            const lc = order.lastChange;
+            const decider = getActorName(order, lc.decidedBy);
+            add(`${decider}가 ${formatIsoDateTime(lc.decidedAt)}에 변경 ${lc.result === 'approved' ? '승인' : '거절'}`, lc.decidedAt);
+        }
+    }
+
+    history.sort((a, b) => a.at - b.at);
+    return history;
+}
+
+function buildOrderStatusHistory(order) {
+    const items = [];
+    if (!order) return items;
+
+    const add = (label, at) => {
+        if (!at) return;
+        const ts = new Date(at).getTime();
+        if (Number.isFinite(ts) && ts > 0) items.push({ label, at: ts });
+    };
+
+    add('주문 요청', order.createdAt);
+    add('접수', order.acceptedAt);
+    if (order.changeRequest?.requestedAt) add('변경 요청', order.changeRequest.requestedAt);
+    if (order.lastChange?.decidedAt && order.lastChange.result === 'approved') add('변경 접수', order.lastChange.decidedAt);
+    add('운송 시작', order.transportStartedAt);
+    add('도착', order.arrivedAt);
+    add('회수 시작', order.collectingAt);
+    add('완료', order.completedAt);
+
+    return items.sort((a, b) => a.at - b.at);
+}
+
+function openOrderDetailModal(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+
+    document.getElementById('orderDetailTitle').textContent = `주문 ${order.id} 상세`;
+    const changeHistory = buildOrderChangeHistory(order);
+    const statusHistory = buildOrderStatusHistory(order);
+    const transportInfo = order.transportInfo;
+
+    const body = document.getElementById('orderDetailBody');
+    body.innerHTML = `
+        <div class="order-detail-section order-detail-actions">
+            <button type="button" class="btn btn-small btn-secondary" id="orderDetailMapBtn" data-order-id="${order.id}">지도 보기</button>
+        </div>
+        <div class="order-detail-section">
+            <h4>기본 정보</h4>
+            <div class="order-detail-grid">
+                <div class="order-detail-row"><span class="label">주문번호</span><span>${order.id}</span></div>
+                <div class="order-detail-row"><span class="label">납품 일시</span><span>${formatOrderDateTime(order)}</span></div>
+                <div class="order-detail-row"><span class="label">공급자</span><span>${order.supplierName || '-'}</span></div>
+                <div class="order-detail-row"><span class="label">납품 주소</span><span>${order.address || '-'}</span></div>
+                <div class="order-detail-row"><span class="label">튜브트레일러</span><span>${order.tubeTrailers || 0}대</span></div>
+                <div class="order-detail-row"><span class="label">상태</span><span class="order-status ${normalizeStatus(order.status)}">${getStatusLabel(order.status)}</span></div>
+                ${transportInfo ? `
+                <div class="order-detail-row"><span class="label">T/T 번호</span><span>${(transportInfo.trailerNumbers || []).join(', ') || '-'}</span></div>
+                <div class="order-detail-row"><span class="label">운송기사</span><span>${transportInfo.driverName || '-'}</span></div>
+                ` : ''}
+                ${order.note ? `<div class="order-detail-row full"><span class="label">요청 사항</span><span>${order.note}</span></div>` : ''}
+            </div>
+        </div>
+        <div class="order-detail-section">
+            <h4>주문 변경 이력</h4>
+            ${changeHistory.length > 0
+                ? `<ul class="order-detail-history">${changeHistory.map(h => `<li>${h.text}</li>`).join('')}</ul>`
+                : '<p class="order-detail-empty">변경/취소 이력이 없습니다.</p>'}
+        </div>
+        <div class="order-detail-section">
+            <h4>주문 상태 상세</h4>
+            ${statusHistory.length > 0
+                ? `<ul class="order-detail-history">${statusHistory.map(h => `<li>${formatIsoDateTime(h.at)} — ${h.label}</li>`).join('')}</ul>`
+                : '<p class="order-detail-empty">상태 이력이 없습니다.</p>'}
+        </div>
+    `;
+
+    const mapBtn = document.getElementById('orderDetailMapBtn');
+    if (mapBtn) {
+        mapBtn.addEventListener('click', () => {
+            closeOrderDetailModal();
+            openOrderMapModal(orderId);
+        });
+    }
+
+    document.getElementById('orderDetailModal').classList.add('active');
+}
+
+function closeOrderDetailModal() {
+    document.getElementById('orderDetailModal').classList.remove('active');
+}
+
+// ========== 운송 시작 모달 ==========
+function openTransportStartModal(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    document.getElementById('transportStartOrderId').value = orderId;
+    document.getElementById('transportTrailerNumbers').value = '';
+    document.getElementById('transportDriverName').value = '';
+    document.getElementById('transportStartModal').classList.add('active');
+}
+
+function closeTransportStartModal() {
+    document.getElementById('transportStartModal').classList.remove('active');
 }
 
 // ========== 변경 요청 ==========
@@ -1456,6 +1618,28 @@ document.getElementById('changeRequestForm').addEventListener('submit', (e) => {
     alert('변경 요청이 제출되었습니다. 상대방의 확정을 기다립니다.');
 });
 
+document.getElementById('transportStartForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const orderId = document.getElementById('transportStartOrderId').value;
+    const trailerInput = String(document.getElementById('transportTrailerNumbers').value || '').trim();
+    const driverName = String(document.getElementById('transportDriverName').value || '').trim();
+    if (!trailerInput || !driverName) {
+        alert('T/T 번호와 운송기사를 모두 입력해 주세요.');
+        return;
+    }
+    const trailerNumbers = trailerInput.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean);
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    order.transportInfo = { trailerNumbers, driverName };
+    order.status = 'in_transit';
+    order.transportStartedAt = new Date().toISOString();
+    localStorage.setItem('h2go_orders', JSON.stringify(orders));
+    closeTransportStartModal();
+    renderConsumerView();
+    renderSupplierView();
+    alert('운송이 시작되었습니다. T/T 번호와 운송기사 정보가 구매자에게 표시됩니다.');
+});
+
 document.getElementById('approveChangeBtn').addEventListener('click', () => {
     if (!pendingApprovalOrderId) return;
     applyChange(pendingApprovalOrderId, true);
@@ -1484,9 +1668,10 @@ document.querySelectorAll('.modal-content').forEach(el => {
 });
 document.querySelector('#orderMapModal .modal-close')?.addEventListener('click', closeOrderMapModal);
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.getElementById('orderMapModal').classList.contains('active')) {
-        closeOrderMapModal();
-    }
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('orderMapModal').classList.contains('active')) closeOrderMapModal();
+    else if (document.getElementById('orderDetailModal').classList.contains('active')) closeOrderDetailModal();
+    else if (document.getElementById('transportStartModal').classList.contains('active')) closeTransportStartModal();
 });
 document.querySelector('#changeRequestModal .modal-close').addEventListener('click', () => {
     document.getElementById('changeRequestModal').classList.remove('active');
@@ -1499,6 +1684,14 @@ document.querySelector('#supplierSelectModal .modal-close')?.addEventListener('c
 });
 document.getElementById('supplierSelectModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
+});
+document.querySelector('#orderDetailModal .modal-close')?.addEventListener('click', closeOrderDetailModal);
+document.getElementById('orderDetailModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeOrderDetailModal();
+});
+document.querySelector('#transportStartModal .modal-close')?.addEventListener('click', closeTransportStartModal);
+document.getElementById('transportStartModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeTransportStartModal();
 });
 
 document.addEventListener('click', (e) => {
@@ -1559,10 +1752,13 @@ document.addEventListener('click', (e) => {
         if (order.changeRequest?.status === 'pending' || order.cancelRequest?.status === 'pending') return;
         const nextStatus = String(btn.dataset.nextStatus || '').trim();
         if (!nextStatus) return;
+        if (nextStatus === 'in_transit') {
+            openTransportStartModal(orderId);
+            return;
+        }
         order.status = nextStatus;
         const nowIso = new Date().toISOString();
         if (nextStatus === 'accepted') order.acceptedAt = nowIso;
-        if (nextStatus === 'in_transit') order.transportStartedAt = nowIso;
         if (nextStatus === 'arrived') order.arrivedAt = nowIso;
         if (nextStatus === 'collecting') order.collectingAt = nowIso;
         if (nextStatus === 'completed') order.completedAt = nowIso;

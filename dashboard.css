@@ -772,9 +772,9 @@
 
 .order-datetime-field {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto 1.9rem;
-    grid-template-rows: 1fr 1fr;
-    min-height: 2.55rem;
+    grid-template-columns: minmax(0, 1fr) auto 2rem;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    min-height: 2.6rem;
     background: var(--bg-card);
     border-radius: 12px;
     border: 1px solid var(--border-color);
@@ -787,7 +787,7 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
-.order-datetime-row input {
+.order-datetime-field input[type="number"] {
     grid-column: 1;
     grid-row: 1 / span 2;
     width: 100%;
@@ -802,11 +802,11 @@
     line-height: 1;
 }
 
-.order-datetime-row input#orderYear {
+.order-datetime-field input[type="number"]#orderYear {
     font-size: 0.94rem;
 }
 
-.order-datetime-row input:focus {
+.order-datetime-field input[type="number"]:focus {
     outline: none;
 }
 
@@ -839,9 +839,11 @@
 }
 
 .dt-toggle {
-    width: 1.9rem;
-    height: 1.28rem;
+    width: 100%;
+    height: 100%;
     box-sizing: border-box;
+    margin: 0;
+    padding: 0;
     border: none;
     border-radius: 0;
     background: transparent;
@@ -860,13 +862,13 @@
     grid-column: 3;
     grid-row: 2;
     border-left: 1px solid var(--border-color);
-    border-top: 1px solid var(--border-color);
 }
 
 .dt-toggle--plus {
     grid-column: 3;
     grid-row: 1;
     border-left: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .dt-toggle:hover,
@@ -916,17 +918,17 @@
 
     .order-datetime-field {
         width: 100%;
-        min-height: 2.45rem;
+        min-height: 2.5rem;
     }
 
-    .order-datetime-field:nth-of-type(1),
-    .order-datetime-field:nth-of-type(2),
-    .order-datetime-field:nth-of-type(3) {
+    .order-datetime-field.field-year,
+    .order-datetime-field.field-month,
+    .order-datetime-field.field-day {
         display: none;
     }
 
-    .order-datetime-field:nth-of-type(4) { grid-column: 1 / span 4; }
-    .order-datetime-field:nth-of-type(5) { grid-column: 5 / span 4; }
+    .order-datetime-field.field-hour { grid-column: 1 / span 4; }
+    .order-datetime-field.field-minute { grid-column: 5 / span 4; }
 
     .order-datetime-sep {
         display: none;
@@ -944,8 +946,7 @@
     }
 
     .dt-toggle {
-        width: 1.82rem;
-        height: 1.22rem;
+        font-size: 0.9rem;
     }
 }
 

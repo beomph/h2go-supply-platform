@@ -357,7 +357,6 @@ function getAllOrders() {
     const supplierName = auth?.name || currentUser.name;
     const scoped = getSupplierOrders(supplierName);
     return scoped
-        .filter(o => o.status !== 'cancelled')
         .sort((a, b) => {
             const da = `${a.year}-${String(a.month).padStart(2, '0')}-${String(a.day).padStart(2, '0')} ${formatTimeText(a.time)}`;
             const db = `${b.year}-${String(b.month).padStart(2, '0')}-${String(b.day).padStart(2, '0')} ${formatTimeText(b.time)}`;
@@ -549,7 +548,7 @@ const ORDER_STATUSES = [
     { value: 'collecting', label: '회수 중' },
     { value: 'completed', label: '완료' },
     { value: 'cancel_requested', label: '취소 요청' },
-    { value: 'cancelled', label: '취소됨' }
+    { value: 'cancelled', label: '취소' }
 ];
 
 function getStatusLabel(status) {
@@ -891,8 +890,9 @@ function renderConsumerView() {
         const transportInfo = order.transportInfo;
         const transportInfoText = transportInfo ? `T/T: ${(transportInfo.trailerNumbers || []).join(', ')} · 기사: ${transportInfo.driverName || '-'}` : '';
 
+        const isCancelled = order.status === 'cancelled';
         return `
-        <div class="order-item order-item-clickable ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
+        <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
             <div class="order-item-head">
                 <div class="order-id">${order.id}</div>
                 ${hasDecisionRequest
@@ -952,8 +952,9 @@ function renderOrdersTable(tbodyId, showActions) {
 
         const supplierStatus = getSupplierStatusLabel(o);
 
+        const isCancelled = o.status === 'cancelled';
         return `
-        <tr class="order-row ${(hasPendingChange || hasPendingCancel) ? 'row-change-request' : ''}" data-order-id="${o.id}" title="클릭하여 지도 보기">
+        <tr class="order-row ${isCancelled ? 'row-cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'row-change-request' : ''}" data-order-id="${o.id}" title="클릭하여 상세 보기">
             <td>${o.id}</td>
             <td>${o.consumerName}</td>
             <td>${formatOrderDate(o)}</td>
@@ -992,14 +993,15 @@ function renderOrdersTable(tbodyId, showActions) {
 
 function renderSupplierView() {
     const allOrders = getAllOrders();
-    const totalTrailers = allOrders.reduce((s, o) => s + (o.tubeTrailers || 0), 0);
+    const activeOrders = allOrders.filter(o => o.status !== 'cancelled');
+    const totalTrailers = activeOrders.reduce((s, o) => s + (o.tubeTrailers || 0), 0);
 
-    document.getElementById('totalOrders').textContent = allOrders.length;
+    document.getElementById('totalOrders').textContent = activeOrders.length;
     const totalEl = document.getElementById('totalTrailers');
     if (totalEl) totalEl.textContent = totalTrailers + '대';
 
-    if (allOrders.length > 0) {
-        const dates = allOrders.map(o => formatOrderDate(o));
+    if (activeOrders.length > 0) {
+        const dates = activeOrders.map(o => formatOrderDate(o));
         const uniqueDates = [...new Set(dates)];
         document.getElementById('deliveryRange').textContent = uniqueDates.length === 1 ? uniqueDates[0] : `${uniqueDates[0]} ~ ${uniqueDates[uniqueDates.length - 1]}`;
     } else {
@@ -1008,13 +1010,13 @@ function renderSupplierView() {
 
     renderOrdersTable('supplierOrdersTable', true);
 
-    const totalQty = allOrders.reduce((s, o) => s + getOrderQuantity(o), 0);
+    const totalQty = activeOrders.reduce((s, o) => s + getOrderQuantity(o), 0);
     const planEl = document.getElementById('productionPlanSummary');
     if (planEl) {
         planEl.innerHTML = `
             <div class="plan-item"><span>총 트레일러 필요</span><strong>${totalTrailers}대</strong></div>
             <div class="plan-item"><span>예상 수소량 (400kg/대)</span><strong>${totalQty.toLocaleString()} kg</strong></div>
-            <div class="plan-item"><span>주문 수요처 수</span><strong>${new Set(allOrders.map(o => o.address)).size}곳</strong></div>
+            <div class="plan-item"><span>주문 수요처 수</span><strong>${new Set(activeOrders.map(o => o.address)).size}곳</strong></div>
         `;
     }
 
@@ -1195,7 +1197,11 @@ function buildOrderChangeHistory(order) {
         if (cancelReq) {
             const who = getActorName(order, cancelReq.requestedBy);
             add(`${who}가 ${formatIsoDateTime(cancelReq.requestedAt)}에 취소 요청`, cancelReq.requestedAt);
-            if (cancelReq.status === 'rejected' && order.lastCancel) {
+            if (cancelReq.status === 'approved' && order.lastCancel) {
+                const lc = order.lastCancel;
+                const decider = getActorName(order, lc.decidedBy);
+                add(`${decider}가 ${formatIsoDateTime(lc.decidedAt)}에 승인 (취소 완료)`, lc.decidedAt);
+            } else if (cancelReq.status === 'rejected' && order.lastCancel) {
                 const lc = order.lastCancel;
                 const decider = getActorName(order, lc.decidedBy);
                 add(`${decider}가 ${formatIsoDateTime(lc.decidedAt)}에 거절`, lc.decidedAt);
@@ -1230,6 +1236,7 @@ function buildOrderStatusHistory(order) {
     add('도착', order.arrivedAt);
     add('회수 시작', order.collectingAt);
     add('완료', order.completedAt);
+    add('취소', order.cancelledAt);
 
     return items.sort((a, b) => a.at - b.at);
 }
@@ -1414,10 +1421,8 @@ function initFormDefaults() {
 }
 
 function initOrdersDateFilterDefault() {
-    const filterEl = document.getElementById('ordersDateFilter');
-    if (!filterEl || filterEl.value) return;
-    const today = getTodayParts();
-    filterEl.value = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
+    // 기본값 미설정: 날짜 필터가 비어 있으면 전체 주문 표시.
+    // (변경 승인 시 납품일이 바뀌어도 주문이 목록에서 사라지지 않도록 함)
 }
 
 function syncDateInputFromNumericFields() {
@@ -1722,7 +1727,12 @@ document.addEventListener('click', (e) => {
         const decidedBy = requestedBy === 'consumer' ? 'supplier' : 'consumer';
 
         if (approved) {
-            orders = orders.filter(x => x && x.id !== o.id);
+            o.status = 'cancelled';
+            o.cancelledAt = decidedAt;
+            o.cancelRequest.status = 'approved';
+            o.cancelRequest.decidedAt = decidedAt;
+            o.cancelRequest.decidedBy = decidedBy;
+            o.lastCancel = { result: 'approved', decidedAt, decidedBy };
         } else {
             o.cancelRequest.status = 'rejected';
             o.cancelRequest.decidedAt = decidedAt;
@@ -1775,7 +1785,10 @@ document.addEventListener('click', (e) => {
         const canImmediateCancel = canImmediateCancelOrder(order, actor) && order.changeRequest?.status !== 'pending';
         if (canImmediateCancel) {
             if (!confirm('주문 등록 후 5분 이내 건은 공급자 동의 없이 즉시 취소됩니다. 지금 취소할까요?')) return;
-            orders = orders.filter(x => x && x.id !== order.id);
+            order.status = 'cancelled';
+            order.cancelledAt = new Date().toISOString();
+            order.cancelRequest = { requestedBy: 'consumer', status: 'approved', requestedAt: order.cancelledAt, decidedAt: order.cancelledAt, decidedBy: 'consumer' };
+            order.lastCancel = { result: 'approved', decidedAt: order.cancelledAt, decidedBy: 'consumer' };
             persistAndRerender();
             alert('주문이 즉시 취소되었습니다.');
             return;
@@ -1786,10 +1799,10 @@ document.addEventListener('click', (e) => {
         alert('취소 요청을 보냈습니다. 상대방 승인을 기다립니다.');
     } else if (action === 'approve-cancel') {
         if (!order || !order.cancelRequest || order.cancelRequest.status !== 'pending') return;
-        if (!confirm('취소(삭제) 요청을 승인하시겠습니까? 승인하면 주문이 삭제됩니다.')) return;
+        if (!confirm('취소 요청을 승인하시겠습니까? 승인하면 주문이 취소 상태로 표시됩니다.')) return;
         decideCancel(order, true);
         persistAndRerender();
-        alert('취소 요청을 승인했습니다. 주문이 삭제되었습니다.');
+        alert('취소 요청을 승인했습니다. 주문이 취소 상태로 표시됩니다.');
     } else if (action === 'reject-cancel') {
         if (!order || !order.cancelRequest || order.cancelRequest.status !== 'pending') return;
         const reason = window.prompt("취소 요청 거절 사유를 입력해 주세요.", "");
@@ -1829,11 +1842,6 @@ document.getElementById('orderDateMobile')?.addEventListener('change', () => {
 
 // 주문 현황 - 일별 필터 이벤트(조회 버튼 클릭 시 적용)
 document.getElementById('ordersDateApplyBtn')?.addEventListener('click', () => {
-    const el = document.getElementById('ordersDateFilter');
-    if (!el?.value) {
-        alert('조회일을 선택해 주세요.');
-        return;
-    }
     renderConsumerView();
 });
 

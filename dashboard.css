@@ -1679,6 +1679,22 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     color: var(--h2-blue-light);
 }
 
+.order-item--cancelled {
+    opacity: 0.55;
+}
+
+.order-item--cancelled:hover {
+    opacity: 0.75;
+}
+
+.orders-table tr.row-cancelled {
+    opacity: 0.55;
+}
+
+.orders-table tr.row-cancelled:hover {
+    opacity: 0.75;
+}
+
 .order-change-note {
     font-size: 0.85rem;
     color: #f59e0b;

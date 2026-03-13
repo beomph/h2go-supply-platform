@@ -436,10 +436,10 @@
     display: contents;
 }
 
-.my-orders-card { grid-area: orders; }
-.order-form-card { grid-area: form; }
-.inventory-card { grid-area: inventory; }
-.prediction-card { grid-area: prediction; }
+.my-orders-card { grid-area: orders; min-width: 0; }
+.order-form-card { grid-area: form; min-width: 0; }
+.inventory-card { grid-area: inventory; min-width: 0; }
+.prediction-card { grid-area: prediction; min-width: 0; }
 
 @media (max-width: 1200px) {
     .consumer-content {
@@ -905,6 +905,54 @@
     font-weight: 500;
 }
 
+/* 2열 레이아웃 활성 구간(≥901px)에서 날짜 스테퍼가 form 칼럼을 밀어내는 문제 방지.
+   날짜 선택기(date picker) + 시/분 입력만 표시해 최소 너비를 줄인다.
+   769-900px(1열 구간)에서는 base 스타일(전체 스테퍼)이 그대로 유지된다. */
+@media (min-width: 901px) {
+    .order-datetime-row {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        width: 100%;
+        gap: 0.42rem;
+        padding: 0.52rem;
+    }
+
+    .order-date-mobile-wrap {
+        display: block;
+        grid-column: 1 / -1;
+    }
+
+    .order-datetime-row .order-date-mobile {
+        width: 100%;
+        min-height: 2.45rem;
+        padding: 0.5rem 0.7rem;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: var(--bg-card);
+        color: var(--text-white);
+        font-family: inherit;
+        font-size: 0.92rem;
+    }
+
+    .order-datetime-row .order-date-mobile:focus {
+        outline: none;
+        border-color: var(--h2-blue);
+    }
+
+    .order-datetime-field.field-year,
+    .order-datetime-field.field-month,
+    .order-datetime-field.field-day {
+        display: none;
+    }
+
+    .order-datetime-field.field-hour { grid-column: 1 / span 4; }
+    .order-datetime-field.field-minute { grid-column: 5 / span 4; }
+
+    .order-datetime-sep {
+        display: none;
+    }
+}
+
 @media (max-width: 768px) {
     .order-datetime-row {
         display: grid;
@@ -1061,10 +1109,16 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    row-gap: 0.4rem;
     margin-bottom: 1rem;
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--border-color);
     gap: 1rem;
+}
+
+.my-orders-header h3 {
+    flex-shrink: 0;
 }
 
 .my-orders-header h3 {

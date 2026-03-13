@@ -1186,24 +1186,34 @@
     line-height: 1.24;
 }
 
-.order-decision-pack {
+.order-item .order-status.order-status--action {
     display: inline-flex;
-    align-items: center;
-    gap: 0.28rem;
-    padding: 0.2rem 0.28rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.18rem;
+    padding: 0.18rem 0.24rem;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     background: var(--surface-soft);
+    min-width: 112px;
 }
 
-.order-actions--decision {
-    overflow: visible;
-    gap: 0.24rem;
+.order-status-action-label {
+    font-size: 0.7rem;
+    line-height: 1.1;
+    text-align: center;
 }
 
-.order-actions--decision .btn-small {
-    padding: 0.22rem 0.42rem;
-    font-size: 0.72rem;
+.order-status-action-buttons {
+    display: flex;
+    gap: 0.2rem;
+    justify-content: center;
+}
+
+.order-status-action-buttons .btn-small {
+    padding: 0.18rem 0.34rem;
+    font-size: 0.68rem;
+    white-space: nowrap;
 }
 
 @media (max-width: 768px) {
@@ -1234,14 +1244,18 @@
         font-size: 0.74rem;
     }
 
-    .order-decision-pack {
-        gap: 0.22rem;
-        padding: 0.18rem 0.24rem;
+    .order-item .order-status.order-status--action {
+        min-width: 102px;
+        padding: 0.16rem 0.2rem;
     }
 
-    .order-actions--decision .btn-small {
-        padding: 0.2rem 0.36rem;
-        font-size: 0.7rem;
+    .order-status-action-label {
+        font-size: 0.66rem;
+    }
+
+    .order-status-action-buttons .btn-small {
+        padding: 0.16rem 0.3rem;
+        font-size: 0.64rem;
     }
 }
 

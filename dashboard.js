@@ -884,19 +884,25 @@ function renderConsumerView() {
             ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''}
         `.trim();
         const decisionButtons = `
-            ${canApproveChange ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${order.id}">변경 확정</button>
-            <button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${order.id}">변경 거절</button>` : ''}
-            ${canApproveCancel ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${order.id}">취소 승인</button>
-            <button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${order.id}">취소 거절</button>` : ''}
+            ${canApproveChange ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${order.id}">승인</button>
+            <button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${order.id}">거절</button>` : ''}
+            ${canApproveCancel ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${order.id}">승인</button>
+            <button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${order.id}">거절</button>` : ''}
         `.trim();
-        const hasFoot = Boolean(changeBadge || cancelBadge || actionButtons || decisionButtons);
+        const hasFoot = Boolean(changeBadge || cancelBadge || actionButtons);
 
         const trailerDetailText = Number(order.tubeTrailers || 0) > 1 ? ` · 트레일러 ${order.tubeTrailers}대` : '';
         return `
         <div class="order-item ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}">
             <div class="order-item-head">
                 <div class="order-id">${order.id}</div>
-                ${hasDecisionRequest ? '' : `<span class="order-status ${status}">${getStatusLabel(order.status)}</span>`}
+                ${hasDecisionRequest
+                    ? `<div class="order-status ${status} order-status--action">
+                        <span class="order-status-action-label">${getStatusLabel(order.status)}</span>
+                        <div class="order-status-action-buttons">${decisionButtons}</div>
+                    </div>`
+                    : `<span class="order-status ${status}">${getStatusLabel(order.status)}</span>`
+                }
             </div>
             <div class="order-detail">${formatOrderDateTime(order)}${trailerDetailText}</div>
             <div class="order-detail">공급자: ${order.supplierName || '-'}</div>
@@ -908,13 +914,7 @@ function renderConsumerView() {
                     ${changeBadge ? `<div class="change-summary">${changeBadge}</div>` : ''}
                     ${cancelBadge ? `<div class="change-summary">${cancelBadge}</div>` : ''}
                 </div>
-                ${hasDecisionRequest
-                    ? `<div class="order-decision-pack">
-                        <span class="order-status ${status}">${getStatusLabel(order.status)}</span>
-                        <div class="order-actions order-actions--decision">${decisionButtons}</div>
-                    </div>`
-                    : (actionButtons ? `<div class="order-actions order-actions--inline">${actionButtons}</div>` : '')
-                }
+                ${actionButtons ? `<div class="order-actions order-actions--inline">${actionButtons}</div>` : ''}
             </div>
             ` : ''}
         </div>
@@ -938,7 +938,7 @@ function renderOrdersTable(tbodyId, showActions) {
         const canApproveCancel = showActions && hasPendingCancel && o.cancelRequest.requestedBy === 'consumer';
 
         const canProposeChange = showActions && !hasPendingChange && !hasPendingCancel && ['requested', 'accepted', 'change_accepted'].includes(status);
-        const canRequestCancel = showActions && !hasPendingCancel && !['completed', 'cancelled'].includes(status);
+        const canRequestCancel = showActions && !hasPendingChange && !hasPendingCancel && !['completed', 'cancelled'].includes(status);
         const advanceAction = showActions && !hasPendingChange && !hasPendingCancel ? getSupplierAdvanceAction(status) : null;
 
         const travelTime = getTravelTimeFromAddress(o.address);
@@ -1179,8 +1179,8 @@ function openApprovalModal(orderId) {
         <p>${cr.requestedBy === 'supplier' ? '공급자' : '수요자'}가 아래와 같이 변경을 요청했습니다.</p>
         <p class="change-summary">요약: ${summary}</p>
         <div class="change-diff">
-            <p><strong>현재:</strong> ${order.year}/${order.month}/${order.day} ${order.time}, 트레일러 ${order.tubeTrailers}대</p>
-            <p><strong>변경 후:</strong> ${cr.proposed.year}/${cr.proposed.month}/${cr.proposed.day} ${cr.proposed.time}, 트레일러 ${cr.proposed.tubeTrailers}대</p>
+            <p><strong>현재:</strong> ${order.year}/${order.month}/${order.day} ${formatTimeText(order.time)}, 트레일러 ${order.tubeTrailers}대</p>
+            <p><strong>변경 후:</strong> ${cr.proposed.year}/${cr.proposed.month}/${cr.proposed.day} ${formatTimeText(cr.proposed.time)}, 트레일러 ${cr.proposed.tubeTrailers}대</p>
             <p><strong>주소:</strong> ${cr.proposed.address || order.address}</p>
         </div>
     `;
@@ -1459,13 +1459,13 @@ document.getElementById('changeRequestForm').addEventListener('submit', (e) => {
 document.getElementById('approveChangeBtn').addEventListener('click', () => {
     if (!pendingApprovalOrderId) return;
     applyChange(pendingApprovalOrderId, true);
-    alert('변경이 확정되었습니다. 주문 상태가 "주문 확정"으로 변경됩니다.');
+    alert('변경 요청이 승인되었습니다. 주문 상태가 "변경 접수"로 변경됩니다.');
 });
 
 document.getElementById('rejectChangeBtn').addEventListener('click', () => {
     if (!pendingApprovalOrderId) return;
     applyChange(pendingApprovalOrderId, false);
-    alert('변경 요청이 거절되었습니다. 주문 상태가 원래 상태로 되돌아갑니다.');
+    alert('변경 요청이 거절되었습니다. 주문 상태가 이전 단계로 유지됩니다.');
 });
 
 document.getElementById('changeRequestModal').addEventListener('click', (e) => {
@@ -1572,6 +1572,10 @@ document.addEventListener('click', (e) => {
         if (!order) return;
         const actor = getActorForOrder(order);
         if (order.cancelRequest?.status === 'pending') return;
+        if (order.changeRequest?.status === 'pending') {
+            alert('변경 요청 검토가 진행 중입니다. 먼저 승인/거절 후 취소를 요청해 주세요.');
+            return;
+        }
         const canImmediateCancel = canImmediateCancelOrder(order, actor) && order.changeRequest?.status !== 'pending';
         if (canImmediateCancel) {
             if (!confirm('주문 등록 후 5분 이내 건은 공급자 동의 없이 즉시 취소됩니다. 지금 취소할까요?')) return;

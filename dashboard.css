@@ -272,26 +272,55 @@
         position: static;
         background: transparent;
         border-bottom: none;
-        padding: 0;
-        /* 상단바에서 한 줄에 우겨넣지 않고, 필요한 만큼 줄바꿈 */
+        padding: 0 0 0.2rem;
+        /* 모바일에서는 한 줄 유지 + 필요시 가로 스크롤 */
         width: 100%;
-        flex-wrap: wrap;
-        gap: 0.6rem;
-        justify-content: flex-end;
+        flex-wrap: nowrap;
+        gap: 0.45rem;
+        justify-content: flex-start;
+        align-items: center;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .dashboard-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .dashboard-nav > li {
+        flex: 0 0 auto;
     }
 
     .role-switcher {
-        /* 모드 셀렉트는 가독성을 위해 한 줄 전체를 차지 */
-        flex: 1 1 100%;
-        order: 3;
+        flex: 1 0 130px;
+        min-width: 130px;
+        order: 0;
     }
 
     .role-select {
         width: 100%;
+        padding: 0.5rem 0.7rem;
+        font-size: 0.9rem;
+    }
+
+    .theme-toggle-switch {
+        padding: 0.25rem 0.55rem;
+        gap: 0.4rem;
+        font-size: 0.75rem;
+    }
+
+    .theme-toggle-label {
+        min-width: 34px;
+        font-size: 0.75rem;
     }
 
     #logoutBtn {
-        padding: 0.55rem 0.75rem;
+        width: auto;
+        padding: 0.48rem 0.7rem;
+        font-size: 0.82rem;
+        line-height: 1.2;
+        white-space: nowrap;
     }
 
     .dashboard-main {

@@ -1254,6 +1254,12 @@ document.querySelector('#changeRequestModal .modal-close').addEventListener('cli
 document.querySelector('#changeApprovalModal .modal-close').addEventListener('click', () => {
     document.getElementById('changeApprovalModal').classList.remove('active');
 });
+document.querySelector('#supplierSelectModal .modal-close')?.addEventListener('click', () => {
+    document.getElementById('supplierSelectModal')?.classList.remove('active');
+});
+document.getElementById('supplierSelectModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
+});
 
 document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');

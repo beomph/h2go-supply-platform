@@ -1131,12 +1131,25 @@
     line-height: 1.32;
 }
 
+.order-item .order-note {
+    color: var(--text-muted);
+    font-size: 0.83rem;
+}
+
 .order-item .order-status {
     display: inline-block;
     padding: 0.2rem 0.45rem;
     border-radius: 4px;
     font-size: 0.74rem;
-    margin-top: 0.25rem;
+    margin-top: 0;
+    white-space: nowrap;
+}
+
+.order-status-actions {
+    margin-top: 0.32rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
 }
 
 @media (max-width: 768px) {
@@ -1150,7 +1163,7 @@
     }
 
     .order-actions {
-        margin-top: 0.34rem;
+        margin-top: 0;
         gap: 0.34rem;
     }
 
@@ -1160,11 +1173,15 @@
     }
 }
 
-.order-status.received { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
-.order-status.reviewing { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
-.order-status.confirmed { background: rgba(59, 130, 246, 0.2); color: var(--h2-blue-light); }
-.order-status.on_hold { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.order-status.requested { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
+.order-status.accepted { background: rgba(34, 197, 94, 0.18); color: #86efac; }
 .order-status.change_requested { background: rgba(245, 158, 11, 0.25); color: #f59e0b; }
+.order-status.change_accepted { background: rgba(250, 204, 21, 0.2); color: #fde68a; }
+.order-status.in_transit { background: rgba(59, 130, 246, 0.2); color: var(--h2-blue-light); }
+.order-status.arrived { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+.order-status.collecting { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; }
+.order-status.completed { background: rgba(107, 114, 128, 0.24); color: #d1d5db; }
+.order-status.cancel_requested { background: rgba(239, 68, 68, 0.22); color: #fca5a5; }
 
 /* 생산자 화면 */
 .summary-cards {
@@ -1496,9 +1513,21 @@
 
 .order-actions {
     display: flex;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.order-actions::-webkit-scrollbar {
+    display: none;
+}
+
+.order-actions--inline {
+    flex: 1;
+    justify-content: flex-end;
 }
 
 .btn-small, .btn-tiny {

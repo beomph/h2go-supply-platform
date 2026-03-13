@@ -356,12 +356,25 @@ function getSupplierStatusLabel(order) {
     const status = normalizeStatus(order?.status);
     if (order?.cancelRequest?.status === 'pending' || status === 'cancel_requested') return '취소 요청';
     if (order?.changeRequest?.status === 'pending' || status === 'change_requested') return '변경 요청';
-    if (status === 'confirmed') return '주문 확정';
-    if (status === 'reviewing') return '검토 중';
-    if (status === 'on_hold') return '보류';
-    if (status === 'received') return '접수(최초)';
-    if (status === 'cancelled') return '취소됨';
     return getStatusLabel(status);
+}
+
+function getSupplierAdvanceAction(status) {
+    switch (status) {
+        case 'requested':
+            return { label: '접수', next: 'accepted' };
+        case 'accepted':
+        case 'change_accepted':
+            return { label: '운송 시작', next: 'in_transit' };
+        case 'in_transit':
+            return { label: '도착 처리', next: 'arrived' };
+        case 'arrived':
+            return { label: '회수 시작', next: 'collecting' };
+        case 'collecting':
+            return { label: '회수 완료', next: 'completed' };
+        default:
+            return null;
+    }
 }
 
 function getActorForOrder(order) {
@@ -384,7 +397,7 @@ function getOrderQuantity(order) {
 
 // ========== AI 운송계획 ==========
 function calculateTransportPlan() {
-    const activeStatuses = ['received', 'reviewing', 'confirmed'];
+    const activeStatuses = ['requested', 'accepted', 'change_accepted', 'in_transit', 'arrived', 'collecting'];
     const activeOrders = getAllOrders().filter(o => activeStatuses.includes(normalizeStatus(o.status)));
     if (activeOrders.length === 0) return null;
 
@@ -457,13 +470,16 @@ function showView(viewId) {
     document.getElementById(viewId + 'View').classList.add('active');
 }
 
-// 주문 상태: 접수(최초), 검토 중, 주문 확정, 보류, 변경 요청, 취소 요청(삭제 요청), 취소됨
+// 주문 상태: 요청/접수/변경/운송/도착/회수/완료
 const ORDER_STATUSES = [
-    { value: 'received', label: '접수(최초)' },
-    { value: 'reviewing', label: '검토 중' },
-    { value: 'confirmed', label: '주문 확정' },
-    { value: 'on_hold', label: '보류' },
+    { value: 'requested', label: '주문 요청' },
+    { value: 'accepted', label: '접수' },
     { value: 'change_requested', label: '변경 요청' },
+    { value: 'change_accepted', label: '변경 접수' },
+    { value: 'in_transit', label: '운송 중' },
+    { value: 'arrived', label: '도착' },
+    { value: 'collecting', label: '회수 중' },
+    { value: 'completed', label: '완료' },
     { value: 'cancel_requested', label: '취소 요청' },
     { value: 'cancelled', label: '취소됨' }
 ];
@@ -472,16 +488,26 @@ function getStatusLabel(status) {
     const s = ORDER_STATUSES.find(o => o.value === status);
     if (s) return s.label;
     // 레거시 매핑
-    const legacy = { pending: '검토 중', confirmed: '주문 확정', change_requested_consumer: '변경 요청', change_requested_supplier: '변경 요청' };
-    return legacy[status] || status;
+    const legacy = {
+        pending: '접수',
+        received: '주문 요청',
+        reviewing: '접수',
+        confirmed: '접수',
+        on_hold: '접수',
+        change_requested_consumer: '변경 요청',
+        change_requested_supplier: '변경 요청',
+    };
+    return legacy[status] || getStatusLabel(normalizeStatus(status));
 }
 
 function normalizeStatus(status) {
-    if (status === 'pending') return 'reviewing';
+    if (status === 'pending') return 'accepted';
+    if (status === 'received') return 'requested';
+    if (status === 'reviewing' || status === 'confirmed' || status === 'on_hold') return 'accepted';
     if (status === 'change_requested_consumer' || status === 'change_requested_supplier') return 'change_requested';
     if (status === 'cancel_requested_consumer' || status === 'cancel_requested_supplier') return 'cancel_requested';
     if (ORDER_STATUSES.some(o => o.value === status)) return status;
-    return 'received';
+    return 'requested';
 }
 
 // ========== 재고 현황 & 발주 예측 ==========
@@ -772,8 +798,8 @@ function renderConsumerView() {
         const hasRejectedCancel = cancelReq && cancelReq.status === 'rejected';
 
         const status = normalizeStatus(order.status);
-        const canRequestChange = !hasPendingChange && !hasPendingCancel && ['reviewing', 'confirmed', 'received'].includes(status);
-        const canRequestCancel = !hasPendingCancel && !hasPendingChange && !hasRejectedCancel && ['reviewing', 'confirmed', 'received', 'cancel_requested', 'change_requested'].includes(status);
+        const canRequestChange = !hasPendingChange && !hasPendingCancel && ['requested', 'accepted', 'change_accepted', 'in_transit', 'arrived'].includes(status);
+        const canRequestCancel = !hasPendingCancel && !hasPendingChange && !hasRejectedCancel && !['completed', 'cancelled', 'collecting'].includes(status);
         const immediateCancelable = canRequestCancel && canImmediateCancelOrder(order, 'consumer');
 
         // 상대방(공급자)이 요청한 변경/취소는 수요모드에서 확정/거절 가능
@@ -782,6 +808,7 @@ function renderConsumerView() {
 
         const changeBadge = getChangeBadgeText(order);
         const cancelBadge = getCancelBadgeText(order);
+        const noteText = String(order.note || '').trim();
 
         return `
         <div class="order-item ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}">
@@ -789,16 +816,19 @@ function renderConsumerView() {
             <div class="order-detail">${formatOrderDateTime(order)} · 트레일러 ${order.tubeTrailers}대</div>
             <div class="order-detail">공급자: ${order.supplierName || '-'}</div>
             <div class="order-detail">${order.address}</div>
-            <span class="order-status ${status}">${getStatusLabel(order.status)}</span>
+            ${noteText ? `<div class="order-detail order-note">메모: ${noteText}</div>` : ''}
             ${changeBadge ? `<div class="change-summary">${changeBadge}</div>` : ''}
             ${cancelBadge ? `<div class="change-summary">${cancelBadge}</div>` : ''}
-            <div class="order-actions">
-                ${canRequestChange ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
-                ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''}
-                ${canApproveChange ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${order.id}">변경 확정</button>
-                <button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${order.id}">변경 거절</button>` : ''}
-                ${canApproveCancel ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${order.id}">취소 승인</button>
-                <button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${order.id}">취소 거절</button>` : ''}
+            <div class="order-status-actions">
+                <span class="order-status ${status}">${getStatusLabel(order.status)}</span>
+                <div class="order-actions order-actions--inline">
+                    ${canRequestChange ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
+                    ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''}
+                    ${canApproveChange ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${order.id}">변경 확정</button>
+                    <button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${order.id}">변경 거절</button>` : ''}
+                    ${canApproveCancel ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${order.id}">취소 승인</button>
+                    <button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${order.id}">취소 거절</button>` : ''}
+                </div>
             </div>
         </div>
     `}).join('');
@@ -820,13 +850,14 @@ function renderOrdersTable(tbodyId, showActions) {
         const canApproveChange = showActions && hasPendingChange && o.changeRequest.requestedBy === 'consumer';
         const canApproveCancel = showActions && hasPendingCancel && o.cancelRequest.requestedBy === 'consumer';
 
-        const canConfirm = showActions && !hasPendingChange && !hasPendingCancel && (status === 'received' || status === 'reviewing' || status === 'on_hold');
-        const canProposeChange = showActions && !hasPendingChange && !hasPendingCancel && (status === 'received' || status === 'reviewing' || status === 'confirmed' || status === 'on_hold');
-        const canRequestCancel = showActions && !hasPendingCancel && (status !== 'cancelled');
+        const canProposeChange = showActions && !hasPendingChange && !hasPendingCancel && ['requested', 'accepted', 'change_accepted'].includes(status);
+        const canRequestCancel = showActions && !hasPendingCancel && !['completed', 'cancelled'].includes(status);
+        const advanceAction = showActions && !hasPendingChange && !hasPendingCancel ? getSupplierAdvanceAction(status) : null;
 
         const travelTime = getTravelTimeFromAddress(o.address);
         const changeBadge = getChangeBadgeText(o);
         const cancelBadge = getCancelBadgeText(o);
+        const noteText = String(o.note || '').trim();
 
         const supplierStatus = getSupplierStatusLabel(o);
 
@@ -841,11 +872,12 @@ function renderOrdersTable(tbodyId, showActions) {
             <td><span class="travel-time">${travelTime}분</span></td>
             <td>
                 <span class="order-status ${status}">${supplierStatus}</span>
+                ${noteText ? `<div class="change-summary">메모: ${noteText}</div>` : ''}
                 ${changeBadge ? `<div class="change-summary">${changeBadge}</div>` : ''}
                 ${cancelBadge ? `<div class="change-summary">${cancelBadge}</div>` : ''}
             </td>
             <td class="table-actions">
-                ${canConfirm ? `<button type="button" class="btn btn-tiny btn-primary" data-action="confirm-order" data-id="${o.id}">주문 확정</button>` : ''}
+                ${advanceAction ? `<button type="button" class="btn btn-tiny btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : ''}
                 ${canProposeChange ? `<button type="button" class="btn btn-tiny" data-action="request-change" data-id="${o.id}">변경</button>` : ''}
                 ${canRequestCancel ? `<button type="button" class="btn btn-tiny btn-secondary" data-action="request-cancel" data-id="${o.id}">취소</button>` : ''}
                 ${canApproveChange ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-change" data-id="${o.id}">변경 확정</button>
@@ -1089,13 +1121,13 @@ function applyChange(orderId, approved) {
         order.lastChange = { result: 'approved', summary, decidedAt, decidedBy, requestedBy };
 
         order.changeRequest = null;
-        order.status = 'confirmed';
+        order.status = 'change_accepted';
     } else {
         order.lastChange = { result: 'rejected', summary, decidedAt, decidedBy, requestedBy };
         order.changeRequest.status = 'rejected';
         order.changeRequest.decidedAt = decidedAt;
         order.changeRequest.decidedBy = decidedBy;
-        order.status = order.changeRequest.originalStatus || 'reviewing';
+        order.status = order.changeRequest.originalStatus || 'accepted';
     }
 
     localStorage.setItem('h2go_orders', JSON.stringify(orders));
@@ -1277,7 +1309,7 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
         tubeTrailers: 1,
         address: addressValue,
         note: document.getElementById('orderNote').value,
-        status: 'received',
+        status: 'requested',
         createdAt: new Date().toISOString()
     };
     orders.push(order);
@@ -1403,7 +1435,7 @@ document.addEventListener('click', (e) => {
             o.cancelRequest.decidedAt = decidedAt;
             o.cancelRequest.decidedBy = decidedBy;
             o.lastCancel = { result: 'rejected', decidedAt, decidedBy, reason: o.cancelRequest.reason || "" };
-            o.status = o.cancelRequest.originalStatus || 'reviewing';
+            o.status = o.cancelRequest.originalStatus || 'accepted';
         }
     }
 
@@ -1420,15 +1452,22 @@ document.addEventListener('click', (e) => {
             applyChange(orderId, false);
             alert('변경 요청이 거절되었습니다.');
         }
-    } else if (action === 'confirm-order') {
+    } else if (action === 'advance-status') {
         if (!order) return;
         const actor = getActorForOrder(order);
         if (actor !== 'supplier') return;
         if (order.changeRequest?.status === 'pending' || order.cancelRequest?.status === 'pending') return;
-        order.status = 'confirmed';
-        order.confirmedAt = new Date().toISOString();
+        const nextStatus = String(btn.dataset.nextStatus || '').trim();
+        if (!nextStatus) return;
+        order.status = nextStatus;
+        const nowIso = new Date().toISOString();
+        if (nextStatus === 'accepted') order.acceptedAt = nowIso;
+        if (nextStatus === 'in_transit') order.transportStartedAt = nowIso;
+        if (nextStatus === 'arrived') order.arrivedAt = nowIso;
+        if (nextStatus === 'collecting') order.collectingAt = nowIso;
+        if (nextStatus === 'completed') order.completedAt = nowIso;
         persistAndRerender();
-        alert('주문이 "주문 확정" 상태로 변경되었습니다.');
+        alert(`주문 상태가 "${getStatusLabel(nextStatus)}"로 변경되었습니다.`);
     } else if (action === 'request-cancel') {
         if (!order) return;
         const actor = getActorForOrder(order);

@@ -1143,6 +1143,8 @@
     font-size: 0.74rem;
     margin-top: 0;
     white-space: nowrap;
+    border: 1px solid transparent;
+    font-weight: 700;
 }
 
 .order-status-actions {
@@ -1173,15 +1175,26 @@
     }
 }
 
-.order-status.requested { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
-.order-status.accepted { background: rgba(34, 197, 94, 0.18); color: #86efac; }
-.order-status.change_requested { background: rgba(245, 158, 11, 0.25); color: #f59e0b; }
-.order-status.change_accepted { background: rgba(250, 204, 21, 0.2); color: #fde68a; }
-.order-status.in_transit { background: rgba(59, 130, 246, 0.2); color: var(--h2-blue-light); }
-.order-status.arrived { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
-.order-status.collecting { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; }
-.order-status.completed { background: rgba(107, 114, 128, 0.24); color: #d1d5db; }
-.order-status.cancel_requested { background: rgba(239, 68, 68, 0.22); color: #fca5a5; }
+.order-status.requested { background: rgba(148, 163, 184, 0.22); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.42); }
+.order-status.accepted { background: rgba(34, 197, 94, 0.24); color: #bbf7d0; border-color: rgba(34, 197, 94, 0.45); }
+.order-status.change_requested { background: rgba(245, 158, 11, 0.28); color: #fed7aa; border-color: rgba(245, 158, 11, 0.5); }
+.order-status.change_accepted { background: rgba(250, 204, 21, 0.23); color: #fef08a; border-color: rgba(250, 204, 21, 0.45); }
+.order-status.in_transit { background: rgba(59, 130, 246, 0.26); color: #bfdbfe; border-color: rgba(59, 130, 246, 0.5); }
+.order-status.arrived { background: rgba(16, 185, 129, 0.25); color: #a7f3d0; border-color: rgba(16, 185, 129, 0.5); }
+.order-status.collecting { background: rgba(168, 85, 247, 0.25); color: #e9d5ff; border-color: rgba(168, 85, 247, 0.5); }
+.order-status.completed { background: rgba(107, 114, 128, 0.3); color: #e5e7eb; border-color: rgba(156, 163, 175, 0.55); }
+.order-status.cancel_requested { background: rgba(239, 68, 68, 0.25); color: #fecaca; border-color: rgba(239, 68, 68, 0.55); }
+
+/* 라이트 모드에서 상태 배지 대비 강화 */
+body.theme-light .order-status.requested { background: #e2e8f0; color: #334155; border-color: #cbd5e1; }
+body.theme-light .order-status.accepted { background: #dcfce7; color: #166534; border-color: #86efac; }
+body.theme-light .order-status.change_requested { background: #fef3c7; color: #b45309; border-color: #fcd34d; }
+body.theme-light .order-status.change_accepted { background: #fef9c3; color: #92400e; border-color: #fde047; }
+body.theme-light .order-status.in_transit { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+body.theme-light .order-status.arrived { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+body.theme-light .order-status.collecting { background: #ede9fe; color: #6d28d9; border-color: #c4b5fd; }
+body.theme-light .order-status.completed { background: #e5e7eb; color: #374151; border-color: #d1d5db; }
+body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
 
 /* 생산자 화면 */
 .summary-cards {
@@ -1301,6 +1314,16 @@
     padding: 1rem;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
+}
+
+.orders-table th:nth-child(8),
+.orders-table td:nth-child(8) {
+    min-width: 160px;
+}
+
+.orders-table th:last-child,
+.orders-table td:last-child {
+    min-width: 220px;
 }
 
 .orders-table th {
@@ -1543,7 +1566,32 @@
 .table-actions {
     display: flex;
     gap: 0.35rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.table-actions .btn,
+.table-actions .btn-tiny {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .orders-table th:last-child,
+    .orders-table td:last-child {
+        min-width: 260px;
+    }
+
+    .table-actions {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .table-actions::-webkit-scrollbar {
+        display: none;
+    }
 }
 
 .orders-table tr.row-change-request td {

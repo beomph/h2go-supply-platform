@@ -415,37 +415,46 @@
     overflow-wrap: anywhere; /* 긴 토큰(주소/ID)이 있으면 적절히 줄바꿈 */
 }
 
-/* 수요자 화면 - 2컬럼(왼쪽:주문관리, 오른쪽:재고/예측) */
+/* 수요자 화면 레이아웃
+   - 상단: 주문현황(메인) + 새 주문(우측)
+   - 하단: 재고현황 + 발주예측 */
 .consumer-content {
     display: grid;
-    grid-template-columns: 1fr 1.15fr;
-    gap: 2rem;
+    grid-template-columns: 1.5fr 1fr;
+    grid-template-areas:
+        "orders form"
+        "inventory prediction";
+    gap: 1.5rem;
     align-items: start;
 }
 
 .consumer-left {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
+    display: contents;
 }
 
 .consumer-right {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    position: sticky;
-    top: 2rem;
+    display: contents;
 }
 
-@media (max-width: 1024px) {
-    .consumer-right {
-        position: static;
+.my-orders-card { grid-area: orders; }
+.order-form-card { grid-area: form; }
+.inventory-card { grid-area: inventory; }
+.prediction-card { grid-area: prediction; }
+
+@media (max-width: 1200px) {
+    .consumer-content {
+        grid-template-columns: 1.3fr 1fr;
     }
 }
 
 @media (max-width: 900px) {
     .consumer-content {
         grid-template-columns: 1fr;
+        grid-template-areas:
+            "orders"
+            "form"
+            "inventory"
+            "prediction";
     }
 }
 

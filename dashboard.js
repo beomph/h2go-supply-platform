@@ -1226,6 +1226,13 @@ function initFormDefaults() {
     }
 }
 
+function initOrdersDateFilterDefault() {
+    const filterEl = document.getElementById('ordersDateFilter');
+    if (!filterEl || filterEl.value) return;
+    const today = getTodayParts();
+    filterEl.value = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
+}
+
 function syncDateInputFromNumericFields() {
     const y = parseInt(document.getElementById('orderYear')?.value || '', 10);
     const m = parseInt(document.getElementById('orderMonth')?.value || '', 10);
@@ -1616,6 +1623,7 @@ roleSelectEl.title = "구매/판매 모드를 전환할 수 있습니다.";
 
 initTheme();
 initFormDefaults();
+initOrdersDateFilterDefault();
 initTimeInputs();
 initDateTimeToggles();
 initDateTimeWheelAdjust();

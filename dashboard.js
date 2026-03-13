@@ -283,8 +283,60 @@ try {
 selectedSupplierName = currentUser.name;
 
 // ========== 유틸리티 ==========
-function generateOrderId() {
-    return 'ORD-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2, 4).toUpperCase();
+function isHangulSyllable(ch) {
+    const code = ch.charCodeAt(0);
+    return code >= 0xac00 && code <= 0xd7a3;
+}
+
+function businessCodeFromName(name) {
+    const src = String(name || "").trim();
+    const CHO_TO_ALPHA = ["G", "G", "N", "D", "D", "R", "M", "B", "B", "S", "S", "N", "J", "J", "C", "K", "T", "P", "H"];
+    const out = [];
+    for (const ch of src) {
+        if (/[A-Za-z]/.test(ch)) {
+            out.push(ch.toUpperCase());
+        } else if (/[0-9]/.test(ch)) {
+            // 숫자 기반 사업자명도 연상 가능하게 알파벳으로 변환
+            out.push(String.fromCharCode(65 + Number(ch)));
+        } else if (isHangulSyllable(ch)) {
+            const code = ch.charCodeAt(0) - 0xac00;
+            const choIdx = Math.floor(code / 588);
+            out.push(CHO_TO_ALPHA[choIdx] || "X");
+        }
+        if (out.length >= 3) break;
+    }
+    while (out.length < 3) out.push("X");
+    return out.slice(0, 3).join("");
+}
+
+function orderDateCode(year, month, day) {
+    const yy = String(year).slice(-2).padStart(2, "0");
+    const mm = String(month).padStart(2, "0");
+    const dd = String(day).padStart(2, "0");
+    return `${yy}${mm}${dd}`;
+}
+
+function nextOrderSequence(prefix) {
+    const re = new RegExp(`^${prefix}([0-9A-Z]{2})$`);
+    const maxSeq = orders.reduce((max, o) => {
+        const id = String(o?.id || "");
+        const m = id.match(re);
+        if (!m) return max;
+        const n = parseInt(m[1], 36);
+        return Number.isFinite(n) ? Math.max(max, n) : max;
+    }, 0);
+    const next = maxSeq + 1;
+    const bounded = Math.min(next, 36 * 36 - 1);
+    return bounded.toString(36).toUpperCase().padStart(2, "0");
+}
+
+function generateOrderId({ supplierName, consumerName, year, month, day }) {
+    const supplierCode = businessCodeFromName(supplierName);
+    const consumerCode = businessCodeFromName(consumerName);
+    const dateCode = orderDateCode(year, month, day); // YYMMDD
+    const prefix = `${supplierCode}${consumerCode}${dateCode}`;
+    const seq = nextOrderSequence(prefix);
+    return `${prefix}${seq}`;
 }
 
 function getTodayParts() {
@@ -319,6 +371,14 @@ function formatOrderDateTime(order) {
 
 function formatOrderDate(order) {
     return `${order.year}/${order.month}/${order.day}`;
+}
+
+function getOrderDateTimeSortKey(order) {
+    const y = String(order?.year ?? "").padStart(4, "0");
+    const m = String(order?.month ?? "").padStart(2, "0");
+    const d = String(order?.day ?? "").padStart(2, "0");
+    const t = String(order?.time || "00:00").padStart(5, "0");
+    return `${y}-${m}-${d} ${t}`;
 }
 
 function summarizeChange(order, proposed) {
@@ -770,12 +830,13 @@ function renderConsumerView() {
         }
     }
 
-    // 최신순 정렬
+    // 납품일시 이른 순(오름차순) 정렬
     myOrders = myOrders.slice().sort((a, b) => {
-        const da = new Date(a.year, a.month - 1, a.day);
-        const db = new Date(b.year, b.month - 1, b.day);
-        if (da.getTime() !== db.getTime()) return db - da;
-        return (b.time || '').localeCompare(a.time || '');
+        const ka = getOrderDateTimeSortKey(a);
+        const kb = getOrderDateTimeSortKey(b);
+        const byDateTime = ka.localeCompare(kb);
+        if (byDateTime !== 0) return byDateTime;
+        return String(a.id || "").localeCompare(String(b.id || ""));
     });
 
     if (myOrders.length === 0) {
@@ -810,10 +871,11 @@ function renderConsumerView() {
         const cancelBadge = getCancelBadgeText(order);
         const noteText = String(order.note || '').trim();
 
+        const trailerDetailText = Number(order.tubeTrailers || 0) > 1 ? ` · 트레일러 ${order.tubeTrailers}대` : '';
         return `
         <div class="order-item ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}">
             <div class="order-id">${order.id}</div>
-            <div class="order-detail">${formatOrderDateTime(order)} · 트레일러 ${order.tubeTrailers}대</div>
+            <div class="order-detail">${formatOrderDateTime(order)}${trailerDetailText}</div>
             <div class="order-detail">공급자: ${order.supplierName || '-'}</div>
             <div class="order-detail">${order.address}</div>
             ${noteText ? `<div class="order-detail order-note">메모: ${noteText}</div>` : ''}
@@ -1299,7 +1361,13 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
     const month = pickedDate?.month ?? parseInt(document.getElementById('orderMonth').value, 10);
     const day = pickedDate?.day ?? parseInt(document.getElementById('orderDay').value, 10);
     const order = {
-        id: generateOrderId(),
+        id: generateOrderId({
+            supplierName,
+            consumerName: currentUser.name,
+            year,
+            month,
+            day,
+        }),
         consumerName: currentUser.name,
         supplierName,
         year,

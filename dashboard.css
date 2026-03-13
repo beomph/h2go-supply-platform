@@ -1861,6 +1861,12 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     flex-shrink: 0;
 }
 
+/* 상태 배지: 글씨가 있는 부분에만 배경 적용 (넓게 퍼지지 않도록) */
+.order-detail-section .order-detail-row span.order-status {
+    width: fit-content;
+    display: inline-block;
+}
+
 .order-detail-history {
     list-style: none;
     padding: 0;

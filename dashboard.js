@@ -1250,13 +1250,31 @@ function buildOrderStatusHistory(order) {
     return items.sort((a, b) => a.at - b.at);
 }
 
+function buildMergedOrderHistory(order) {
+    const statusItems = buildOrderStatusHistory(order);
+    const changeItems = buildOrderChangeHistory(order);
+    const stripDate = (t) => t.replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}에 /g, '');
+
+    const merged = statusItems.map(h => ({ at: h.at, text: h.label, from: 'status' }));
+    changeItems.forEach(ch => {
+        const stripped = stripDate(ch.text);
+        const sameTime = merged.find(m => Math.abs(m.at - ch.at) < 2000);
+        if (sameTime && (sameTime.text.includes('변경') || sameTime.text.includes('취소') || sameTime.text.includes('승인') || sameTime.text.includes('거절'))) {
+            sameTime.text = stripped;
+            sameTime.from = 'change';
+        } else if (!sameTime) {
+            merged.push({ at: ch.at, text: stripped, from: 'change' });
+        }
+    });
+    return merged.sort((a, b) => a.at - b.at);
+}
+
 function openOrderDetailModal(orderId) {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
 
     document.getElementById('orderDetailTitle').textContent = `주문 ${order.id} 상세`;
-    const changeHistory = buildOrderChangeHistory(order);
-    const statusHistory = buildOrderStatusHistory(order);
+    const mergedHistory = buildMergedOrderHistory(order);
     const transportInfo = order.transportInfo;
 
     const body = document.getElementById('orderDetailBody');
@@ -1281,16 +1299,10 @@ function openOrderDetailModal(orderId) {
             </div>
         </div>
         <div class="order-detail-section">
-            <h4>주문 변경 이력</h4>
-            ${changeHistory.length > 0
-                ? `<ul class="order-detail-history">${changeHistory.map(h => `<li>${h.text}</li>`).join('')}</ul>`
-                : '<p class="order-detail-empty">변경/취소 이력이 없습니다.</p>'}
-        </div>
-        <div class="order-detail-section">
-            <h4>주문 상태 상세</h4>
-            ${statusHistory.length > 0
-                ? `<ul class="order-detail-history">${statusHistory.map(h => `<li>${formatIsoDateTime(h.at)} — ${h.label}</li>`).join('')}</ul>`
-                : '<p class="order-detail-empty">상태 이력이 없습니다.</p>'}
+            <h4>주문 이력</h4>
+            ${mergedHistory.length > 0
+                ? `<ul class="order-detail-history">${mergedHistory.map(h => `<li>${formatIsoDateTime(h.at)} — ${h.text}</li>`).join('')}</ul>`
+                : '<p class="order-detail-empty">이력이 없습니다.</p>'}
         </div>
     `;
 

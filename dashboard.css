@@ -1864,7 +1864,9 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
 /* 상태 배지: 글씨가 있는 부분에만 배경 적용 (넓게 퍼지지 않도록) */
 .order-detail-section .order-detail-row span.order-status {
     width: fit-content;
+    max-width: max-content;
     display: inline-block;
+    justify-self: start;
 }
 
 .order-detail-history {

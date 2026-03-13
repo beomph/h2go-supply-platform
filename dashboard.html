@@ -61,6 +61,9 @@
                             <div class="form-group">
                                 <label>희망 납품 일시 <small class="order-datetime-inline-help">시 입력은 24시간 기준</small></label>
                                 <div class="order-datetime-row">
+                                    <div class="order-date-mobile-wrap">
+                                        <input type="date" id="orderDateMobile" class="order-date-mobile" aria-label="희망 납품 날짜">
+                                    </div>
                                     <div class="order-datetime-field">
                                         <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderYear" data-step="-1">-</button>
                                         <input type="number" id="orderYear" min="2025" max="2030" value="2025" required placeholder="연">
@@ -119,7 +122,7 @@
                             <div class="orders-filter">
                                 <label for="ordersDateFilter">조회일</label>
                                 <input type="date" id="ordersDateFilter">
-                                <button type="button" class="btn btn-tiny btn-secondary" id="ordersDateReset">전체</button>
+                                <button type="button" class="btn btn-tiny btn-secondary" id="ordersDateApplyBtn">조회</button>
                             </div>
                         </div>
                         <div id="consumerOrdersList" class="orders-list"></div>

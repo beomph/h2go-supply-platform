@@ -1071,9 +1071,38 @@ function initFormDefaults() {
     const yearEl = document.getElementById('orderYear');
     const monthEl = document.getElementById('orderMonth');
     const dayEl = document.getElementById('orderDay');
+    const dateMobileEl = document.getElementById('orderDateMobile');
     if (yearEl) yearEl.value = today.year;
     if (monthEl) monthEl.value = today.month;
     if (dayEl) dayEl.value = today.day;
+    if (dateMobileEl) {
+        dateMobileEl.value = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
+    }
+}
+
+function syncDateInputFromNumericFields() {
+    const y = parseInt(document.getElementById('orderYear')?.value || '', 10);
+    const m = parseInt(document.getElementById('orderMonth')?.value || '', 10);
+    const d = parseInt(document.getElementById('orderDay')?.value || '', 10);
+    const dateMobileEl = document.getElementById('orderDateMobile');
+    if (!dateMobileEl || !y || !m || !d) return;
+    dateMobileEl.value = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function syncNumericFieldsFromDateInput() {
+    const dateMobileEl = document.getElementById('orderDateMobile');
+    const raw = String(dateMobileEl?.value || '').trim();
+    if (!raw) return null;
+    const parts = raw.split('-').map(v => parseInt(v, 10));
+    if (parts.length !== 3 || parts.some(v => Number.isNaN(v))) return null;
+    const [year, month, day] = parts;
+    const yearEl = document.getElementById('orderYear');
+    const monthEl = document.getElementById('orderMonth');
+    const dayEl = document.getElementById('orderDay');
+    if (yearEl) yearEl.value = year;
+    if (monthEl) monthEl.value = month;
+    if (dayEl) dayEl.value = day;
+    return { year, month, day };
 }
 
 function adjustNumericField(id, delta) {
@@ -1086,6 +1115,9 @@ function adjustNumericField(id, delta) {
     if (next < min) next = min;
     if (next > max) next = max;
     el.value = next;
+    if (id === 'orderYear' || id === 'orderMonth' || id === 'orderDay') {
+        syncDateInputFromNumericFields();
+    }
 }
 
 function initDateTimeToggles() {
@@ -1172,13 +1204,18 @@ document.getElementById('roleSelect').addEventListener('change', (e) => {
 document.getElementById('orderForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const supplierName = String(selectedSupplierName || auth?.name || currentUser.name).trim();
+    const useMobileDateInput = window.matchMedia('(max-width: 768px)').matches;
+    const pickedDate = useMobileDateInput ? syncNumericFieldsFromDateInput() : null;
+    const year = pickedDate?.year ?? parseInt(document.getElementById('orderYear').value, 10);
+    const month = pickedDate?.month ?? parseInt(document.getElementById('orderMonth').value, 10);
+    const day = pickedDate?.day ?? parseInt(document.getElementById('orderDay').value, 10);
     const order = {
         id: generateOrderId(),
         consumerName: currentUser.name,
         supplierName,
-        year: parseInt(document.getElementById('orderYear').value),
-        month: parseInt(document.getElementById('orderMonth').value),
-        day: parseInt(document.getElementById('orderDay').value),
+        year,
+        month,
+        day,
         time: `${String(document.getElementById('orderHour').value).padStart(2, '0')}:${document.getElementById('orderMinute').value}`,
         tubeTrailers: 1,
         address: document.getElementById('orderAddress').value,
@@ -1376,14 +1413,21 @@ document.getElementById('waitingCustomers')?.addEventListener('change', (e) => {
     renderInventoryPanel();
 });
 
-// 주문 현황 - 일별 필터 이벤트
-document.getElementById('ordersDateFilter')?.addEventListener('change', () => {
-    renderConsumerView();
+// 모바일 캘린더 입력(주문요청) 변경 시 숫자 필드 동기화
+document.getElementById('orderDateMobile')?.addEventListener('change', () => {
+    syncNumericFieldsFromDateInput();
+});
+['orderYear', 'orderMonth', 'orderDay'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('change', syncDateInputFromNumericFields);
 });
 
-document.getElementById('ordersDateReset')?.addEventListener('click', () => {
+// 주문 현황 - 일별 필터 이벤트(조회 버튼 클릭 시 적용)
+document.getElementById('ordersDateApplyBtn')?.addEventListener('click', () => {
     const el = document.getElementById('ordersDateFilter');
-    if (el) el.value = '';
+    if (!el?.value) {
+        alert('조회일을 선택해 주세요.');
+        return;
+    }
     renderConsumerView();
 });
 

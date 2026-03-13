@@ -870,28 +870,36 @@ function renderConsumerView() {
         const changeBadge = getChangeBadgeText(order);
         const cancelBadge = getCancelBadgeText(order);
         const noteText = String(order.note || '').trim();
+        const actionButtons = `
+            ${canRequestChange ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
+            ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''}
+            ${canApproveChange ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${order.id}">변경 확정</button>
+            <button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${order.id}">변경 거절</button>` : ''}
+            ${canApproveCancel ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${order.id}">취소 승인</button>
+            <button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${order.id}">취소 거절</button>` : ''}
+        `.trim();
+        const hasFoot = Boolean(changeBadge || cancelBadge || actionButtons);
 
         const trailerDetailText = Number(order.tubeTrailers || 0) > 1 ? ` · 트레일러 ${order.tubeTrailers}대` : '';
         return `
         <div class="order-item ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}">
-            <div class="order-id">${order.id}</div>
+            <div class="order-item-head">
+                <div class="order-id">${order.id}</div>
+                <span class="order-status ${status}">${getStatusLabel(order.status)}</span>
+            </div>
             <div class="order-detail">${formatOrderDateTime(order)}${trailerDetailText}</div>
             <div class="order-detail">공급자: ${order.supplierName || '-'}</div>
             <div class="order-detail">${order.address}</div>
             ${noteText ? `<div class="order-detail order-note">메모: ${noteText}</div>` : ''}
-            ${changeBadge ? `<div class="change-summary">${changeBadge}</div>` : ''}
-            ${cancelBadge ? `<div class="change-summary">${cancelBadge}</div>` : ''}
-            <div class="order-status-actions">
-                <span class="order-status ${status}">${getStatusLabel(order.status)}</span>
-                <div class="order-actions order-actions--inline">
-                    ${canRequestChange ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
-                    ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''}
-                    ${canApproveChange ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${order.id}">변경 확정</button>
-                    <button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${order.id}">변경 거절</button>` : ''}
-                    ${canApproveCancel ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${order.id}">취소 승인</button>
-                    <button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${order.id}">취소 거절</button>` : ''}
+            ${hasFoot ? `
+            <div class="order-item-foot">
+                <div class="order-item-badges">
+                    ${changeBadge ? `<div class="change-summary">${changeBadge}</div>` : ''}
+                    ${cancelBadge ? `<div class="change-summary">${cancelBadge}</div>` : ''}
                 </div>
+                ${actionButtons ? `<div class="order-actions order-actions--inline">${actionButtons}</div>` : ''}
             </div>
+            ` : ''}
         </div>
     `}).join('');
 

@@ -869,6 +869,7 @@ function renderConsumerView() {
         const canRequestChange = !hasPendingChange && !hasPendingCancel && ['requested', 'accepted', 'change_accepted', 'in_transit', 'arrived'].includes(status);
         const canRequestCancel = !hasPendingCancel && !hasPendingChange && !hasRejectedCancel && !['completed', 'cancelled', 'collecting'].includes(status);
         const immediateCancelable = canRequestCancel && canImmediateCancelOrder(order, 'consumer');
+        const canCancelChangeRequest = hasPendingChange && cr.requestedBy === 'consumer';
 
         const canApproveChange = hasPendingChange && cr.requestedBy === 'supplier';
         const canApproveCancel = hasPendingCancel && cancelReq.requestedBy === 'supplier';
@@ -877,6 +878,7 @@ function renderConsumerView() {
         const changeBadge = getChangeBadgeText(order);
         const cancelBadge = getCancelBadgeText(order);
         const actionButtons = `
+            ${canCancelChangeRequest ? `<button type="button" class="btn btn-small btn-secondary" data-action="cancel-change-request" data-id="${order.id}">변경요청 취소</button>` : ''}
             ${canRequestChange ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
             ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''}
         `.trim();
@@ -903,10 +905,12 @@ function renderConsumerView() {
                     : `<span class="order-status ${status}">${getStatusLabel(order.status)}</span>`
                 }
             </div>
-            <div class="order-detail">${formatOrderDateTime(order)}</div>
-            <div class="order-detail">공급자: ${order.supplierName || '-'}</div>
-            <div class="order-detail">${order.address}</div>
-            ${transportInfoText ? `<div class="order-detail order-transport-info">${transportInfoText}</div>` : ''}
+            <div class="order-item-datetime-row">
+                <div class="order-datetime">${formatOrderDateTime(order)}</div>
+                <div class="order-address">${order.address || '-'}</div>
+            </div>
+            <div class="order-supplier">${order.supplierName || '-'}</div>
+            ${transportInfoText ? `<div class="order-transport-info">${transportInfoText}</div>` : ''}
             ${(changeBadge || cancelBadge || actionButtons) ? `
             <div class="order-item-foot">
                 ${(changeBadge || cancelBadge) ? `<div class="order-item-badges"><div class="change-summary">${changeBadge || ''} ${cancelBadge || ''}</div></div>` : ''}
@@ -943,6 +947,7 @@ function renderOrdersTable(tbodyId, showActions) {
 
         const canProposeChange = showActions && !hasPendingChange && !hasPendingCancel && ['requested', 'accepted', 'change_accepted'].includes(status);
         const canRequestCancel = showActions && !hasPendingChange && !hasPendingCancel && !['completed', 'cancelled'].includes(status);
+        const canCancelChangeRequest = showActions && hasPendingChange && o.changeRequest.requestedBy === 'supplier';
         const advanceAction = showActions && !hasPendingChange && !hasPendingCancel ? getSupplierAdvanceAction(status) : null;
 
         const travelTime = getTravelTimeFromAddress(o.address);
@@ -971,6 +976,7 @@ function renderOrdersTable(tbodyId, showActions) {
             </td>
             <td class="table-actions">
                 ${advanceAction ? `<button type="button" class="btn btn-tiny btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : ''}
+                ${canCancelChangeRequest ? `<button type="button" class="btn btn-tiny btn-secondary" data-action="cancel-change-request" data-id="${o.id}">변경요청 취소</button>` : ''}
                 ${canProposeChange ? `<button type="button" class="btn btn-tiny" data-action="request-change" data-id="${o.id}">변경</button>` : ''}
                 ${canRequestCancel ? `<button type="button" class="btn btn-tiny btn-secondary" data-action="request-cancel" data-id="${o.id}">취소</button>` : ''}
                 ${canApproveChange ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-change" data-id="${o.id}">변경 확정</button>
@@ -1742,7 +1748,16 @@ document.addEventListener('click', (e) => {
         }
     }
 
-    if (action === 'request-change') {
+    if (action === 'cancel-change-request') {
+        if (!order || !order.changeRequest || order.changeRequest.status !== 'pending') return;
+        const actor = getActorForOrder(order);
+        if (order.changeRequest.requestedBy !== actor) return;
+        if (!confirm('변경 요청을 취소하시겠습니까?')) return;
+        order.status = order.changeRequest.originalStatus || 'accepted';
+        order.changeRequest = null;
+        persistAndRerender();
+        alert('변경 요청이 취소되었습니다.');
+    } else if (action === 'request-change') {
         if (!order) return;
         const actor = getActorForOrder(order);
         if (order.changeRequest && order.changeRequest.status === 'pending') return;

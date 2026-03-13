@@ -48,6 +48,44 @@ function getAddressHistoryStorageKey() {
     return `${ORDER_ADDRESS_HISTORY_PREFIX}:${who}`;
 }
 
+// 취소 주문 숨김 (구매/판매 대시보드 각각 독립)
+const HIDDEN_CONSUMER_PREFIX = "h2go_hidden_consumer";
+const HIDDEN_SUPPLIER_PREFIX = "h2go_hidden_supplier";
+
+function getHiddenConsumerKey() {
+    const a = getAuth();
+    const who = String(a?.id || a?.name || "anon").trim().toLowerCase();
+    return `${HIDDEN_CONSUMER_PREFIX}:${who}`;
+}
+
+function getHiddenSupplierKey() {
+    const a = getAuth();
+    const who = String(a?.id || a?.name || "anon").trim().toLowerCase();
+    return `${HIDDEN_SUPPLIER_PREFIX}:${who}`;
+}
+
+function readHiddenConsumerIds() {
+    const raw = safeJsonParse(localStorage.getItem(getHiddenConsumerKey()) || "[]", []);
+    return Array.isArray(raw) ? raw : [];
+}
+
+function readHiddenSupplierIds() {
+    const raw = safeJsonParse(localStorage.getItem(getHiddenSupplierKey()) || "[]", []);
+    return Array.isArray(raw) ? raw : [];
+}
+
+function addHiddenConsumerOrderId(orderId) {
+    const ids = readHiddenConsumerIds();
+    if (!ids.includes(orderId)) ids.push(orderId);
+    try { localStorage.setItem(getHiddenConsumerKey(), JSON.stringify(ids)); } catch (_) {}
+}
+
+function addHiddenSupplierOrderId(orderId) {
+    const ids = readHiddenSupplierIds();
+    if (!ids.includes(orderId)) ids.push(orderId);
+    try { localStorage.setItem(getHiddenSupplierKey(), JSON.stringify(ids)); } catch (_) {}
+}
+
 function normalizeAddress(address) {
     return String(address || "").replace(/\s+/g, " ").trim();
 }
@@ -821,7 +859,8 @@ function renderPrediction(inv, leadInfo) {
 
 function renderConsumerView() {
     const list = document.getElementById('consumerOrdersList');
-    const allMyOrders = getConsumerOrders(currentUser.name);
+    const hiddenConsumerIds = new Set(readHiddenConsumerIds());
+    let allMyOrders = getConsumerOrders(currentUser.name).filter(o => !hiddenConsumerIds.has(o.id));
 
     // 조회일 필터(일별 조회)
     let myOrders = allMyOrders;
@@ -897,13 +936,16 @@ function renderConsumerView() {
         <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
             <div class="order-item-head">
                 <div class="order-id">${order.id}</div>
-                ${hasDecisionRequest
-                    ? `<div class="order-status ${status} order-status--action">
-                        <span class="order-status-action-label">${getStatusLabel(order.status)}</span>
-                        <div class="order-status-action-buttons">${decisionButtons}</div>
-                    </div>`
-                    : `<span class="order-status ${status}">${getStatusLabel(order.status)}</span>`
-                }
+                <div class="order-item-head-right">
+                    ${hasDecisionRequest
+                        ? `<div class="order-status ${status} order-status--action">
+                            <span class="order-status-action-label">${getStatusLabel(order.status)}</span>
+                            <div class="order-status-action-buttons">${decisionButtons}</div>
+                        </div>`
+                        : `<span class="order-status ${status}">${getStatusLabel(order.status)}</span>`
+                    }
+                    ${isCancelled ? `<button type="button" class="order-remove-cancelled-btn" data-action="remove-cancelled-consumer" data-id="${order.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
+                </div>
             </div>
             <div class="order-item-datetime-row">
                 <div class="order-datetime">${formatOrderDateTime(order)}</div>
@@ -932,7 +974,8 @@ function renderConsumerView() {
 }
 
 function renderOrdersTable(tbodyId, showActions) {
-    const allOrders = getAllOrders();
+    const hiddenSupplierIds = new Set(readHiddenSupplierIds());
+    const allOrders = getAllOrders().filter(o => !hiddenSupplierIds.has(o.id));
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
 
@@ -975,6 +1018,7 @@ function renderOrdersTable(tbodyId, showActions) {
                 ${o.transportInfo ? `<div class="change-summary">T/T: ${(o.transportInfo.trailerNumbers || []).join(', ')} · 기사: ${o.transportInfo.driverName || '-'}</div>` : ''}
             </td>
             <td class="table-actions">
+                ${isCancelled ? `<button type="button" class="btn btn-tiny order-remove-cancelled-btn" data-action="remove-cancelled-supplier" data-id="${o.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
                 ${advanceAction ? `<button type="button" class="btn btn-tiny btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : ''}
                 ${canCancelChangeRequest ? `<button type="button" class="btn btn-tiny btn-secondary" data-action="cancel-change-request" data-id="${o.id}">변경요청 취소</button>` : ''}
                 ${canProposeChange ? `<button type="button" class="btn btn-tiny" data-action="request-change" data-id="${o.id}">변경</button>` : ''}
@@ -1442,8 +1486,11 @@ function initFormDefaults() {
 }
 
 function initOrdersDateFilterDefault() {
-    // 기본값 미설정: 날짜 필터가 비어 있으면 전체 주문 표시.
-    // (변경 승인 시 납품일이 바뀌어도 주문이 목록에서 사라지지 않도록 함)
+    const filterInput = document.getElementById('ordersDateFilter');
+    if (filterInput && !filterInput.value) {
+        const today = getTodayParts();
+        filterInput.value = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
+    }
 }
 
 function syncDateInputFromNumericFields() {
@@ -1841,6 +1888,16 @@ document.addEventListener('click', (e) => {
         decideCancel(order, false);
         persistAndRerender();
         alert('취소 요청을 거절했습니다. 사유가 요청자에게 전달됩니다.');
+    } else if (action === 'remove-cancelled-consumer') {
+        if (!orderId || !order || order.status !== 'cancelled') return;
+        addHiddenConsumerOrderId(orderId);
+        renderConsumerView();
+        renderSupplierView();
+    } else if (action === 'remove-cancelled-supplier') {
+        if (!orderId || !order || order.status !== 'cancelled') return;
+        addHiddenSupplierOrderId(orderId);
+        renderConsumerView();
+        renderSupplierView();
     }
 });
 

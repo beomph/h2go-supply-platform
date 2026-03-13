@@ -1190,6 +1190,36 @@
     margin-bottom: 0.08rem;
 }
 
+.order-item-head-right {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+}
+
+.order-remove-cancelled-btn {
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--surface-soft);
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+}
+
+.order-remove-cancelled-btn:hover {
+    background: var(--danger-bg, #7f1d1d);
+    color: #fff;
+    border-color: transparent;
+}
+
 .order-item .order-id {
     font-size: 0.8rem;
     color: var(--go-gray);

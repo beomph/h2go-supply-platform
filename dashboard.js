@@ -359,14 +359,22 @@ function getAllOrders() {
     return scoped
         .filter(o => o.status !== 'cancelled')
         .sort((a, b) => {
-            const da = `${a.year}-${String(a.month).padStart(2, '0')}-${String(a.day).padStart(2, '0')} ${a.time}`;
-            const db = `${b.year}-${String(b.month).padStart(2, '0')}-${String(b.day).padStart(2, '0')} ${b.time}`;
+            const da = `${a.year}-${String(a.month).padStart(2, '0')}-${String(a.day).padStart(2, '0')} ${formatTimeText(a.time)}`;
+            const db = `${b.year}-${String(b.month).padStart(2, '0')}-${String(b.day).padStart(2, '0')} ${formatTimeText(b.time)}`;
             return da.localeCompare(db);
         });
 }
 
+function formatTimeText(rawTime) {
+    const raw = String(rawTime || "").trim();
+    const [hRaw = "0", mRaw = "0"] = raw.split(":");
+    const h = Math.max(0, Math.min(23, parseInt(hRaw, 10) || 0));
+    const m = Math.max(0, Math.min(59, parseInt(mRaw, 10) || 0));
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
 function formatOrderDateTime(order) {
-    return `${order.year}/${order.month}/${order.day} ${order.time}`;
+    return `${order.year}/${order.month}/${order.day} ${formatTimeText(order.time)}`;
 }
 
 function formatOrderDate(order) {
@@ -377,15 +385,15 @@ function getOrderDateTimeSortKey(order) {
     const y = String(order?.year ?? "").padStart(4, "0");
     const m = String(order?.month ?? "").padStart(2, "0");
     const d = String(order?.day ?? "").padStart(2, "0");
-    const t = String(order?.time || "00:00").padStart(5, "0");
+    const t = formatTimeText(order?.time);
     return `${y}-${m}-${d} ${t}`;
 }
 
 function summarizeChange(order, proposed) {
     if (!order || !proposed) return "";
     const changes = [];
-    const fromDt = `${order.year}/${order.month}/${order.day} ${order.time}`;
-    const toDt = `${proposed.year}/${proposed.month}/${proposed.day} ${proposed.time}`;
+    const fromDt = `${order.year}/${order.month}/${order.day} ${formatTimeText(order.time)}`;
+    const toDt = `${proposed.year}/${proposed.month}/${proposed.day} ${formatTimeText(proposed.time)}`;
     if (fromDt !== toDt) changes.push(`일정 ${fromDt} → ${toDt}`);
     if ((order.tubeTrailers || 0) !== (proposed.tubeTrailers || 0)) changes.push(`트레일러 ${order.tubeTrailers}대 → ${proposed.tubeTrailers}대`);
     const fromAddr = String(order.address || "").trim();
@@ -866,6 +874,7 @@ function renderConsumerView() {
         // 상대방(공급자)이 요청한 변경/취소는 수요모드에서 확정/거절 가능
         const canApproveChange = hasPendingChange && cr.requestedBy === 'supplier';
         const canApproveCancel = hasPendingCancel && cancelReq.requestedBy === 'supplier';
+        const hasDecisionRequest = canApproveChange || canApproveCancel;
 
         const changeBadge = getChangeBadgeText(order);
         const cancelBadge = getCancelBadgeText(order);
@@ -873,19 +882,21 @@ function renderConsumerView() {
         const actionButtons = `
             ${canRequestChange ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
             ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''}
+        `.trim();
+        const decisionButtons = `
             ${canApproveChange ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${order.id}">변경 확정</button>
             <button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${order.id}">변경 거절</button>` : ''}
             ${canApproveCancel ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${order.id}">취소 승인</button>
             <button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${order.id}">취소 거절</button>` : ''}
         `.trim();
-        const hasFoot = Boolean(changeBadge || cancelBadge || actionButtons);
+        const hasFoot = Boolean(changeBadge || cancelBadge || actionButtons || decisionButtons);
 
         const trailerDetailText = Number(order.tubeTrailers || 0) > 1 ? ` · 트레일러 ${order.tubeTrailers}대` : '';
         return `
         <div class="order-item ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}">
             <div class="order-item-head">
                 <div class="order-id">${order.id}</div>
-                <span class="order-status ${status}">${getStatusLabel(order.status)}</span>
+                ${hasDecisionRequest ? '' : `<span class="order-status ${status}">${getStatusLabel(order.status)}</span>`}
             </div>
             <div class="order-detail">${formatOrderDateTime(order)}${trailerDetailText}</div>
             <div class="order-detail">공급자: ${order.supplierName || '-'}</div>
@@ -897,7 +908,13 @@ function renderConsumerView() {
                     ${changeBadge ? `<div class="change-summary">${changeBadge}</div>` : ''}
                     ${cancelBadge ? `<div class="change-summary">${cancelBadge}</div>` : ''}
                 </div>
-                ${actionButtons ? `<div class="order-actions order-actions--inline">${actionButtons}</div>` : ''}
+                ${hasDecisionRequest
+                    ? `<div class="order-decision-pack">
+                        <span class="order-status ${status}">${getStatusLabel(order.status)}</span>
+                        <div class="order-actions order-actions--decision">${decisionButtons}</div>
+                    </div>`
+                    : (actionButtons ? `<div class="order-actions order-actions--inline">${actionButtons}</div>` : '')
+                }
             </div>
             ` : ''}
         </div>
@@ -936,7 +953,7 @@ function renderOrdersTable(tbodyId, showActions) {
             <td>${o.id}</td>
             <td>${o.consumerName}</td>
             <td>${formatOrderDate(o)}</td>
-            <td>${o.time}</td>
+            <td>${formatTimeText(o.time)}</td>
             <td>${o.tubeTrailers}대</td>
             <td>${o.address}</td>
             <td><span class="travel-time">${travelTime}분</span></td>
@@ -1388,7 +1405,7 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
         year,
         month,
         day,
-        time: `${String(document.getElementById('orderHour').value).padStart(2, '0')}:${document.getElementById('orderMinute').value}`,
+        time: `${String(document.getElementById('orderHour').value).padStart(2, '0')}:${String(document.getElementById('orderMinute').value).padStart(2, '0')}`,
         tubeTrailers: 1,
         address: addressValue,
         note: document.getElementById('orderNote').value,
@@ -1418,7 +1435,7 @@ document.getElementById('changeRequestForm').addEventListener('submit', (e) => {
         year: parseInt(document.getElementById('changeYear').value),
         month: parseInt(document.getElementById('changeMonth').value),
         day: parseInt(document.getElementById('changeDay').value),
-        time: `${String(document.getElementById('changeHour').value).padStart(2, '0')}:${document.getElementById('changeMinute').value}`,
+        time: `${String(document.getElementById('changeHour').value).padStart(2, '0')}:${String(document.getElementById('changeMinute').value).padStart(2, '0')}`,
         tubeTrailers: parseInt(document.getElementById('changeTrailers').value),
         address: document.getElementById('changeAddress').value
     };

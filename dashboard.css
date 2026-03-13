@@ -1186,6 +1186,26 @@
     line-height: 1.24;
 }
 
+.order-decision-pack {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    padding: 0.2rem 0.28rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface-soft);
+}
+
+.order-actions--decision {
+    overflow: visible;
+    gap: 0.24rem;
+}
+
+.order-actions--decision .btn-small {
+    padding: 0.22rem 0.42rem;
+    font-size: 0.72rem;
+}
+
 @media (max-width: 768px) {
     .order-item {
         padding: 0.56rem 0.6rem;
@@ -1212,6 +1232,16 @@
 
     .order-item-badges .change-summary {
         font-size: 0.74rem;
+    }
+
+    .order-decision-pack {
+        gap: 0.22rem;
+        padding: 0.18rem 0.24rem;
+    }
+
+    .order-actions--decision .btn-small {
+        padding: 0.2rem 0.36rem;
+        font-size: 0.7rem;
     }
 }
 

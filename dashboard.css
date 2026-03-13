@@ -754,24 +754,23 @@
     color: var(--text-muted);
 }
 
-/* 새 주문 - 희망 납품 일시 한 줄 배치 */
+/* 새 주문 - 희망 납품 일시 */
 .order-datetime-row {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.45rem 0.55rem;
+    display: grid;
+    grid-template-columns: minmax(136px, 1.25fr) repeat(4, minmax(104px, 1fr));
+    gap: 0.45rem;
+    width: 100%;
+    padding: 0.5rem;
     border-radius: 14px;
     border: 1px solid var(--border-color);
     background: var(--surface-soft);
-    flex-wrap: nowrap;
-    max-width: 100%;
 }
 
 .order-datetime-field {
-    display: inline-flex;
-    align-items: center;
-    gap: 0;
-    min-height: 2.4rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 1.9rem;
+    grid-template-rows: 1fr 1fr;
+    min-height: 2.55rem;
     background: var(--bg-card);
     border-radius: 12px;
     border: 1px solid var(--border-color);
@@ -785,26 +784,22 @@
 }
 
 .order-datetime-row input {
-    width: 3.2rem;
-    padding: 0.45rem 0.35rem;
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    width: 100%;
+    min-width: 0;
+    padding: 0.45rem 0.4rem;
     background: transparent;
     border: none;
     color: var(--text-white);
     text-align: center;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
     font-weight: 600;
     line-height: 1;
 }
 
 .order-datetime-row input#orderYear {
-    width: 4.35rem;
-}
-
-.order-datetime-row input#orderMonth,
-.order-datetime-row input#orderDay,
-.order-datetime-row input#orderHour,
-.order-datetime-row input#orderMinute {
-    width: 3.2rem;
+    font-size: 0.94rem;
 }
 
 .order-datetime-row input:focus {
@@ -823,37 +818,33 @@
 }
 
 .order-datetime-sep {
-    color: var(--text-muted);
-    font-size: 0.95rem;
-    font-weight: 600;
-}
-
-.order-datetime-sep.at {
-    font-size: 0.78rem;
-    letter-spacing: 0.04em;
-    opacity: 0.85;
+    display: none;
 }
 
 .order-datetime-unit {
-    min-width: 1.25rem;
-    padding-right: 0.25rem;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    min-width: 1.3rem;
+    padding: 0 0.35rem 0 0.15rem;
     color: var(--text-muted);
     font-size: 0.8rem;
     font-weight: 600;
     text-align: center;
+    display: inline-flex;
+    align-items: center;
 }
 
 .dt-toggle {
-    width: 2rem;
-    height: 2.4rem;
+    width: 1.9rem;
+    height: 1.28rem;
     border: none;
     border-radius: 0;
     background: transparent;
     color: var(--text-muted);
-    font-size: 1rem;
+    font-size: 0.92rem;
     font-weight: 500;
     line-height: 1;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
@@ -861,10 +852,15 @@
 }
 
 .dt-toggle--minus {
-    border-right: 1px solid var(--border-color);
+    grid-column: 3;
+    grid-row: 2;
+    border-left: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-color);
 }
 
 .dt-toggle--plus {
+    grid-column: 3;
+    grid-row: 1;
     border-left: 1px solid var(--border-color);
 }
 
@@ -885,22 +881,22 @@
 @media (max-width: 768px) {
     .order-datetime-row {
         display: grid;
-        grid-template-columns: repeat(6, minmax(0, 1fr));
+        grid-template-columns: repeat(8, minmax(0, 1fr));
         width: 100%;
-        gap: 0.45rem;
-        padding: 0.55rem;
+        gap: 0.42rem;
+        padding: 0.52rem;
     }
 
     .order-datetime-field {
         width: 100%;
-        min-height: 2.5rem;
+        min-height: 2.45rem;
     }
 
-    .order-datetime-field:nth-of-type(1) { grid-column: 1 / span 2; }
-    .order-datetime-field:nth-of-type(2) { grid-column: 3 / span 2; }
-    .order-datetime-field:nth-of-type(3) { grid-column: 5 / span 2; }
-    .order-datetime-field:nth-of-type(4) { grid-column: 1 / span 3; }
-    .order-datetime-field:nth-of-type(5) { grid-column: 4 / span 3; }
+    .order-datetime-field:nth-of-type(1) { grid-column: 1 / span 4; }
+    .order-datetime-field:nth-of-type(2) { grid-column: 5 / span 2; }
+    .order-datetime-field:nth-of-type(3) { grid-column: 7 / span 2; }
+    .order-datetime-field:nth-of-type(4) { grid-column: 1 / span 4; }
+    .order-datetime-field:nth-of-type(5) { grid-column: 5 / span 4; }
 
     .order-datetime-sep {
         display: none;
@@ -914,12 +910,12 @@
     .order-datetime-row input#orderMinute {
         width: 100%;
         min-width: 0;
-        font-size: 0.92rem;
+        font-size: 0.93rem;
     }
 
     .dt-toggle {
-        width: 1.9rem;
-        height: 2.5rem;
+        width: 1.82rem;
+        height: 1.22rem;
     }
 }
 

@@ -1099,6 +1099,18 @@ function initDateTimeToggles() {
     });
 }
 
+function initDateTimeWheelAdjust() {
+    // 데스크톱(정밀 포인터)에서만 휠 증감 활성화
+    if (!window.matchMedia('(pointer:fine)').matches) return;
+    document.querySelectorAll('.order-datetime-row input[type="number"]').forEach(inputEl => {
+        inputEl.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY < 0 ? 1 : -1;
+            adjustNumericField(inputEl.id, delta);
+        }, { passive: false });
+    });
+}
+
 // ========== 공급자 선택(수요모드) ==========
 function setSupplierName(name) {
     selectedSupplierName = String(name || "").trim();
@@ -1382,12 +1394,13 @@ if (bizEl) bizEl.textContent = currentUser.name;
 const roleSelectEl = document.getElementById('roleSelect');
 roleSelectEl.value = initialRole;
 roleSelectEl.disabled = false;
-roleSelectEl.title = "수요/공급 모드를 전환할 수 있습니다.";
+roleSelectEl.title = "구매/판매 모드를 전환할 수 있습니다.";
 
 initTheme();
 initFormDefaults();
 initTimeInputs();
 initDateTimeToggles();
+initDateTimeWheelAdjust();
 setSupplierName(currentUser.name);
 showView(initialRole);
 if (initialRole === 'consumer') renderConsumerView();

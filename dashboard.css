@@ -840,8 +840,8 @@
 }
 
 .dt-toggle {
-    width: 1.6rem;
-    height: 1.05rem;
+    width: 1.48rem;
+    height: 0.94rem;
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -858,6 +858,8 @@
     cursor: pointer;
     transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.14);
+    position: relative;
+    top: -1px;
 }
 
 .dt-toggle--minus {
@@ -956,9 +958,10 @@
     }
 
     .dt-toggle {
-        width: 1.56rem;
-        height: 1.02rem;
+        width: 1.42rem;
+        height: 0.88rem;
         font-size: 0.68rem;
+        top: -1px;
     }
 }
 
@@ -1081,6 +1084,11 @@
     font-size: 0.8rem;
 }
 
+#ordersDateApplyBtn {
+    padding: 0.26rem 0.54rem;
+    margin-top: -1px;
+}
+
 @media (max-width: 640px) {
     .my-orders-header {
         flex-direction: column;
@@ -1098,35 +1106,58 @@
    사용처: `dashboard.html`의 `#consumerOrdersList`가 포함된 `.orders-list` */
 @media (max-width: 768px) {
     .orders-list {
-        max-height: none;
+        max-height: 48vh;
+        padding-right: 0.12rem;
     }
 }
 
 .order-item {
-    padding: 1rem;
+    padding: 0.72rem 0.78rem;
     background: var(--bg-dark);
     border-radius: 8px;
-    margin-bottom: 0.75rem;
-    border-left: 4px solid var(--h2-blue);
+    margin-bottom: 0.42rem;
+    border-left: 3px solid var(--h2-blue);
 }
 
 .order-item .order-id {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--go-gray);
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.14rem;
 }
 
 .order-item .order-detail {
-    font-size: 0.95rem;
-    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+    margin-bottom: 0.06rem;
+    line-height: 1.32;
 }
 
 .order-item .order-status {
     display: inline-block;
-    padding: 0.25rem 0.5rem;
+    padding: 0.2rem 0.45rem;
     border-radius: 4px;
-    font-size: 0.8rem;
-    margin-top: 0.5rem;
+    font-size: 0.74rem;
+    margin-top: 0.25rem;
+}
+
+@media (max-width: 768px) {
+    .order-item {
+        padding: 0.62rem 0.66rem;
+        margin-bottom: 0.36rem;
+    }
+
+    .order-item .order-detail {
+        font-size: 0.85rem;
+    }
+
+    .order-actions {
+        margin-top: 0.34rem;
+        gap: 0.34rem;
+    }
+
+    .order-actions .btn-small {
+        padding: 0.27rem 0.52rem;
+        font-size: 0.77rem;
+    }
 }
 
 .order-status.received { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }

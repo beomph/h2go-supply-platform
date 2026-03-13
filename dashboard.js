@@ -5,6 +5,7 @@ const AUTH_KEY = "h2go_auth";
 const DEFAULT_ROLES = ["consumer", "supplier"];
 const USERS_KEY = "h2go_users";
 const THEME_KEY = "h2go_theme";
+const ORDER_ADDRESS_HISTORY_PREFIX = "h2go_order_address_history_v1";
 
 function safeJsonParse(raw, fallback) {
     try {
@@ -39,6 +40,47 @@ function getSupplierCandidates(currentBizName) {
     const names = users.map(u => u?.name).filter(Boolean);
     const merged = uniqueNames([currentBizName, ...names]);
     return merged;
+}
+
+function getAddressHistoryStorageKey() {
+    const a = getAuth();
+    const who = String(a?.id || a?.name || "anon").trim().toLowerCase();
+    return `${ORDER_ADDRESS_HISTORY_PREFIX}:${who}`;
+}
+
+function normalizeAddress(address) {
+    return String(address || "").replace(/\s+/g, " ").trim();
+}
+
+function readAddressHistory() {
+    const raw = safeJsonParse(localStorage.getItem(getAddressHistoryStorageKey()) || "[]", []);
+    if (!Array.isArray(raw)) return [];
+    return uniqueNames(raw.map(normalizeAddress)).slice(0, 20);
+}
+
+function writeAddressHistory(list) {
+    try {
+        localStorage.setItem(getAddressHistoryStorageKey(), JSON.stringify(list.slice(0, 20)));
+    } catch (_) {}
+}
+
+function renderAddressHistoryOptions() {
+    const datalist = document.getElementById("orderAddressHistoryList");
+    if (!datalist) return;
+    datalist.innerHTML = "";
+    readAddressHistory().forEach((addr) => {
+        const option = document.createElement("option");
+        option.value = addr;
+        datalist.appendChild(option);
+    });
+}
+
+function addAddressToHistory(address) {
+    const normalized = normalizeAddress(address);
+    if (!normalized) return;
+    const current = readAddressHistory().filter((a) => a.toLowerCase() !== normalized.toLowerCase());
+    current.unshift(normalized);
+    writeAddressHistory(current);
 }
 
 function getAuth() {
@@ -324,6 +366,15 @@ function getSupplierStatusLabel(order) {
 
 function getActorForOrder(order) {
     return currentUser.type;
+}
+
+function canImmediateCancelOrder(order, actorType) {
+    if (!order || actorType !== "consumer") return false;
+    if (!order.createdAt) return false;
+    const createdAtMs = new Date(order.createdAt).getTime();
+    if (!Number.isFinite(createdAtMs)) return false;
+    const elapsedMs = Date.now() - createdAtMs;
+    return elapsedMs >= 0 && elapsedMs <= 5 * 60 * 1000;
 }
 
 // 주문 수량 계산 (트레일러 대수 * 용량)
@@ -723,6 +774,7 @@ function renderConsumerView() {
         const status = normalizeStatus(order.status);
         const canRequestChange = !hasPendingChange && !hasPendingCancel && ['reviewing', 'confirmed', 'received'].includes(status);
         const canRequestCancel = !hasPendingCancel && !hasPendingChange && !hasRejectedCancel && ['reviewing', 'confirmed', 'received', 'cancel_requested', 'change_requested'].includes(status);
+        const immediateCancelable = canRequestCancel && canImmediateCancelOrder(order, 'consumer');
 
         // 상대방(공급자)이 요청한 변경/취소는 수요모드에서 확정/거절 가능
         const canApproveChange = hasPendingChange && cr.requestedBy === 'supplier';
@@ -742,7 +794,7 @@ function renderConsumerView() {
             ${cancelBadge ? `<div class="change-summary">${cancelBadge}</div>` : ''}
             <div class="order-actions">
                 ${canRequestChange ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
-                ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">취소</button>` : ''}
+                ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''}
                 ${canApproveChange ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${order.id}">변경 확정</button>
                 <button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${order.id}">변경 거절</button>` : ''}
                 ${canApproveCancel ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${order.id}">취소 승인</button>
@@ -1204,6 +1256,11 @@ document.getElementById('roleSelect').addEventListener('change', (e) => {
 document.getElementById('orderForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const supplierName = String(selectedSupplierName || auth?.name || currentUser.name).trim();
+    const addressValue = normalizeAddress(document.getElementById('orderAddress').value);
+    if (!addressValue) {
+        alert('납품 주소를 입력해 주세요.');
+        return;
+    }
     const useMobileDateInput = window.matchMedia('(max-width: 768px)').matches;
     const pickedDate = useMobileDateInput ? syncNumericFieldsFromDateInput() : null;
     const year = pickedDate?.year ?? parseInt(document.getElementById('orderYear').value, 10);
@@ -1218,13 +1275,15 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
         day,
         time: `${String(document.getElementById('orderHour').value).padStart(2, '0')}:${document.getElementById('orderMinute').value}`,
         tubeTrailers: 1,
-        address: document.getElementById('orderAddress').value,
+        address: addressValue,
         note: document.getElementById('orderNote').value,
         status: 'received',
         createdAt: new Date().toISOString()
     };
     orders.push(order);
     localStorage.setItem('h2go_orders', JSON.stringify(orders));
+    addAddressToHistory(addressValue);
+    renderAddressHistoryOptions();
     document.getElementById('orderForm').reset();
     initFormDefaults();
     initTimeInputs();
@@ -1374,6 +1433,14 @@ document.addEventListener('click', (e) => {
         if (!order) return;
         const actor = getActorForOrder(order);
         if (order.cancelRequest?.status === 'pending') return;
+        const canImmediateCancel = canImmediateCancelOrder(order, actor) && order.changeRequest?.status !== 'pending';
+        if (canImmediateCancel) {
+            if (!confirm('주문 등록 후 5분 이내 건은 공급자 동의 없이 즉시 취소됩니다. 지금 취소할까요?')) return;
+            orders = orders.filter(x => x && x.id !== order.id);
+            persistAndRerender();
+            alert('주문이 즉시 취소되었습니다.');
+            return;
+        }
         if (!confirm('이 주문에 대해 취소(삭제) 요청을 보내시겠습니까? 상대방 승인 후 삭제됩니다.')) return;
         requestCancel(order, actor);
         persistAndRerender();
@@ -1445,6 +1512,7 @@ initFormDefaults();
 initTimeInputs();
 initDateTimeToggles();
 initDateTimeWheelAdjust();
+renderAddressHistoryOptions();
 setSupplierName(currentUser.name);
 showView(initialRole);
 if (initialRole === 'consumer') renderConsumerView();

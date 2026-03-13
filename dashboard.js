@@ -1236,7 +1236,10 @@ function buildOrderStatusHistory(order) {
 
     add('주문 요청', order.createdAt);
     add('접수', order.acceptedAt);
-    if (order.changeRequest?.requestedAt) add('변경 요청', order.changeRequest.requestedAt);
+    if (order.changeRequest?.requestedAt) {
+        const who = getActorName(order, order.changeRequest.requestedBy);
+        add(`변경 요청 (${who})`, order.changeRequest.requestedAt);
+    }
     if (order.lastChange?.decidedAt && order.lastChange.result === 'approved') add('변경 접수', order.lastChange.decidedAt);
     add('운송 시작', order.transportStartedAt);
     add('도착', order.arrivedAt);

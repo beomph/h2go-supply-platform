@@ -1046,6 +1046,7 @@ function renderConsumerView() {
                     <span class="order-datetime">${formatOrderDateTime(order)}</span>
                     <span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span>
                 </div>
+                ${actionButtons ? `<div class="order-actions order-actions--inline">${actionButtons}</div>` : ''}
             </div>
             <div class="order-item-parties-row">
                 <div class="order-party order-party--seller">
@@ -1058,10 +1059,9 @@ function renderConsumerView() {
                 </div>
             </div>
             ${transportInfoText ? `<div class="order-transport-info">${transportInfoText}</div>` : ''}
-            ${(changeBadge || cancelBadge || actionButtons) ? `
+            ${(changeBadge || cancelBadge) ? `
             <div class="order-item-foot">
-                ${(changeBadge || cancelBadge) ? `<div class="order-item-badges"><div class="change-summary">${changeBadge || ''} ${cancelBadge || ''}</div></div>` : ''}
-                ${actionButtons ? `<div class="order-actions order-actions--inline">${actionButtons}</div>` : ''}
+                <div class="order-item-badges"><div class="change-summary">${changeBadge || ''} ${cancelBadge || ''}</div></div>
             </div>
             ` : ''}
         </div>

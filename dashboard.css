@@ -839,9 +839,10 @@
 /* 도착도·출하도 한 줄 (날짜·시각 행 아래) */
 .order-supply-row {
     display: flex;
+    align-items: center;
     gap: 0.35rem;
     min-height: 3rem;
-    padding: 0.5rem;
+    padding: 0.5rem 0.5rem;
     border-radius: 14px;
     border: 1px solid var(--border-color);
     background: var(--surface-soft);
@@ -903,7 +904,7 @@
     min-width: 0;
     min-height: 2rem;
     max-height: 2.75rem;
-    padding: 0.4rem 0.75rem;
+    padding: 0.5rem 0.75rem;
     border-radius: 10px;
     border: 1px solid var(--border-color);
     background: var(--surface-soft);
@@ -1083,7 +1084,7 @@
 
     .order-supply-row .supply-condition-toggle {
         font-size: 0.72rem;
-        padding: 0.35rem 0.4rem;
+        padding: 0.4rem 0.5rem;
     }
 
     .order-time-block .order-datetime-field {
@@ -1277,7 +1278,7 @@
 }
 
 .order-item {
-    padding: 0.62rem 0.72rem;
+    padding: 0.5rem 0.65rem;
     background: var(--bg-dark);
     border-radius: 8px;
     margin-bottom: 0.34rem;
@@ -1289,7 +1290,7 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 0.45rem;
-    margin-bottom: 0.08rem;
+    margin-bottom: 0.06rem;
 }
 
 .order-item-head-right {
@@ -1338,7 +1339,7 @@
 .order-item-datetime-row {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 1rem;
     margin-bottom: 0.35rem;
 }
@@ -1369,7 +1370,7 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 1rem;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.2rem;
 }
 
 .order-party {
@@ -1431,11 +1432,9 @@
 }
 
 .order-item-foot {
-    margin-top: 0.14rem;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: end;
-    gap: 0.32rem;
+    margin-top: 0.1rem;
+    display: flex;
+    align-items: flex-start;
 }
 
 .order-item-badges {

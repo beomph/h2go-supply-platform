@@ -766,7 +766,7 @@
 /* 새 주문 - 희망 납품 일시 (연/월/일 @ 시·분·도착도·출하도 4칸) */
 .order-datetime-row {
     display: grid;
-    grid-template-columns: minmax(100px, 1fr) minmax(72px, 0.9fr) minmax(72px, 0.9fr) auto repeat(4, minmax(0, 1fr));
+    grid-template-columns: minmax(100px, 1fr) minmax(72px, 0.9fr) minmax(72px, 0.9fr) auto minmax(0, 1fr) minmax(0, 1fr) minmax(7.5rem, 1fr) minmax(7.5rem, 1fr);
     gap: 0.45rem;
     width: 100%;
     padding: 0.5rem;
@@ -806,9 +806,10 @@
 .supply-condition-cell {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
+    justify-content: flex-start;
+    gap: 0.4rem;
     min-height: 2.6rem;
+    min-width: 7.5rem;
     padding: 0 0.5rem;
     border-radius: 12px;
     border: 1px solid var(--border-color);
@@ -819,6 +820,11 @@
     color: var(--text-muted);
     transition: border-color 0.2s, background 0.2s, color 0.2s;
     white-space: nowrap;
+}
+
+.supply-condition-cell input {
+    flex-shrink: 0;
+    order: -1;
 }
 
 .supply-condition-cell:hover {
@@ -1578,6 +1584,30 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
 .supplier-select-row input[readonly] {
     flex: 1;
     background: var(--field-readonly);
+}
+
+.supplier-shipping-address-block {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    background: var(--surface-soft);
+    border: 1px solid var(--border-color);
+}
+
+.supplier-shipping-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+}
+
+.supplier-shipping-address-text {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--text-white);
+    word-break: keep-all;
 }
 
 .supplier-list {

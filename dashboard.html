@@ -112,9 +112,9 @@
                                     <button type="button" class="btn btn-secondary btn-tiny" id="changeSupplierBtn">변경</button>
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div id="orderAddressFormGroup" class="form-group">
                                 <label>납품 주소</label>
-                                <input type="text" id="orderAddress" list="orderAddressHistoryList" placeholder="예: 서울시 강남구 테헤란로 123 (도착도: 배달지, 출하도: 픽업지 안내용)" required>
+                                <input type="text" id="orderAddress" list="orderAddressHistoryList" placeholder="예: 서울시 강남구 테헤란로 123 (도착도: 배달지)" required>
                                 <datalist id="orderAddressHistoryList"></datalist>
                             </div>
                             <div class="form-group">
@@ -363,6 +363,10 @@
         <div class="modal-content">
             <button class="modal-close" aria-label="닫기">&times;</button>
             <h3>공급자 선택</h3>
+            <div id="supplierShippingAddressBlock" class="supplier-shipping-address-block" aria-live="polite">
+                <span class="supplier-shipping-label">출하 주소 확인</span>
+                <p id="supplierShippingAddressDisplay" class="supplier-shipping-address-text"></p>
+            </div>
             <div id="supplierList" class="supplier-list"></div>
             <div class="form-group supplier-manual-row">
                 <label for="supplierManualInput">직접 입력</label>

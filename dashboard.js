@@ -150,6 +150,16 @@ function redirectToLogin() {
 const TRAILER_CAPACITY_KG = 400; // 트레일러 1대당 kg (기본)
 const PRODUCTION_SITE = { name: '인천 수소생산공장', address: '인천시 남동구 논현고잔로 123', lat: 37.4489, lng: 126.7317 };
 
+// 공급자별 출하(픽업) 주소 (없으면 생산지 주소 사용)
+function getSupplierShippingAddress(supplierName) {
+    const name = String(supplierName || "").trim();
+    const map = {
+        "KOGAS(데모)": "인천시 남동구 논현고잔로 123 (인천 수소생산공장)",
+        "KOGAS": "인천시 남동구 논현고잔로 123 (인천 수소생산공장)"
+    };
+    return map[name] || PRODUCTION_SITE.address;
+}
+
 // 주소별 운송시간 (분)
 function getTravelTimeFromAddress(addr) {
     const keywords = [{ key: '강남', time: 60 }, { key: '인천', time: 40 }, { key: '수원', time: 50 }, { key: '안산', time: 75 }, { key: '부천', time: 55 }];
@@ -1601,20 +1611,46 @@ function setSupplierName(name) {
     if (input) input.value = selectedSupplierName || "";
 }
 
+// 출하도 선택 시 납품 주소 입력 숨김, 도착도 시 표시
+function toggleOrderAddressBySupplyCondition() {
+    const isExFactory = (document.querySelector('input[name="supplyCondition"]:checked') || {}).value === 'ex_factory';
+    const group = document.getElementById('orderAddressFormGroup');
+    const input = document.getElementById('orderAddress');
+    if (!group || !input) return;
+    if (isExFactory) {
+        group.style.display = 'none';
+        input.removeAttribute('required');
+        input.value = '';
+    } else {
+        group.style.display = '';
+        input.setAttribute('required', 'required');
+    }
+}
+
 function openSupplierSelectModal() {
     const modal = document.getElementById("supplierSelectModal");
     const listEl = document.getElementById("supplierList");
     const manualEl = document.getElementById("supplierManualInput");
+    const addressDisplay = document.getElementById("supplierShippingAddressDisplay");
     if (!modal || !listEl) return;
 
+    const currentSupplier = String(selectedSupplierName || "").trim();
+    if (addressDisplay) {
+        addressDisplay.textContent = currentSupplier
+            ? getSupplierShippingAddress(currentSupplier)
+            : "공급자를 선택하면 출하 주소가 표시됩니다.";
+    }
+
     const candidates = getSupplierCandidates(currentUser.name);
-    listEl.innerHTML = candidates.map(n => `
-        <button type="button" data-supplier="${String(n).replace(/"/g, "&quot;")}">${n}</button>
-    `).join("");
+    listEl.innerHTML = candidates.map(n => {
+        const addr = getSupplierShippingAddress(n);
+        return `<button type="button" data-supplier="${String(n).replace(/"/g, "&quot;")}" data-address="${String(addr).replace(/"/g, "&quot;")}">${n}</button>`;
+    }).join("");
 
     listEl.querySelectorAll("button[data-supplier]").forEach(btn => {
         btn.addEventListener("click", () => {
             setSupplierName(btn.dataset.supplier);
+            if (addressDisplay && btn.dataset.address) addressDisplay.textContent = btn.dataset.address;
             modal.classList.remove("active");
         });
     });
@@ -1623,16 +1659,22 @@ function openSupplierSelectModal() {
     modal.classList.add("active");
 }
 
+document.querySelectorAll('input[name="supplyCondition"]').forEach(radio => {
+    radio.addEventListener('change', toggleOrderAddressBySupplyCondition);
+});
+
 document.getElementById("changeSupplierBtn")?.addEventListener("click", openSupplierSelectModal);
 document.getElementById("supplierManualApplyBtn")?.addEventListener("click", () => {
     const modal = document.getElementById("supplierSelectModal");
     const manualEl = document.getElementById("supplierManualInput");
+    const addressDisplay = document.getElementById("supplierShippingAddressDisplay");
     const v = String(manualEl?.value || "").trim();
     if (!v) {
         alert("공급자명을 입력해 주세요.");
         return;
     }
     setSupplierName(v);
+    if (addressDisplay) addressDisplay.textContent = getSupplierShippingAddress(v);
     modal?.classList.remove("active");
 });
 
@@ -1655,8 +1697,15 @@ document.getElementById('roleSelect').addEventListener('change', (e) => {
 document.getElementById('orderForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const supplierName = String(selectedSupplierName || auth?.name || currentUser.name).trim();
-    const addressValue = normalizeAddress(document.getElementById('orderAddress').value);
+    const supplyCondition = (document.querySelector('input[name="supplyCondition"]:checked') || {}).value || 'delivery';
+    const addressValue = supplyCondition === 'ex_factory'
+        ? getSupplierShippingAddress(supplierName)
+        : normalizeAddress(document.getElementById('orderAddress').value);
     if (!addressValue) {
+        alert('납품 주소를 입력해 주세요.');
+        return;
+    }
+    if (supplyCondition === 'delivery' && !normalizeAddress(document.getElementById('orderAddress').value)) {
         alert('납품 주소를 입력해 주세요.');
         return;
     }
@@ -1665,7 +1714,6 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
     const year = pickedDate?.year ?? parseInt(document.getElementById('orderYear').value, 10);
     const month = pickedDate?.month ?? parseInt(document.getElementById('orderMonth').value, 10);
     const day = pickedDate?.day ?? parseInt(document.getElementById('orderDay').value, 10);
-    const supplyCondition = (document.querySelector('input[name="supplyCondition"]:checked') || {}).value || 'delivery';
     const order = {
         id: generateOrderId({
             supplierName,
@@ -1689,12 +1737,13 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
     };
     orders.push(order);
     localStorage.setItem('h2go_orders', JSON.stringify(orders));
-    addAddressToHistory(addressValue);
+    if (supplyCondition === 'delivery') addAddressToHistory(addressValue);
     renderAddressHistoryOptions();
     document.getElementById('orderForm').reset();
     initFormDefaults();
     initTimeInputs();
     document.querySelector('input[name="supplyCondition"][value="delivery"]')?.setAttribute('checked', 'checked');
+    toggleOrderAddressBySupplyCondition();
     renderConsumerView();
     renderSupplierView();
     alert('주문이 등록되었습니다. 공급자에게 전달됩니다.');
@@ -1988,6 +2037,7 @@ initOrdersDateFilterDefault();
 initTimeInputs();
 initDateTimeToggles();
 initDateTimeWheelAdjust();
+toggleOrderAddressBySupplyCondition();
 renderAddressHistoryOptions();
 setSupplierName(currentUser.name);
 showView(initialRole);

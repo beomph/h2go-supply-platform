@@ -13,17 +13,13 @@
 <body class="theme-dark">
     <!-- 네비게이션 -->
     <nav class="navbar">
-        <a href="dashboard.html" class="logo dashboard-brand" aria-label="H2GO 홈(대시보드)">
-            <!-- 로고: 이미지(검정 배경 포함) 대신 텍스트 로고로 통일 -->
-            <div class="brand-mark brand-mark--lg" aria-label="H2GO 로고">
-                <span class="brand-h2">H2</span><span class="brand-go">GO</span>
-            </div>
-        </a>
-
-        <div class="dashboard-top-right">
-            <!-- 사업자명 표시 (로그인한 계정의 name) -->
-            <div id="bizName" class="dashboard-biz-name">사업자</div>
-            <div class="theme-switcher">
+        <div class="navbar-brand-row">
+            <a href="dashboard.html" class="logo dashboard-brand" aria-label="H2GO 홈(대시보드)">
+                <div class="brand-mark brand-mark--lg" aria-label="H2GO 로고">
+                    <span class="brand-h2">H2</span><span class="brand-go">GO</span>
+                </div>
+            </a>
+            <div class="theme-switcher theme-switcher--compact">
                 <button id="themeToggle" type="button" class="theme-toggle-switch" aria-label="라이트/다크 모드 전환" data-theme="dark">
                     <span class="theme-toggle-track">
                         <span class="theme-toggle-thumb"></span>
@@ -33,15 +29,19 @@
             </div>
         </div>
 
+        <div class="dashboard-top-right">
+            <div id="bizName" class="dashboard-biz-name">사업자</div>
+        </div>
+
         <ul class="nav-links dashboard-nav">
-            <li id="navSupplierRegistrationItem" class="nav-supplier-registration" style="display:none">
-                <a href="#supplier-registration" id="navSupplierRegistration">공급자 등록</a>
-            </li>
             <li class="role-switcher">
                 <select id="roleSelect" class="role-select">
                     <option value="consumer">구매모드</option>
                     <option value="supplier">판매모드</option>
                 </select>
+            </li>
+            <li id="navSupplierRegistrationItem" class="nav-supplier-registration" style="display:none">
+                <a href="#supplier-registration" id="navSupplierRegistration">공급자 등록</a>
             </li>
             <li class="logout-item"><button id="logoutBtn" type="button" class="btn btn-secondary btn-tiny">로그아웃</button></li>
         </ul>

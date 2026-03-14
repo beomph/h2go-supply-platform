@@ -35,16 +35,15 @@
 
         <ul class="nav-links dashboard-nav">
             <li class="nav-controls-stack">
-                <select id="roleSelect" class="role-select">
-                    <option value="consumer">구매모드</option>
-                    <option value="supplier">판매모드</option>
-                </select>
-                <button id="supplierRegisterBtn" type="button" class="btn btn-secondary btn-tiny btn-full">공급자 등록</button>
+                <div class="nav-row-1">
+                    <select id="roleSelect" class="role-select">
+                        <option value="consumer">구매모드</option>
+                        <option value="supplier">판매모드</option>
+                    </select>
+                    <button id="logoutBtn" type="button" class="btn btn-secondary btn-tiny">로그아웃</button>
+                </div>
+                <button id="supplierRegisterBtn" type="button" class="btn btn-secondary btn-tiny">공급자 등록</button>
             </li>
-            <li id="navSupplierRegistrationItem" class="nav-supplier-registration" style="display:none">
-                <a href="#supplier-registration" id="navSupplierRegistration">공급자 등록</a>
-            </li>
-            <li class="logout-item"><button id="logoutBtn" type="button" class="btn btn-secondary btn-tiny">로그아웃</button></li>
         </ul>
     </nav>
 

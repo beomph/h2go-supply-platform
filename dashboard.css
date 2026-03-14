@@ -327,8 +327,16 @@
         width: 100%;
     }
 
+    .nav-row-1 {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
     .nav-controls-stack .role-select,
-    .nav-controls-stack .btn {
+    .nav-controls-stack .btn,
+    .nav-controls-stack #logoutBtn,
+    .nav-controls-stack #supplierRegisterBtn {
         width: 100%;
     }
 
@@ -390,41 +398,43 @@
 
     .dashboard-nav {
         /* styles.css 모바일 규칙(.nav-links { display:none }) 무효화 */
-        display: grid;
+        display: block;
         grid-area: controls;
-        grid-template-columns: minmax(0, 1fr) auto;
         position: static;
         background: transparent;
         border-bottom: none;
         padding: 0;
         width: 100%;
         margin: 0;
-        gap: 0.5rem;
-        align-items: stretch;
     }
 
     .dashboard-nav > li {
-        width: auto;
+        width: 100%;
     }
 
     .nav-controls-stack {
-        grid-column: 1;
-        min-width: 0;
         display: flex;
         flex-direction: column;
         gap: 0.4rem;
-    }
-
-    .nav-controls-stack .role-select,
-    .nav-controls-stack .btn-full {
         width: 100%;
-        min-width: 0;
     }
 
-    .logout-item {
-        grid-column: 2;
-        justify-self: end;
-        align-self: center;
+    .nav-row-1 {
+        display: flex;
+        gap: 0.4rem;
+        align-items: stretch;
+    }
+
+    .nav-row-1 .role-select,
+    .nav-row-1 #logoutBtn {
+        flex: 1;
+        min-width: 0;
+        width: 50%;
+    }
+
+    #supplierRegisterBtn {
+        width: 50%;
+        min-width: 0;
     }
 
     .role-select {
@@ -1121,15 +1131,11 @@
     font-weight: 500;
 }
 
-/* 도착도/출하도 토글 버튼 - 체크박스 없이 글자만, 상하 여백 동일 */
+/* 도착도/출하도 토글 버튼 - 외곽 박스 없이 버튼만 */
 .order-time-type-row {
     display: flex;
     gap: 0.5rem;
     margin-top: 0.6rem;
-    padding: 0.5rem;
-    border-radius: 14px;
-    border: 1px solid var(--border-color);
-    background: var(--surface-soft);
 }
 
 .order-time-type-btn {

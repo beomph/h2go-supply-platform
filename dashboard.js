@@ -1746,8 +1746,12 @@ function initSupplyConditionToggles() {
 
 document.getElementById("changeSupplierBtn")?.addEventListener("click", openSupplierSelectModal);
 document.getElementById("supplierRegisterBtn")?.addEventListener("click", () => {
-    if (currentUser.type === 'consumer') openSupplierSelectModal();
-    else showView('supplier');
+    if (currentUser.type === 'consumer') {
+        showView('supplierRegistration');
+        renderSupplierRegistration();
+    } else {
+        showView('supplier');
+    }
 });
 document.getElementById("supplierManualApplyBtn")?.addEventListener("click", () => {
     const modal = document.getElementById("supplierSelectModal");
@@ -1763,12 +1767,6 @@ document.getElementById("supplierManualApplyBtn")?.addEventListener("click", () 
     modal?.classList.remove("active");
 });
 
-function updateNavSupplierRegistrationVisibility() {
-    const item = document.getElementById('navSupplierRegistrationItem');
-    if (!item) return;
-    item.style.display = currentUser.type === 'consumer' ? '' : 'none';
-}
-
 document.getElementById('roleSelect').addEventListener('change', (e) => {
     if (e.target.disabled) return;
     const role = e.target.value;
@@ -1781,16 +1779,8 @@ document.getElementById('roleSelect').addEventListener('change', (e) => {
         localStorage.setItem(AUTH_KEY, JSON.stringify(nextAuth));
     } catch (_) {}
     showView(role);
-    updateNavSupplierRegistrationVisibility();
     if (role === 'consumer') renderConsumerView();
     if (role === 'supplier') renderSupplierView();
-});
-
-document.getElementById('navSupplierRegistration')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (currentUser.type !== 'consumer') return;
-    showView('supplierRegistration');
-    renderSupplierRegistration();
 });
 
 document.getElementById('backToConsumerDashboard')?.addEventListener('click', () => {

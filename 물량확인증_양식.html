@@ -45,9 +45,15 @@
             font-size: 16pt;
             font-weight: 700;
             padding: 10px 0;
-            margin-bottom: 14px;
+            margin-bottom: 4px;
             background: #eef2f7;
             border: 1px solid #c5d0de;
+        }
+        .doc-order-id {
+            text-align: right;
+            font-size: 7.5pt;
+            color: #555;
+            margin: 0 0 10px 0;
         }
         .doc-meta {
             display: flex;
@@ -58,23 +64,26 @@
         .main-grid {
             display: grid;
             grid-template-columns: 1fr 1.5fr;
-            gap: 16px;
-            align-items: start;
+            gap: 10px;
+            align-items: stretch;
         }
         .grid-inout-full {
             grid-column: 1 / -1;
             margin-top: 0;
             width: 100%;
         }
-        .grid-left { min-width: 0; }
-        .grid-right { min-width: 0; }
+        .grid-left { min-width: 0; display: flex; flex-direction: column; }
+        .grid-left .section:last-child { flex: 1; min-height: 0; }
+        .grid-right { min-width: 0; display: flex; flex-direction: column; }
+        .grid-right .section { flex: 1; min-height: 0; }
         @media (max-width: 600px) {
             .main-grid { grid-template-columns: 1fr; }
         }
         .section {
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             border: 1px solid #999;
         }
+        .section:last-child { margin-bottom: 0; }
         .section-title {
             background: #e0e8f0;
             padding: 5px 8px;
@@ -233,6 +242,7 @@
     </div>
 
     <h1 class="doc-title">물량확인증</h1>
+    <p class="doc-order-id" id="qty-order-id"></p>
 
     <div class="main-grid">
         <div class="grid-left">
@@ -337,7 +347,9 @@
                         <p class="qty-subsection-title" style="margin-bottom: 2px;">(3) T/T계량 방식</p>
                         <p class="qty-usage-line qty-usage-inputs">
                             충전전 중량: <input type="text" class="qty-input qty-inline" id="qty-weight-before"> kg &nbsp;
-                            충전후 중량: <input type="text" class="qty-input qty-inline" id="qty-weight-after"> kg &nbsp;
+                            충전후 중량: <input type="text" class="qty-input qty-inline" id="qty-weight-after"> kg
+                        </p>
+                        <p class="qty-usage-line qty-usage-inputs">
                             충전량: <input type="text" class="qty-input qty-inline" id="qty-weight-charge"> kg
                         </p>
                     </div>
@@ -435,6 +447,7 @@
             return map[n] || '인천시 남동구 논현고잔로 123 (인천 수소생산공장)';
         }
 
+        setText('qty-order-id', order.id || '');
         setText('qty-customer-name', order.consumerName || '');
         setText('qty-customer-addr', order.address || '');
         setText('qty-customer-phone', '');

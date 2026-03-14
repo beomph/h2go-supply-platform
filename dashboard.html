@@ -60,56 +60,53 @@
                         <form id="orderForm" class="order-form">
                             <div class="form-group">
                                 <label>납품 일시 <small class="order-datetime-inline-help">24시간 단위로 입력해주세요</small></label>
-                                <div class="order-datetime-row">
-                                    <div class="order-date-mobile-wrap">
-                                        <input type="date" id="orderDateMobile" class="order-date-mobile" aria-label="희망 납품 날짜">
+                                <div class="order-datetime-supply-wrap">
+                                    <div class="order-datetime-row">
+                                        <div class="order-date-mobile-wrap">
+                                            <input type="date" id="orderDateMobile" class="order-date-mobile" aria-label="희망 납품 날짜">
+                                        </div>
+                                        <div class="order-datetime-field field-year">
+                                            <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderYear" data-step="-1" aria-label="연도 감소">▼</button>
+                                            <input type="number" id="orderYear" min="2025" max="2030" value="2025" required placeholder="연">
+                                            <span class="order-datetime-unit">년</span>
+                                            <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderYear" data-step="1" aria-label="연도 증가">▲</button>
+                                        </div>
+                                        <div class="order-datetime-field field-month">
+                                            <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderMonth" data-step="-1" aria-label="월 감소">▼</button>
+                                            <input type="number" id="orderMonth" min="1" max="12" required placeholder="월">
+                                            <span class="order-datetime-unit">월</span>
+                                            <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderMonth" data-step="1" aria-label="월 증가">▲</button>
+                                        </div>
+                                        <div class="order-datetime-field field-day">
+                                            <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderDay" data-step="-1" aria-label="일 감소">▼</button>
+                                            <input type="number" id="orderDay" min="1" max="31" required placeholder="일">
+                                            <span class="order-datetime-unit">일</span>
+                                            <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderDay" data-step="1" aria-label="일 증가">▲</button>
+                                        </div>
+                                        <span class="order-datetime-sep at">@</span>
+                                        <div class="order-datetime-field field-hour">
+                                            <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderHour" data-step="-1" aria-label="시 감소">▼</button>
+                                            <input type="number" id="orderHour" min="0" max="23" placeholder="시" required>
+                                            <span class="order-datetime-unit">시</span>
+                                            <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderHour" data-step="1" aria-label="시 증가">▲</button>
+                                        </div>
+                                        <div class="order-datetime-field field-minute">
+                                            <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderMinute" data-step="-1" aria-label="분 감소">▼</button>
+                                            <input type="number" id="orderMinute" min="0" max="59" placeholder="분" required>
+                                            <span class="order-datetime-unit">분</span>
+                                            <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderMinute" data-step="1" aria-label="분 증가">▲</button>
+                                        </div>
                                     </div>
-                                    <div class="order-datetime-field field-year">
-                                        <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderYear" data-step="-1" aria-label="연도 감소">▼</button>
-                                        <input type="number" id="orderYear" min="2025" max="2030" value="2025" required placeholder="연">
-                                        <span class="order-datetime-unit">년</span>
-                                        <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderYear" data-step="1" aria-label="연도 증가">▲</button>
+                                    <div class="supply-condition-inline" role="group" aria-label="공급조건 선택">
+                                        <label class="supply-condition-option-inline">
+                                            <input type="radio" name="supplyCondition" value="delivery" checked>
+                                            <span>도착도(하차도)</span>
+                                        </label>
+                                        <label class="supply-condition-option-inline">
+                                            <input type="radio" name="supplyCondition" value="ex_factory">
+                                            <span>출하도(상차도)</span>
+                                        </label>
                                     </div>
-                                    <div class="order-datetime-field field-month">
-                                        <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderMonth" data-step="-1" aria-label="월 감소">▼</button>
-                                        <input type="number" id="orderMonth" min="1" max="12" required placeholder="월">
-                                        <span class="order-datetime-unit">월</span>
-                                        <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderMonth" data-step="1" aria-label="월 증가">▲</button>
-                                    </div>
-                                    <div class="order-datetime-field field-day">
-                                        <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderDay" data-step="-1" aria-label="일 감소">▼</button>
-                                        <input type="number" id="orderDay" min="1" max="31" required placeholder="일">
-                                        <span class="order-datetime-unit">일</span>
-                                        <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderDay" data-step="1" aria-label="일 증가">▲</button>
-                                    </div>
-                                    <span class="order-datetime-sep at">@</span>
-                                    <div class="order-datetime-field field-hour">
-                                        <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderHour" data-step="-1" aria-label="시 감소">▼</button>
-                                        <input type="number" id="orderHour" min="0" max="23" placeholder="시" required>
-                                        <span class="order-datetime-unit">시</span>
-                                        <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderHour" data-step="1" aria-label="시 증가">▲</button>
-                                    </div>
-                                    <div class="order-datetime-field field-minute">
-                                        <button type="button" class="dt-toggle dt-toggle--minus" data-target="orderMinute" data-step="-1" aria-label="분 감소">▼</button>
-                                        <input type="number" id="orderMinute" min="0" max="59" placeholder="분" required>
-                                        <span class="order-datetime-unit">분</span>
-                                        <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderMinute" data-step="1" aria-label="분 증가">▲</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>공급조건</label>
-                                <div class="supply-condition-toggle" role="group" aria-label="공급조건 선택">
-                                    <label class="supply-condition-option">
-                                        <input type="radio" name="supplyCondition" value="delivery" checked>
-                                        <span class="supply-condition-label">도착도</span>
-                                        <small class="supply-condition-help">판매자가 납품지까지 배달 · 납품시각은 도착 기준</small>
-                                    </label>
-                                    <label class="supply-condition-option">
-                                        <input type="radio" name="supplyCondition" value="ex_factory">
-                                        <span class="supply-condition-label">출하도</span>
-                                        <small class="supply-condition-help">구매자가 출하지에서 픽업 · T/T 충전시간만 고려</small>
-                                    </label>
                                 </div>
                             </div>
                             <div class="form-group">

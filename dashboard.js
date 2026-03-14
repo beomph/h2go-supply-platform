@@ -974,12 +974,14 @@ function renderConsumerView() {
                 </div>
             </div>
             <div class="order-item-datetime-row">
-                <div class="order-datetime">${formatOrderDateTime(order)}</div>
+                <div class="order-datetime-with-badge">
+                    <span class="order-datetime">${formatOrderDateTime(order)}</span>
+                    <span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span>
+                </div>
                 <div class="order-address">${order.address || '-'}</div>
             </div>
             <div class="order-item-meta-row">
                 <span class="order-supplier">${order.supplierName || '-'}</span>
-                <span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span>
             </div>
             ${transportInfoText ? `<div class="order-transport-info">${transportInfoText}</div>` : ''}
             ${(changeBadge || cancelBadge || actionButtons) ? `

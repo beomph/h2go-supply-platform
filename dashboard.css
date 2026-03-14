@@ -320,6 +320,18 @@
         border-color: rgba(59, 130, 246, 0.25);
     }
 
+    .nav-controls-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        width: 100%;
+    }
+
+    .nav-controls-stack .role-select,
+    .nav-controls-stack .btn {
+        width: 100%;
+    }
+
     .role-select {
         width: 100%;
         min-height: 2.5rem;
@@ -388,25 +400,34 @@
         width: 100%;
         margin: 0;
         gap: 0.5rem;
-        align-items: center;
+        align-items: stretch;
     }
 
     .dashboard-nav > li {
         width: auto;
     }
 
-    .role-switcher {
+    .nav-controls-stack {
         grid-column: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    .nav-controls-stack .role-select,
+    .nav-controls-stack .btn-full {
+        width: 100%;
         min-width: 0;
     }
 
     .logout-item {
         grid-column: 2;
         justify-self: end;
+        align-self: center;
     }
 
     .role-select {
-        width: 100%;
         padding: 0.5rem 0.7rem;
         font-size: 0.9rem;
     }
@@ -798,21 +819,24 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
     padding-bottom: 0;
     border-bottom: none;
     min-height: 2.5rem;
 }
 
 .order-form-card-header h3 {
+    font-size: 1.125rem;
     margin: 0;
-    padding: 0.2rem 0 0;
+    padding: 0;
     border: none;
     line-height: 1;
     display: flex;
     align-items: center;
 }
 
+.order-form-card-header .btn,
 .order-form-card-header .btn-primary {
     flex-shrink: 0;
     height: 2.25rem;
@@ -822,7 +846,7 @@
     padding: 0 1rem;
 }
 
-.order-form-card h3,
+.order-form-card h3:not(.order-form-card-header h3),
 .my-orders-card h3,
 .orders-table-card h3,
 .production-plan-card h3,
@@ -1097,6 +1121,56 @@
     font-weight: 500;
 }
 
+/* 도착도/출하도 토글 버튼 - 체크박스 없이 글자만, 상하 여백 동일 */
+.order-time-type-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+    padding: 0.5rem;
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    background: var(--surface-soft);
+}
+
+.order-time-type-btn {
+    flex: 1;
+    padding: 0.45rem 1rem;
+    border-radius: 8px;
+    border: 2px solid var(--border-color);
+    background: var(--surface-soft);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.order-time-type-btn:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+    color: var(--text-white);
+}
+
+.order-time-type-btn.active {
+    background: var(--h2-blue);
+    border-color: var(--h2-blue);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+}
+
+body.theme-light .order-time-type-btn {
+    background: #f1f5f9;
+    color: #64748b;
+    border-color: #cbd5e1;
+}
+
+body.theme-light .order-time-type-btn.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
 /* 901px 이상: 날짜는 date picker만 표시 */
 @media (min-width: 901px) {
     .order-date-mobile-wrap {

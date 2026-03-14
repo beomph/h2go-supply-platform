@@ -1745,6 +1745,10 @@ function initSupplyConditionToggles() {
 }
 
 document.getElementById("changeSupplierBtn")?.addEventListener("click", openSupplierSelectModal);
+document.getElementById("supplierRegisterBtn")?.addEventListener("click", () => {
+    if (currentUser.type === 'consumer') openSupplierSelectModal();
+    else showView('supplier');
+});
 document.getElementById("supplierManualApplyBtn")?.addEventListener("click", () => {
     const modal = document.getElementById("supplierSelectModal");
     const manualEl = document.getElementById("supplierManualInput");

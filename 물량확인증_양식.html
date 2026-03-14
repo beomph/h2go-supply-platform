@@ -179,10 +179,33 @@
             font-family: inherit;
         }
         .print-btn:hover { background: #2563EB; }
-        .weight-row { margin-top: 6px; font-size: 9pt; }
+        .weight-row { margin-top: 6px; font-size: 8pt; }
+        .weight-row .qty-subsection-title { font-size: 9pt; }
         .qty-txn-section .section-body { padding: 6px 8px; }
         .qty-txn-section p { margin: 4px 0; }
-        .qty-txn-section .formula { margin-top: 4px; padding: 4px 6px; font-size: 8pt; }
+        .qty-txn-section .formula { margin-top: 4px; padding: 4px 6px; font-size: 7.5pt; white-space: nowrap; }
+        .qty-subsection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            margin-top: 10px;
+        }
+        .qty-subsection-header:first-of-type { margin-top: 0; }
+        .qty-subsection-title { font-weight: 600; font-size: 9.5pt; margin: 0; }
+        .qty-usage-line {
+            margin: 3px 0;
+            font-size: 8pt;
+            white-space: nowrap;
+        }
+        .qty-usage-line.qty-usage-inputs {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 2px;
+        }
+        .qty-usage-line .qty-inline { width: 60px; min-width: 50px; flex-shrink: 0; }
+        .qty-pressure-row .qty-inline { width: 80px; }
         .qty-txn-section table { font-size: 9pt; }
         .qty-txn-section .qty-add-row { margin-top: 2px; }
         .qty-watermark-logo {
@@ -269,7 +292,10 @@
             <div class="section qty-txn-section">
                 <div class="section-title">⊙ 거래 내역</div>
                 <div class="section-body">
-                    <p style="margin-bottom: 8px; font-weight: 600; font-size: 9.5pt;">(1) 유량계 정산</p>
+                    <div class="qty-subsection-header">
+                        <span class="qty-subsection-title">(1) 유량계 정산</span>
+                        <button type="button" class="qty-add-row no-print" id="qty-add-flow-row">행 추가</button>
+                    </div>
                     <table id="qty-flow-table">
                         <thead>
                             <tr>
@@ -282,15 +308,17 @@
                             <tr><td><input type="text" class="qty-input" placeholder=""></td><td><input type="text" class="qty-input" placeholder=""></td></tr>
                         </tbody>
                     </table>
-                    <button type="button" class="qty-add-row no-print" id="qty-add-flow-row">행 추가</button>
-                    <p style="margin-top: 6px; font-size: 8.5pt;">사용량: 출고 지침값 (B) - 입고 지침값 (A)</p>
-                    <p style="margin-top: 4px; font-size: 9pt;">
-                        사용량 A: <input type="text" class="qty-input qty-inline" id="qty-usage-a" style="width: 80px;"> &nbsp;
-                        사용량 B: <input type="text" class="qty-input qty-inline" id="qty-usage-b" style="width: 80px;"> &nbsp;
-                        합계: <input type="text" class="qty-input qty-inline" id="qty-usage-sum" style="width: 80px;">
+                    <p class="qty-usage-line">사용량: 출고 지침값 (B) - 입고 지침값 (A)</p>
+                    <p class="qty-usage-line qty-usage-inputs">
+                        사용량 A: <input type="text" class="qty-input qty-inline" id="qty-usage-a"> &nbsp;
+                        사용량 B: <input type="text" class="qty-input qty-inline" id="qty-usage-b"> &nbsp;
+                        합계: <input type="text" class="qty-input qty-inline" id="qty-usage-sum">
                     </p>
 
-                    <p style="margin: 12px 0 8px; font-weight: 600; font-size: 9.5pt;">(2) 차압 정산</p>
+                    <div class="qty-subsection-header">
+                        <span class="qty-subsection-title">(2) 차압 정산</span>
+                        <button type="button" class="qty-add-row no-print" id="qty-add-pressure-row">행 추가</button>
+                    </div>
                     <table id="qty-pressure-table">
                         <thead>
                             <tr>
@@ -302,18 +330,15 @@
                             <tr><td><input type="text" class="qty-input" placeholder=""></td><td><input type="text" class="qty-input" placeholder=""></td></tr>
                         </tbody>
                     </table>
-                    <button type="button" class="qty-add-row no-print" id="qty-add-pressure-row">행 추가</button>
-                    <p style="margin-top: 6px; font-size: 9pt;">사용량: <input type="text" class="qty-input qty-inline" id="qty-pressure-usage" style="width: 100px;"></p>
-                    <div class="formula">
-                        ▶ 사용량 산정식: (출고 압력 - 입고 압력, bar) × 내용적 (m³)
-                    </div>
+                    <p class="qty-usage-line qty-usage-inputs qty-pressure-row">사용량: <input type="text" class="qty-input qty-inline" id="qty-pressure-usage"></p>
+                    <div class="formula">▶ 사용량 산정식: (출고 압력 - 입고 압력, bar) × 내용적 (m³)</div>
 
                     <div class="weight-row">
-                        <p style="font-weight: 600; margin-bottom: 4px;">(3) 계량기 방식 (선택)</p>
-                        <p>
-                            충전전 중량: <input type="text" class="qty-input qty-inline" id="qty-weight-before" style="width: 70px;"> kg &nbsp;&nbsp;
-                            충전후 중량: <input type="text" class="qty-input qty-inline" id="qty-weight-after" style="width: 70px;"> kg &nbsp;&nbsp;
-                            충전량: <input type="text" class="qty-input qty-inline" id="qty-weight-charge" style="width: 70px;"> kg
+                        <p class="qty-subsection-title" style="margin-bottom: 2px;">(3) T/T계량 방식</p>
+                        <p class="qty-usage-line qty-usage-inputs">
+                            충전전 중량: <input type="text" class="qty-input qty-inline" id="qty-weight-before"> kg &nbsp;
+                            충전후 중량: <input type="text" class="qty-input qty-inline" id="qty-weight-after"> kg &nbsp;
+                            충전량: <input type="text" class="qty-input qty-inline" id="qty-weight-charge"> kg
                         </p>
                     </div>
                 </div>

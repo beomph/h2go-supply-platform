@@ -901,6 +901,17 @@
     color: var(--h2-blue-light);
 }
 
+/* 시/분 필드: 두 자리 숫자가 모두 보이도록 최소 너비 확보 */
+.order-datetime-field.field-hour,
+.order-datetime-field.field-minute {
+    grid-template-columns: minmax(2.6em, 1fr) auto 2rem;
+}
+
+.order-datetime-field.field-hour input,
+.order-datetime-field.field-minute input {
+    min-width: 2.5em;
+}
+
 .order-datetime-field input[type="number"]#orderYear {
     font-size: 0.94rem;
 }
@@ -994,6 +1005,53 @@
     font-weight: 500;
 }
 
+/* 도착도/출하도 토글 버튼 - 체크박스 없이 글자만, 눌렀을 때/안 눌렀을 때 구분 */
+.order-time-type-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+}
+
+.order-time-type-btn {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: 2px solid var(--border-color);
+    background: var(--surface-soft);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.order-time-type-btn:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+    color: var(--text-white);
+}
+
+.order-time-type-btn.active {
+    background: var(--h2-blue);
+    border-color: var(--h2-blue);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+}
+
+body.theme-light .order-time-type-btn {
+    background: #f1f5f9;
+    color: #64748b;
+    border-color: #cbd5e1;
+}
+
+body.theme-light .order-time-type-btn.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+
 /* 901px 이상: 날짜는 date picker만 표시 */
 @media (min-width: 901px) {
     .order-date-row {
@@ -1028,6 +1086,10 @@
     .order-datetime-field.field-day,
     .order-date-row .order-datetime-sep {
         display: none !important;
+    }
+
+    .order-time-supply-row .order-datetime-field input {
+        min-width: 2.5em;
     }
 }
 
@@ -1066,7 +1128,11 @@
     }
 
     .order-time-supply-row {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .order-time-supply-row .order-datetime-field input {
+        min-width: 2.8em;
     }
 
     .supply-condition-btn {
@@ -1080,6 +1146,11 @@
 
     .order-datetime-wrap input[type="number"] {
         font-size: 0.95rem;
+    }
+
+    .order-time-supply-row input#orderHour,
+    .order-time-supply-row input#orderMinute {
+        min-width: 2.8em;
     }
 
     .dt-toggle {

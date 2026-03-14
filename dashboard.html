@@ -98,15 +98,12 @@
                                             <span class="order-datetime-unit">분</span>
                                             <button type="button" class="dt-toggle dt-toggle--plus" data-target="orderMinute" data-step="1" aria-label="분 증가">▲</button>
                                         </div>
-                                        <label class="supply-condition-btn" role="group" aria-label="도착도 선택">
-                                            <input type="radio" name="supplyCondition" value="delivery" checked>
-                                            <span>도착도(하차도)</span>
-                                        </label>
-                                        <label class="supply-condition-btn" role="group" aria-label="출하도 선택">
-                                            <input type="radio" name="supplyCondition" value="ex_factory">
-                                            <span>출하도(상차도)</span>
-                                        </label>
                                     </div>
+                                </div>
+                                <input type="hidden" name="supplyCondition" id="supplyConditionInput" value="delivery">
+                                <div class="order-time-type-row">
+                                    <button type="button" class="order-time-type-btn active" data-type="delivery" aria-pressed="true">도착도(하차도)</button>
+                                    <button type="button" class="order-time-type-btn" data-type="ex_factory" aria-pressed="false">출하도(상차도)</button>
                                 </div>
                             </div>
                             <div class="form-group">

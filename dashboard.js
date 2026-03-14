@@ -1592,6 +1592,22 @@ function initDateTimeToggles() {
     });
 }
 
+function initTimeTypeButtons() {
+    const hiddenInput = document.getElementById('supplyConditionInput');
+    document.querySelectorAll('.order-time-type-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const type = btn.dataset.type;
+            document.querySelectorAll('.order-time-type-btn').forEach(b => {
+                const isActive = b.dataset.type === type;
+                b.classList.toggle('active', isActive);
+                b.setAttribute('aria-pressed', isActive);
+            });
+            if (hiddenInput) hiddenInput.value = type;
+            toggleOrderAddressBySupplyCondition();
+        });
+    });
+}
+
 function initDateTimeWheelAdjust() {
     // 데스크톱(정밀 포인터)에서만 휠 증감 활성화
     if (!window.matchMedia('(pointer:fine)').matches) return;
@@ -1613,7 +1629,8 @@ function setSupplierName(name) {
 
 // 출하도 선택 시 납품 주소 입력 숨김, 도착도 시 표시
 function toggleOrderAddressBySupplyCondition() {
-    const isExFactory = (document.querySelector('input[name="supplyCondition"]:checked') || {}).value === 'ex_factory';
+    const scInput = document.getElementById('supplyConditionInput');
+    const isExFactory = (scInput && scInput.value) === 'ex_factory';
     const group = document.getElementById('orderAddressFormGroup');
     const input = document.getElementById('orderAddress');
     if (!group || !input) return;
@@ -1659,9 +1676,7 @@ function openSupplierSelectModal() {
     modal.classList.add("active");
 }
 
-document.querySelectorAll('input[name="supplyCondition"]').forEach(radio => {
-    radio.addEventListener('change', toggleOrderAddressBySupplyCondition);
-});
+// supplyCondition은 order-time-type-btn으로 제어됨 (initTimeTypeButtons에서 toggleOrderAddressBySupplyCondition 호출)
 
 document.getElementById("changeSupplierBtn")?.addEventListener("click", openSupplierSelectModal);
 document.getElementById("supplierManualApplyBtn")?.addEventListener("click", () => {
@@ -1697,7 +1712,7 @@ document.getElementById('roleSelect').addEventListener('change', (e) => {
 document.getElementById('orderForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const supplierName = String(selectedSupplierName || auth?.name || currentUser.name).trim();
-    const supplyCondition = (document.querySelector('input[name="supplyCondition"]:checked') || {}).value || 'delivery';
+    const supplyCondition = (document.getElementById('supplyConditionInput') || {}).value || 'delivery';
     const addressValue = supplyCondition === 'ex_factory'
         ? getSupplierShippingAddress(supplierName)
         : normalizeAddress(document.getElementById('orderAddress').value);
@@ -1742,7 +1757,13 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
     document.getElementById('orderForm').reset();
     initFormDefaults();
     initTimeInputs();
-    document.querySelector('input[name="supplyCondition"][value="delivery"]')?.setAttribute('checked', 'checked');
+    const scInput = document.getElementById('supplyConditionInput');
+    if (scInput) scInput.value = 'delivery';
+    document.querySelectorAll('.order-time-type-btn').forEach(b => {
+        const isDelivery = b.dataset.type === 'delivery';
+        b.classList.toggle('active', isDelivery);
+        b.setAttribute('aria-pressed', isDelivery);
+    });
     toggleOrderAddressBySupplyCondition();
     renderConsumerView();
     renderSupplierView();
@@ -2037,6 +2058,7 @@ initOrdersDateFilterDefault();
 initTimeInputs();
 initDateTimeToggles();
 initDateTimeWheelAdjust();
+initTimeTypeButtons();
 toggleOrderAddressBySupplyCondition();
 renderAddressHistoryOptions();
 setSupplierName(currentUser.name);

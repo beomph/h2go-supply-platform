@@ -373,27 +373,28 @@ function orderDateCode(year, month, day) {
     return `${yy}${mm}${dd}`;
 }
 
-function nextOrderSequence(prefix) {
-    const re = new RegExp(`^${prefix}([0-9A-Z]{2})$`);
+// 주문회차: 해당 주문일시(YYMMDD) 기준 당일 순번 2자리 (01~99)
+function nextOrderSequence(dateCode) {
+    const re = new RegExp(`^${dateCode}-([0-9]{2})-.+`);
     const maxSeq = orders.reduce((max, o) => {
         const id = String(o?.id || "");
         const m = id.match(re);
         if (!m) return max;
-        const n = parseInt(m[1], 36);
+        const n = parseInt(m[1], 10);
         return Number.isFinite(n) ? Math.max(max, n) : max;
     }, 0);
     const next = maxSeq + 1;
-    const bounded = Math.min(next, 36 * 36 - 1);
-    return bounded.toString(36).toUpperCase().padStart(2, "0");
+    const bounded = Math.min(next, 99);
+    return String(bounded).padStart(2, "0");
 }
 
+// 주문번호: 주문일시 6자리 - 주문회차 2자리 - 구매자번호 3자리 - 판매자번호 3자리
 function generateOrderId({ supplierName, consumerName, year, month, day }) {
     const supplierCode = businessCodeFromName(supplierName);
     const consumerCode = businessCodeFromName(consumerName);
     const dateCode = orderDateCode(year, month, day); // YYMMDD
-    const prefix = `${supplierCode}${consumerCode}${dateCode}`;
-    const seq = nextOrderSequence(prefix);
-    return `${prefix}${seq}`;
+    const seq = nextOrderSequence(dateCode);
+    return `${dateCode}-${seq}-${consumerCode}-${supplierCode}`;
 }
 
 function getTodayParts() {

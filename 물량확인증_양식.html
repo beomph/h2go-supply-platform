@@ -4,15 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>H2GO 수소 공급 물량확인증</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .no-print { display: none !important; }
             body { padding: 12px; }
+            .qty-input { border: none; background: transparent !important; }
+            .qty-input:focus { outline: none; }
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", sans-serif;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: 10.5pt;
             line-height: 1.4;
             color: #222;
@@ -20,6 +23,8 @@
             padding: 20px;
             max-width: 210mm;
             margin: 0 auto;
+            word-break: keep-all;
+            overflow-wrap: break-word;
         }
         .header-row {
             display: flex;
@@ -87,13 +92,45 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 9.5pt;
+            table-layout: fixed;
         }
+        #qty-flow-table th:nth-child(1), #qty-flow-table td:nth-child(1) { width: 50%; }
+        #qty-flow-table th:nth-child(2), #qty-flow-table td:nth-child(2) { width: 50%; }
+        #qty-pressure-table th:nth-child(1), #qty-pressure-table td:nth-child(1) { width: 50%; }
+        #qty-pressure-table th:nth-child(2), #qty-pressure-table td:nth-child(2) { width: 50%; }
         th, td {
             border: 1px solid #999;
-            padding: 5px 6px;
+            padding: 4px 6px;
             text-align: center;
+            word-break: keep-all;
+            overflow: hidden;
         }
         th { background: #eef2f7; font-weight: 600; }
+        .qty-input {
+            width: 100%;
+            min-width: 0;
+            border: none;
+            background: transparent;
+            font: inherit;
+            text-align: center;
+            padding: 2px 4px;
+        }
+        .qty-input:focus { outline: 1px solid #3B82F6; }
+        .qty-add-row {
+            margin-top: 4px;
+            padding: 4px 10px;
+            font-size: 9pt;
+            background: #eef2f7;
+            border: 1px solid #c5d0de;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .qty-add-row:hover { background: #e0e8f0; }
+        .qty-inline { display: inline-block; vertical-align: middle; }
+        .section-title, .label, .formula { word-break: keep-all; }
+        .row { flex-wrap: wrap; }
+        .value { min-width: 0; }
         .formula {
             margin-top: 6px;
             padding: 6px 8px;
@@ -112,16 +149,17 @@
         }
         .print-btn {
             position: fixed;
-            top: 16px;
-            right: 16px;
-            padding: 10px 20px;
+            top: 12px;
+            right: 12px;
+            padding: 6px 12px;
             background: #3B82F6;
             color: #fff;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
+            font-size: 12px;
+            font-weight: 500;
+            font-family: inherit;
         }
         .print-btn:hover { background: #2563EB; }
         .weight-row { margin-top: 8px; font-size: 9pt; }
@@ -203,7 +241,7 @@
                     </div>
                     <div class="row">
                         <span class="label">내용적:</span>
-                        <span class="value" id="qty-trailer-vol" style="flex: 0 0 80px;">&nbsp;</span>
+                        <span class="value" style="flex: 0 0 80px;"><input type="text" class="qty-input" id="qty-trailer-vol" placeholder=""></span>
                         <span>m³</span>
                     </div>
                 </div>
@@ -243,7 +281,7 @@
                 <div class="section-title">⊙ 거래 내역</div>
                 <div class="section-body">
                     <p style="margin-bottom: 8px; font-weight: 600; font-size: 9.5pt;">(1) 유량계 정산</p>
-                    <table>
+                    <table id="qty-flow-table">
                         <thead>
                             <tr>
                                 <th>입고 (A)</th>
@@ -251,15 +289,20 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td style="height: 26px;">&nbsp;</td><td>&nbsp;</td></tr>
-                            <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+                            <tr><td><input type="text" class="qty-input" placeholder=""></td><td><input type="text" class="qty-input" placeholder=""></td></tr>
+                            <tr><td><input type="text" class="qty-input" placeholder=""></td><td><input type="text" class="qty-input" placeholder=""></td></tr>
                         </tbody>
                     </table>
-                    <p style="margin-top: 4px; font-size: 8.5pt;">사용량: 출고 지침값 (B) - 입고 지침값 (A)</p>
-                    <p style="margin-top: 4px; font-size: 9pt;">사용량 A: ___________ &nbsp; 사용량 B: ___________ &nbsp; 합계: ___________</p>
+                    <button type="button" class="qty-add-row no-print" id="qty-add-flow-row">행 추가</button>
+                    <p style="margin-top: 6px; font-size: 8.5pt;">사용량: 출고 지침값 (B) - 입고 지침값 (A)</p>
+                    <p style="margin-top: 4px; font-size: 9pt;">
+                        사용량 A: <input type="text" class="qty-input qty-inline" id="qty-usage-a" style="width: 80px;"> &nbsp;
+                        사용량 B: <input type="text" class="qty-input qty-inline" id="qty-usage-b" style="width: 80px;"> &nbsp;
+                        합계: <input type="text" class="qty-input qty-inline" id="qty-usage-sum" style="width: 80px;">
+                    </p>
 
                     <p style="margin: 12px 0 8px; font-weight: 600; font-size: 9.5pt;">(2) 차압 정산</p>
-                    <table>
+                    <table id="qty-pressure-table">
                         <thead>
                             <tr>
                                 <th>입고 압력 (A) bar</th>
@@ -267,17 +310,22 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td style="height: 26px;">&nbsp;</td><td>&nbsp;</td></tr>
+                            <tr><td><input type="text" class="qty-input" placeholder=""></td><td><input type="text" class="qty-input" placeholder=""></td></tr>
                         </tbody>
                     </table>
-                    <p style="margin-top: 4px; font-size: 9pt;">사용량: ___________</p>
+                    <button type="button" class="qty-add-row no-print" id="qty-add-pressure-row">행 추가</button>
+                    <p style="margin-top: 6px; font-size: 9pt;">사용량: <input type="text" class="qty-input qty-inline" id="qty-pressure-usage" style="width: 100px;"></p>
                     <div class="formula">
                         ▶ 사용량 산정식: (출고 압력 - 입고 압력, bar) × 내용적 (m³)
                     </div>
 
                     <div class="weight-row">
                         <p style="font-weight: 600; margin-bottom: 4px;">(3) 계량기 방식 (선택)</p>
-                        <p>충전전 중량: ___________ kg &nbsp;&nbsp; 충전후 중량: ___________ kg &nbsp;&nbsp; 충전량: ___________ kg</p>
+                        <p>
+                            충전전 중량: <input type="text" class="qty-input qty-inline" id="qty-weight-before" style="width: 70px;"> kg &nbsp;&nbsp;
+                            충전후 중량: <input type="text" class="qty-input qty-inline" id="qty-weight-after" style="width: 70px;"> kg &nbsp;&nbsp;
+                            충전량: <input type="text" class="qty-input qty-inline" id="qty-weight-charge" style="width: 70px;"> kg
+                        </p>
                     </div>
                 </div>
             </div>
@@ -298,7 +346,9 @@
         }
         function setText(id, val) {
             const el = document.getElementById(id);
-            if (el) el.textContent = val || '';
+            if (!el) return;
+            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = val || '';
+            else el.textContent = val || '';
         }
         const embed = getParam('embed') === '1';
         if (embed) {
@@ -360,6 +410,23 @@
         var driver = ti && ti.driverName ? ti.driverName : '';
         setText('qty-sign-in-driver', driver);
         setText('qty-sign-out-driver', driver);
+
+        function addFlowRow() {
+            var tbody = document.querySelector('#qty-flow-table tbody');
+            if (!tbody) return;
+            var tr = document.createElement('tr');
+            tr.innerHTML = '<td><input type="text" class="qty-input" placeholder=""></td><td><input type="text" class="qty-input" placeholder=""></td>';
+            tbody.appendChild(tr);
+        }
+        function addPressureRow() {
+            var tbody = document.querySelector('#qty-pressure-table tbody');
+            if (!tbody) return;
+            var tr = document.createElement('tr');
+            tr.innerHTML = '<td><input type="text" class="qty-input" placeholder=""></td><td><input type="text" class="qty-input" placeholder=""></td>';
+            tbody.appendChild(tr);
+        }
+        document.getElementById('qty-add-flow-row')?.addEventListener('click', addFlowRow);
+        document.getElementById('qty-add-pressure-row')?.addEventListener('click', addPressureRow);
     })();
     </script>
 </body>

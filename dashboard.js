@@ -1036,7 +1036,7 @@ function renderConsumerView() {
 
         const isCancelled = order.status === 'cancelled';
         return `
-        <div class="order-item ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
+        <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
             <div class="order-item-head">
                 <div class="order-id">${order.id}</div>
                 <div class="order-item-head-right">
@@ -1075,6 +1075,14 @@ function renderConsumerView() {
             ` : ''}
         </div>
     `}).join('');
+
+    list.querySelectorAll('.order-item-clickable[data-order-id]').forEach(el => {
+        el.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return;
+            const orderId = el.dataset.orderId;
+            window.open('물량확인증_양식.html?orderId=' + encodeURIComponent(orderId), '_blank', 'noopener');
+        });
+    });
 
     renderInventoryPanel();
 }
@@ -1140,6 +1148,13 @@ function renderOrdersTable(tbodyId, showActions) {
         </tr>
     `}).join('') || `<tr><td colspan="${colspan}" class="empty-state">주문이 없습니다.</td></tr>`;
 
+    tbody.querySelectorAll('.order-row[data-order-id]').forEach(row => {
+        row.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return;
+            const orderId = row.dataset.orderId;
+            window.open('물량확인증_양식.html?orderId=' + encodeURIComponent(orderId), '_blank', 'noopener');
+        });
+    });
 }
 
 function renderSupplierView() {

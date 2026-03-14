@@ -2124,6 +2124,14 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     border-left-color: #f59e0b;
 }
 
+.order-item-clickable {
+    cursor: pointer;
+}
+
+.order-item-clickable:hover {
+    background: rgba(59, 130, 246, 0.06);
+}
+
 .order-item .order-transport-info {
     font-size: 0.82rem;
     color: var(--h2-blue-light);

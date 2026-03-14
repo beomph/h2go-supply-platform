@@ -138,8 +138,8 @@
     <h1 class="doc-title">물량확인증</h1>
 
     <div class="doc-meta">
-        <span>입고 일자: _____________ 년 _____ 월 _____ 일</span>
-        <span>출고 일자: _____________ 년 _____ 월 _____ 일</span>
+        <span>입고 일자: <span id="qty-in-year"></span> 년 <span id="qty-in-month"></span> 월 <span id="qty-in-day"></span> 일</span>
+        <span>출고 일자: <span id="qty-out-year"></span> 년 <span id="qty-out-month"></span> 월 <span id="qty-out-day"></span> 일</span>
     </div>
 
     <div class="main-grid">
@@ -149,15 +149,15 @@
                 <div class="section-body">
                     <div class="row">
                         <span class="label">고객명:</span>
-                        <span class="value">&nbsp;</span>
+                        <span class="value" id="qty-customer-name">&nbsp;</span>
                     </div>
                     <div class="row">
                         <span class="label">주소:</span>
-                        <span class="value">&nbsp;</span>
+                        <span class="value" id="qty-customer-addr">&nbsp;</span>
                     </div>
                     <div class="row">
                         <span class="label">전화번호:</span>
-                        <span class="value">&nbsp;</span>
+                        <span class="value" id="qty-customer-phone">&nbsp;</span>
                     </div>
                 </div>
             </div>
@@ -167,15 +167,15 @@
                 <div class="section-body">
                     <div class="row">
                         <span class="label">공급자명:</span>
-                        <span class="value">&nbsp;</span>
+                        <span class="value" id="qty-supplier-name">&nbsp;</span>
                     </div>
                     <div class="row">
                         <span class="label">주소:</span>
-                        <span class="value">&nbsp;</span>
+                        <span class="value" id="qty-supplier-addr">&nbsp;</span>
                     </div>
                     <div class="row">
                         <span class="label">전화번호:</span>
-                        <span class="value">&nbsp;</span>
+                        <span class="value" id="qty-supplier-phone">&nbsp;</span>
                     </div>
                 </div>
             </div>
@@ -185,11 +185,11 @@
                 <div class="section-body">
                     <div class="row">
                         <span class="label">차량 번호:</span>
-                        <span class="value" style="flex: 0 0 100px;">&nbsp;</span>
+                        <span class="value" id="qty-trailer-no" style="flex: 0 0 100px;">&nbsp;</span>
                     </div>
                     <div class="row">
                         <span class="label">내용적:</span>
-                        <span class="value" style="flex: 0 0 80px;">&nbsp;</span>
+                        <span class="value" id="qty-trailer-vol" style="flex: 0 0 80px;">&nbsp;</span>
                         <span>m³</span>
                     </div>
                 </div>
@@ -206,17 +206,17 @@
                         </tr>
                         <tr>
                             <td>고객</td>
-                            <td>&nbsp;</td>
+                            <td id="qty-sign-customer">&nbsp;</td>
                             <td>&nbsp;</td>
                         </tr>
                         <tr>
                             <td>입고 기사</td>
-                            <td>&nbsp;</td>
+                            <td id="qty-sign-in-driver">&nbsp;</td>
                             <td>&nbsp;</td>
                         </tr>
                         <tr>
                             <td>출고 기사</td>
-                            <td>&nbsp;</td>
+                            <td id="qty-sign-out-driver">&nbsp;</td>
                             <td>&nbsp;</td>
                         </tr>
                     </table>
@@ -273,5 +273,69 @@
     <div class="footer-note">
         (공급받는자 보관용) &nbsp;&nbsp;&nbsp; H2GO
     </div>
+
+    <script>
+    (function() {
+        function getParam(name) {
+            const m = location.search.match(new RegExp('[?&]' + name + '=([^&]*)'));
+            return m ? decodeURIComponent(m[1]) : '';
+        }
+        function setText(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val || '';
+        }
+        const orderId = getParam('orderId');
+        if (!orderId) return;
+        let orders = [];
+        try {
+            orders = JSON.parse(localStorage.getItem('h2go_orders') || '[]');
+        } catch (_) {}
+        const order = orders.find(function(o) { return o.id === orderId; });
+        if (!order) return;
+
+        function getSupplierAddress(name) {
+            const n = String(name || '').trim();
+            let registered = [];
+            try {
+                const auth = JSON.parse(localStorage.getItem('h2go_auth') || 'null');
+                const who = String((auth && auth.id) || (auth && auth.name) || 'anon').trim().toLowerCase();
+                registered = JSON.parse(localStorage.getItem('h2go_registered_suppliers_v1:' + who) || '[]');
+            } catch (_) {}
+            const found = registered.find(function(s) {
+                const sn = typeof s === 'string' ? s : (s && s.name);
+                return String(sn || '').trim().toLowerCase() === n.toLowerCase();
+            });
+            if (found && typeof found === 'object' && found.address) return found.address;
+            var map = { 'KOGAS(데모)': '인천시 남동구 논현고잔로 123 (인천 수소생산공장)', 'KOGAS': '인천시 남동구 논현고잔로 123 (인천 수소생산공장)' };
+            return map[n] || '인천시 남동구 논현고잔로 123 (인천 수소생산공장)';
+        }
+
+        var y = order.year || '', m = order.month || '', d = order.day || '';
+        setText('qty-in-year', y);
+        setText('qty-in-month', m);
+        setText('qty-in-day', d);
+        setText('qty-out-year', y);
+        setText('qty-out-month', m);
+        setText('qty-out-day', d);
+
+        setText('qty-customer-name', order.consumerName || '');
+        setText('qty-customer-addr', order.address || '');
+        setText('qty-customer-phone', '');
+
+        setText('qty-supplier-name', order.supplierName || '');
+        setText('qty-supplier-addr', getSupplierAddress(order.supplierName));
+        setText('qty-supplier-phone', '');
+
+        var ti = order.transportInfo;
+        var trailerNos = ti && ti.trailerNumbers && ti.trailerNumbers.length ? ti.trailerNumbers.join(', ') : '';
+        setText('qty-trailer-no', trailerNos);
+        setText('qty-trailer-vol', '');
+
+        setText('qty-sign-customer', order.consumerName || '');
+        var driver = ti && ti.driverName ? ti.driverName : '';
+        setText('qty-sign-in-driver', driver);
+        setText('qty-sign-out-driver', driver);
+    })();
+    </script>
 </body>
 </html>

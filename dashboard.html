@@ -98,6 +98,21 @@
                                 </div>
                             </div>
                             <div class="form-group">
+                                <label>공급조건</label>
+                                <div class="supply-condition-toggle" role="group" aria-label="공급조건 선택">
+                                    <label class="supply-condition-option">
+                                        <input type="radio" name="supplyCondition" value="delivery" checked>
+                                        <span class="supply-condition-label">도착도</span>
+                                        <small class="supply-condition-help">판매자가 납품지까지 배달 · 납품시각은 도착 기준</small>
+                                    </label>
+                                    <label class="supply-condition-option">
+                                        <input type="radio" name="supplyCondition" value="ex_factory">
+                                        <span class="supply-condition-label">출하도</span>
+                                        <small class="supply-condition-help">구매자가 출하지에서 픽업 · T/T 충전시간만 고려</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group">
                                 <label>공급자</label>
                                 <div class="supplier-select-row">
                                     <input type="text" id="orderSupplierName" readonly>
@@ -106,7 +121,7 @@
                             </div>
                             <div class="form-group">
                                 <label>납품 주소</label>
-                                <input type="text" id="orderAddress" list="orderAddressHistoryList" placeholder="예: 서울시 강남구 테헤란로 123" required>
+                                <input type="text" id="orderAddress" list="orderAddressHistoryList" placeholder="예: 서울시 강남구 테헤란로 123 (도착도: 배달지, 출하도: 픽업지 안내용)" required>
                                 <datalist id="orderAddressHistoryList"></datalist>
                             </div>
                             <div class="form-group">
@@ -201,6 +216,7 @@
                                     <th>시각</th>
                                     <th>트레일러</th>
                                     <th>납품지</th>
+                                    <th>공급조건</th>
                                     <th>운송시간</th>
                                     <th>상태</th>
                                     <th>작업</th>
@@ -355,9 +371,9 @@
             <button class="modal-close" aria-label="닫기">&times;</button>
             <h3>공급자 선택</h3>
             <div id="supplierList" class="supplier-list"></div>
-            <div class="form-group">
+            <div class="form-group supplier-manual-row">
                 <label for="supplierManualInput">직접 입력</label>
-                <input type="text" id="supplierManualInput" placeholder="공급자명을 입력하세요">
+                <input type="text" id="supplierManualInput" class="supplier-manual-input" placeholder="공급자명을 입력하세요" autocomplete="off">
             </div>
             <button type="button" class="btn btn-primary btn-full" id="supplierManualApplyBtn">적용</button>
         </div>

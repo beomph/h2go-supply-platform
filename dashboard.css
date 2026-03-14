@@ -763,6 +763,49 @@
     color: var(--text-muted);
 }
 
+/* 공급조건 토글 (도착도 / 출하도) */
+.supply-condition-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.supply-condition-option {
+    flex: 1;
+    min-width: 140px;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--surface-soft);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.supply-condition-option:has(input:checked) {
+    border-color: var(--h2-blue);
+    background: var(--bg-card);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.supply-condition-option input {
+    margin-right: 0.4rem;
+    vertical-align: middle;
+}
+
+.supply-condition-label {
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: block;
+    margin-bottom: 0.15rem;
+}
+
+.supply-condition-help {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+}
+
 /* 새 주문 - 희망 납품 일시 */
 .order-datetime-row {
     display: grid;
@@ -1261,6 +1304,38 @@
     margin-bottom: 0.2rem;
 }
 
+.order-item-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.2rem;
+}
+
+.order-item-meta-row .order-supplier {
+    margin-bottom: 0;
+}
+
+.supply-condition-badge {
+    display: inline-block;
+    padding: 0.12rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.supply-condition-badge.supply-condition-delivery {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--h2-blue);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.supply-condition-badge.supply-condition-ex-factory {
+    background: rgba(34, 197, 94, 0.15);
+    color: #16a34a;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
 .order-item .order-note {
     color: var(--text-muted);
     font-size: 0.83rem;
@@ -1473,6 +1548,47 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
 .supplier-list button:hover {
     border-color: rgba(59, 130, 246, 0.35);
     background: rgba(59, 130, 246, 0.12);
+}
+
+/* 공급자 선택 모달 - 직접 입력 칸 (전체 톤 통일) */
+#supplierSelectModal .supplier-manual-row {
+    margin-top: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+#supplierSelectModal .supplier-manual-row label {
+    display: block;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+#supplierSelectModal .supplier-manual-input {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--surface-soft-border);
+    background: var(--surface-soft);
+    color: var(--text-white);
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#supplierSelectModal .supplier-manual-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.85;
+}
+
+#supplierSelectModal .supplier-manual-input:hover {
+    border-color: var(--border-color);
+}
+
+#supplierSelectModal .supplier-manual-input:focus {
+    outline: none;
+    border-color: var(--h2-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 /* 변경요청 요약 텍스트

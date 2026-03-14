@@ -157,6 +157,25 @@ function getTravelTimeFromAddress(addr) {
     return found ? found.time : 60;
 }
 
+// 공급조건: 도착도(판매자 배달) / 출하도(구매자 픽업)
+const SUPPLY_CONDITIONS = [
+    { value: 'delivery', label: '도착도' },
+    { value: 'ex_factory', label: '출하도' }
+];
+
+function getSupplyConditionLabel(order) {
+    const v = order?.supplyCondition;
+    const s = SUPPLY_CONDITIONS.find(c => c.value === v);
+    return s ? s.label : (v === 'ex_factory' ? '출하도' : '도착도');
+}
+
+// 주문별 운송시간(분): 출하도는 0(픽업), 도착도는 납품지까지 시간
+function getOrderTravelTimeMinutes(order) {
+    if (!order) return 0;
+    if (order.supplyCondition === 'ex_factory') return 0;
+    return getTravelTimeFromAddress(order.address);
+}
+
 // 주소별 좌표 (지도용)
 function getCoordinatesFromAddress(addr) {
     const keywords = [
@@ -526,12 +545,17 @@ function calculateTransportPlan() {
     const totalQuantity = destinations.reduce((sum, d) => sum + d.quantity, 0);
     const totalTrailers = destinations.reduce((sum, d) => sum + d.tubeTrailers, 0);
 
-    const getTravelTime = getTravelTimeFromAddress;
+    // 도착도만 운송시간 반영, 출하도는 픽업(0분)
+    function getDestTravelTime(d) {
+        const hasDelivery = (d.orders || []).some(o => o.supplyCondition !== 'ex_factory');
+        return hasDelivery ? getTravelTimeFromAddress(d.address) : 0;
+    }
+    const isExFactoryDest = (d) => (d.orders || []).every(o => o.supplyCondition === 'ex_factory');
 
     const trailersNeeded = totalTrailers;
     const trailersToUse = Math.min(trailersNeeded, trailers);
     const totalTrips = destinations.length;
-    const totalDriveTime = destinations.reduce((sum, d) => sum + getTravelTime(d.address) * 2, 0);
+    const totalDriveTime = destinations.reduce((sum, d) => sum + getDestTravelTime(d) * 2, 0);
     const hoursPerTrip = 2.5;
     const maxTripsPerDriver = Math.floor(8 / hoursPerTrip);
     const driversNeeded = Math.ceil(totalTrips / maxTripsPerDriver);
@@ -541,13 +565,15 @@ function calculateTransportPlan() {
     let currentTime = 8;
     destinations.forEach((dest, i) => {
         const driverNum = (i % driversToUse) + 1;
+        const duration = getDestTravelTime(dest);
+        const isPickup = isExFactoryDest(dest);
         schedule.push({
             time: `${Math.floor(currentTime)}:${((currentTime % 1) * 60).toString().padStart(2, '0')}`,
-            route: `생산지 → ${dest.address.substring(0, 20)}...`,
+            route: isPickup ? `출하지 픽업 (${dest.address.substring(0, 16)}...)` : `생산지 → ${dest.address.substring(0, 20)}...`,
             quantity: dest.tubeTrailers + '대 (' + dest.quantity + ' kg)',
             trailer: `트레일러 ${Math.min(dest.tubeTrailers, trailersToUse)}대`,
-            driver: `기사 ${driverNum}`,
-            duration: getTravelTime(dest.address)
+            driver: isPickup ? '—' : `기사 ${driverNum}`,
+            duration: duration
         });
         currentTime += hoursPerTrip;
     });
@@ -951,7 +977,10 @@ function renderConsumerView() {
                 <div class="order-datetime">${formatOrderDateTime(order)}</div>
                 <div class="order-address">${order.address || '-'}</div>
             </div>
-            <div class="order-supplier">${order.supplierName || '-'}</div>
+            <div class="order-item-meta-row">
+                <span class="order-supplier">${order.supplierName || '-'}</span>
+                <span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span>
+            </div>
             ${transportInfoText ? `<div class="order-transport-info">${transportInfoText}</div>` : ''}
             ${(changeBadge || cancelBadge || actionButtons) ? `
             <div class="order-item-foot">
@@ -979,7 +1008,7 @@ function renderOrdersTable(tbodyId, showActions) {
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
 
-    const colspan = 9;
+    const colspan = 10;
     tbody.innerHTML = allOrders.map(o => {
         const status = normalizeStatus(o.status);
         const hasPendingChange = o.changeRequest && o.changeRequest.status === 'pending';
@@ -993,12 +1022,14 @@ function renderOrdersTable(tbodyId, showActions) {
         const canCancelChangeRequest = showActions && hasPendingChange && o.changeRequest.requestedBy === 'supplier';
         const advanceAction = showActions && !hasPendingChange && !hasPendingCancel ? getSupplierAdvanceAction(status) : null;
 
-        const travelTime = getTravelTimeFromAddress(o.address);
+        const travelTimeMin = getOrderTravelTimeMinutes(o);
+        const travelTimeText = travelTimeMin === 0 ? '—' : `${travelTimeMin}분`;
         const changeBadge = getChangeBadgeText(o);
         const cancelBadge = getCancelBadgeText(o);
         const noteText = String(o.note || '').trim();
 
         const supplierStatus = getSupplierStatusLabel(o);
+        const supplyLabel = getSupplyConditionLabel(o);
 
         const isCancelled = o.status === 'cancelled';
         return `
@@ -1009,7 +1040,8 @@ function renderOrdersTable(tbodyId, showActions) {
             <td>${formatTimeText(o.time)}</td>
             <td>${o.tubeTrailers}대</td>
             <td>${o.address}</td>
-            <td><span class="travel-time">${travelTime}분</span></td>
+            <td><span class="supply-condition-badge supply-condition-${o.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${supplyLabel}</span></td>
+            <td><span class="travel-time">${travelTimeText}</span></td>
             <td>
                 <span class="order-status ${status}">${supplierStatus}</span>
                 ${noteText ? `<div class="change-summary">메모: ${noteText}</div>` : ''}
@@ -1133,14 +1165,16 @@ function openOrderMapModal(orderId) {
     if (!order) return;
 
     const destCoords = getCoordinatesFromAddress(order.address);
-    const travelTime = getTravelTimeFromAddress(order.address);
+    const travelTimeMin = getOrderTravelTimeMinutes(order);
+    const isExFactory = order.supplyCondition === 'ex_factory';
 
-    document.getElementById('orderMapTitle').textContent = `주문 ${order.id} - 튜브트레일러 배송 경로`;
+    document.getElementById('orderMapTitle').textContent = isExFactory ? `주문 ${order.id} - 출하지 픽업` : `주문 ${order.id} - 튜브트레일러 배송 경로`;
     document.getElementById('orderMapInfo').innerHTML = `
         <div class="map-info-row"><strong>수요처:</strong> ${order.consumerName}</div>
-        <div class="map-info-row"><strong>납품지:</strong> ${order.address}</div>
+        <div class="map-info-row"><strong>공급조건:</strong> ${getSupplyConditionLabel(order)}</div>
+        <div class="map-info-row"><strong>${isExFactory ? '픽업지' : '납품지'}:</strong> ${order.address}</div>
         <div class="map-info-row"><strong>트레일러:</strong> ${order.tubeTrailers}대</div>
-        <div class="map-info-row"><strong>생산지→수요처 운송시간:</strong> 약 ${travelTime}분</div>
+        <div class="map-info-row"><strong>${isExFactory ? '픽업' : '생산지→수요처 운송시간'}:</strong> ${isExFactory ? '—' : `약 ${travelTimeMin}분`}</div>
     `;
 
     document.getElementById('orderMapModal').classList.add('active');
@@ -1331,6 +1365,7 @@ function openOrderDetailModal(orderId) {
             <div class="order-detail-grid">
                 <div class="order-detail-row"><span class="label">주문번호</span><span>${order.id}</span></div>
                 <div class="order-detail-row"><span class="label">납품 일시</span><span>${formatOrderDateTime(order)}</span></div>
+                <div class="order-detail-row"><span class="label">공급조건</span><span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span></div>
                 <div class="order-detail-row"><span class="label">공급자</span><span>${order.supplierName || '-'}</span></div>
                 <div class="order-detail-row"><span class="label">납품 주소</span><span>${order.address || '-'}</span></div>
                 <div class="order-detail-row"><span class="label">튜브트레일러</span><span>${order.tubeTrailers || 0}대</span></div>
@@ -1627,6 +1662,7 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
     const year = pickedDate?.year ?? parseInt(document.getElementById('orderYear').value, 10);
     const month = pickedDate?.month ?? parseInt(document.getElementById('orderMonth').value, 10);
     const day = pickedDate?.day ?? parseInt(document.getElementById('orderDay').value, 10);
+    const supplyCondition = (document.querySelector('input[name="supplyCondition"]:checked') || {}).value || 'delivery';
     const order = {
         id: generateOrderId({
             supplierName,
@@ -1643,6 +1679,7 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
         time: `${String(document.getElementById('orderHour').value).padStart(2, '0')}:${String(document.getElementById('orderMinute').value).padStart(2, '0')}`,
         tubeTrailers: 1,
         address: addressValue,
+        supplyCondition: supplyCondition,
         note: document.getElementById('orderNote').value,
         status: 'requested',
         createdAt: new Date().toISOString()
@@ -1654,6 +1691,7 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
     document.getElementById('orderForm').reset();
     initFormDefaults();
     initTimeInputs();
+    document.querySelector('input[name="supplyCondition"][value="delivery"]')?.setAttribute('checked', 'checked');
     renderConsumerView();
     renderSupplierView();
     alert('주문이 등록되었습니다. 공급자에게 전달됩니다.');

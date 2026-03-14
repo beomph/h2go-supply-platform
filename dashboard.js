@@ -34,12 +34,34 @@ function uniqueNames(arr) {
     return out;
 }
 
+const REGISTERED_SUPPLIERS_PREFIX = "h2go_registered_suppliers_v1";
+
+function getRegisteredSuppliersKey() {
+    const a = getAuth();
+    const who = String(a?.id || a?.name || "anon").trim().toLowerCase();
+    return `${REGISTERED_SUPPLIERS_PREFIX}:${who}`;
+}
+
+function readRegisteredSuppliers() {
+    const raw = safeJsonParse(localStorage.getItem(getRegisteredSuppliersKey()) || "[]", []);
+    return Array.isArray(raw) ? raw : [];
+}
+
+function writeRegisteredSuppliers(list) {
+    try {
+        localStorage.setItem(getRegisteredSuppliersKey(), JSON.stringify(list));
+    } catch (_) {}
+}
+
 function getSupplierCandidates(currentBizName) {
-    // 가입된 사업자명을 공급자 후보로 사용
+    // 수요자가 등록한 공급자 우선, 없으면 가입된 사업자명
+    const registered = readRegisteredSuppliers().map(s => (typeof s === 'string' ? s : s?.name)).filter(Boolean);
+    if (registered.length > 0) {
+        return uniqueNames([currentBizName, ...registered]);
+    }
     const users = readUsers();
     const names = users.map(u => u?.name).filter(Boolean);
-    const merged = uniqueNames([currentBizName, ...names]);
-    return merged;
+    return uniqueNames([currentBizName, ...names]);
 }
 
 function getAddressHistoryStorageKey() {
@@ -150,9 +172,15 @@ function redirectToLogin() {
 const TRAILER_CAPACITY_KG = 400; // 트레일러 1대당 kg (기본)
 const PRODUCTION_SITE = { name: '인천 수소생산공장', address: '인천시 남동구 논현고잔로 123', lat: 37.4489, lng: 126.7317 };
 
-// 공급자별 출하(픽업) 주소 (없으면 생산지 주소 사용)
+// 공급자별 출하(픽업) 주소 (등록 주소 우선, 없으면 기본 맵, 최종 생산지)
 function getSupplierShippingAddress(supplierName) {
     const name = String(supplierName || "").trim();
+    const registered = readRegisteredSuppliers();
+    const found = registered.find(s => {
+        const n = typeof s === 'string' ? s : s?.name;
+        return String(n || "").trim().toLowerCase() === name.toLowerCase();
+    });
+    if (found && typeof found === 'object' && found.address) return found.address;
     const map = {
         "KOGAS(데모)": "인천시 남동구 논현고잔로 123 (인천 수소생산공장)",
         "KOGAS": "인천시 남동구 논현고잔로 123 (인천 수소생산공장)"
@@ -609,7 +637,38 @@ function calculateTransportPlan() {
 // ========== 뷰 렌더링 ==========
 function showView(viewId) {
     document.querySelectorAll('.dashboard-view').forEach(v => v.classList.remove('active'));
-    document.getElementById(viewId + 'View').classList.add('active');
+    const el = document.getElementById(viewId + 'View');
+    if (el) el.classList.add('active');
+}
+
+function renderSupplierRegistration() {
+    const listEl = document.getElementById('registeredSuppliersList');
+    if (!listEl) return;
+    const list = readRegisteredSuppliers();
+    if (list.length === 0) {
+        listEl.innerHTML = '<p class="registered-suppliers-empty">등록된 공급자가 없습니다. 아래에서 추가하세요.</p>';
+        return;
+    }
+    listEl.innerHTML = list.map((s, i) => {
+        const name = typeof s === 'string' ? s : (s?.name || '');
+        const addr = typeof s === 'object' && s?.address ? s.address : getSupplierShippingAddress(name);
+        return `<div class="registered-supplier-item" data-index="${i}">
+            <div class="supplier-info">
+                <div class="supplier-name">${String(name).replace(/</g, '&lt;')}</div>
+                <div class="supplier-addr">${String(addr).replace(/</g, '&lt;')}</div>
+            </div>
+            <button type="button" class="btn btn-tiny btn-secondary btn-remove" data-index="${i}">삭제</button>
+        </div>`;
+    }).join('');
+    listEl.querySelectorAll('.btn-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.index, 10);
+            const list = readRegisteredSuppliers();
+            list.splice(idx, 1);
+            writeRegisteredSuppliers(list);
+            renderSupplierRegistration();
+        });
+    });
 }
 
 // 주문 상태: 요청/접수/변경/운송/도착/회수/완료
@@ -1592,22 +1651,6 @@ function initDateTimeToggles() {
     });
 }
 
-function initTimeTypeButtons() {
-    const hiddenInput = document.getElementById('supplyConditionInput');
-    document.querySelectorAll('.order-time-type-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const type = btn.dataset.type;
-            document.querySelectorAll('.order-time-type-btn').forEach(b => {
-                const isActive = b.dataset.type === type;
-                b.classList.toggle('active', isActive);
-                b.setAttribute('aria-pressed', isActive);
-            });
-            if (hiddenInput) hiddenInput.value = type;
-            toggleOrderAddressBySupplyCondition();
-        });
-    });
-}
-
 function initDateTimeWheelAdjust() {
     // 데스크톱(정밀 포인터)에서만 휠 증감 활성화
     if (!window.matchMedia('(pointer:fine)').matches) return;
@@ -1659,10 +1702,14 @@ function openSupplierSelectModal() {
     }
 
     const candidates = getSupplierCandidates(currentUser.name);
-    listEl.innerHTML = candidates.map(n => {
-        const addr = getSupplierShippingAddress(n);
-        return `<button type="button" data-supplier="${String(n).replace(/"/g, "&quot;")}" data-address="${String(addr).replace(/"/g, "&quot;")}">${n}</button>`;
-    }).join("");
+    if (candidates.length === 0) {
+        listEl.innerHTML = '<p class="supplier-list-empty">등록된 공급자가 없습니다. 공급자 등록 메뉴에서 추가하거나 아래 직접 입력을 이용하세요.</p>';
+    } else {
+        listEl.innerHTML = candidates.map(n => {
+            const addr = getSupplierShippingAddress(n);
+            return `<button type="button" data-supplier="${String(n).replace(/"/g, "&quot;")}" data-address="${String(addr).replace(/"/g, "&quot;")}">${n}</button>`;
+        }).join("");
+    }
 
     listEl.querySelectorAll("button[data-supplier]").forEach(btn => {
         btn.addEventListener("click", () => {
@@ -1676,7 +1723,22 @@ function openSupplierSelectModal() {
     modal.classList.add("active");
 }
 
-// supplyCondition은 order-time-type-btn으로 제어됨 (initTimeTypeButtons에서 toggleOrderAddressBySupplyCondition 호출)
+// 도착도/출하도 버튼 토글
+function initSupplyConditionToggles() {
+    const hiddenInput = document.getElementById('supplyConditionInput');
+    document.querySelectorAll('.supply-condition-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const type = btn.dataset.type;
+            document.querySelectorAll('.supply-condition-toggle').forEach(b => {
+                const isActive = b.dataset.type === type;
+                b.classList.toggle('active', isActive);
+                b.setAttribute('aria-pressed', isActive);
+            });
+            if (hiddenInput) hiddenInput.value = type;
+            toggleOrderAddressBySupplyCondition();
+        });
+    });
+}
 
 document.getElementById("changeSupplierBtn")?.addEventListener("click", openSupplierSelectModal);
 document.getElementById("supplierManualApplyBtn")?.addEventListener("click", () => {
@@ -1693,6 +1755,12 @@ document.getElementById("supplierManualApplyBtn")?.addEventListener("click", () 
     modal?.classList.remove("active");
 });
 
+function updateNavSupplierRegistrationVisibility() {
+    const item = document.getElementById('navSupplierRegistrationItem');
+    if (!item) return;
+    item.style.display = currentUser.type === 'consumer' ? '' : 'none';
+}
+
 document.getElementById('roleSelect').addEventListener('change', (e) => {
     if (e.target.disabled) return;
     const role = e.target.value;
@@ -1705,14 +1773,50 @@ document.getElementById('roleSelect').addEventListener('change', (e) => {
         localStorage.setItem(AUTH_KEY, JSON.stringify(nextAuth));
     } catch (_) {}
     showView(role);
+    updateNavSupplierRegistrationVisibility();
     if (role === 'consumer') renderConsumerView();
     if (role === 'supplier') renderSupplierView();
+});
+
+document.getElementById('navSupplierRegistration')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (currentUser.type !== 'consumer') return;
+    showView('supplierRegistration');
+    renderSupplierRegistration();
+});
+
+document.getElementById('backToConsumerDashboard')?.addEventListener('click', () => {
+    showView('consumer');
+    renderConsumerView();
+});
+
+document.getElementById('addSupplierBtn')?.addEventListener('click', () => {
+    const nameEl = document.getElementById('newSupplierName');
+    const addrEl = document.getElementById('newSupplierAddress');
+    const name = String(nameEl?.value || '').trim();
+    const addr = String(addrEl?.value || '').trim();
+    if (!name) {
+        alert('공급자명을 입력해 주세요.');
+        return;
+    }
+    const list = readRegisteredSuppliers();
+    const exists = list.some(s => (typeof s === 'string' ? s : s?.name || '').toLowerCase() === name.toLowerCase());
+    if (exists) {
+        alert('이미 등록된 공급자입니다.');
+        return;
+    }
+    list.push(addr ? { name, address: addr } : name);
+    writeRegisteredSuppliers(list);
+    if (nameEl) nameEl.value = '';
+    if (addrEl) addrEl.value = '';
+    renderSupplierRegistration();
 });
 
 document.getElementById('orderForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const supplierName = String(selectedSupplierName || auth?.name || currentUser.name).trim();
-    const supplyCondition = (document.getElementById('supplyConditionInput') || {}).value || 'delivery';
+    const scInput = document.getElementById('supplyConditionInput');
+    const supplyCondition = (scInput && scInput.value) || 'delivery';
     const addressValue = supplyCondition === 'ex_factory'
         ? getSupplierShippingAddress(supplierName)
         : normalizeAddress(document.getElementById('orderAddress').value);
@@ -1757,9 +1861,8 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
     document.getElementById('orderForm').reset();
     initFormDefaults();
     initTimeInputs();
-    const scInput = document.getElementById('supplyConditionInput');
     if (scInput) scInput.value = 'delivery';
-    document.querySelectorAll('.order-time-type-btn').forEach(b => {
+    document.querySelectorAll('.supply-condition-toggle').forEach(b => {
         const isDelivery = b.dataset.type === 'delivery';
         b.classList.toggle('active', isDelivery);
         b.setAttribute('aria-pressed', isDelivery);
@@ -2058,10 +2161,11 @@ initOrdersDateFilterDefault();
 initTimeInputs();
 initDateTimeToggles();
 initDateTimeWheelAdjust();
-initTimeTypeButtons();
+initSupplyConditionToggles();
 toggleOrderAddressBySupplyCondition();
 renderAddressHistoryOptions();
 setSupplierName(currentUser.name);
+updateNavSupplierRegistrationVisibility();
 showView(initialRole);
 if (initialRole === 'consumer') renderConsumerView();
 if (initialRole === 'supplier') renderSupplierView();

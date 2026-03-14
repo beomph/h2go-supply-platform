@@ -34,6 +34,9 @@
         </div>
 
         <ul class="nav-links dashboard-nav">
+            <li id="navSupplierRegistrationItem" class="nav-supplier-registration" style="display:none">
+                <a href="#supplier-registration" id="navSupplierRegistration">공급자 등록</a>
+            </li>
             <li class="role-switcher">
                 <select id="roleSelect" class="role-select">
                     <option value="consumer">구매모드</option>
@@ -102,15 +105,10 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="order-supply-row">
-                                        <label class="supply-condition-btn" role="group" aria-label="도착도 선택">
-                                            <input type="radio" name="supplyCondition" value="delivery" checked>
-                                            <span>도착도(하차도)</span>
-                                        </label>
-                                        <label class="supply-condition-btn" role="group" aria-label="출하도 선택">
-                                            <input type="radio" name="supplyCondition" value="ex_factory">
-                                            <span>출하도(상차도)</span>
-                                        </label>
+                                    <div class="order-supply-row" role="group" aria-label="공급조건 선택">
+                                        <button type="button" class="supply-condition-toggle active" data-type="delivery" aria-pressed="true">도착도(하차도)</button>
+                                        <button type="button" class="supply-condition-toggle" data-type="ex_factory" aria-pressed="false">출하도(상차도)</button>
+                                        <input type="hidden" name="supplyCondition" id="supplyConditionInput" value="delivery">
                                     </div>
                                 </div>
                             </div>
@@ -179,6 +177,29 @@
                         <h3>📊 발주 예측 &amp; 권고</h3>
                         <div id="predictionDisplay" class="prediction-content">
                             <div class="empty-state"><p>재고 정보를 입력하면 예측이 표시됩니다.</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== 공급자 등록 (수요자 전용) ========== -->
+        <section id="supplierRegistrationView" class="dashboard-view">
+            <div class="view-header">
+                <button type="button" class="btn btn-tiny btn-secondary" id="backToConsumerDashboard">← 구매 대시보드</button>
+                <h1>공급자 등록</h1>
+                <p>주문 시 선택할 수 있는 공급자를 미리 등록해 두세요.</p>
+            </div>
+            <div class="supplier-registration-content">
+                <div class="supplier-registration-card">
+                    <h3>등록된 공급자</h3>
+                    <div id="registeredSuppliersList" class="registered-suppliers-list"></div>
+                    <div class="form-group supplier-add-form">
+                        <label for="newSupplierName">공급자 추가</label>
+                        <div class="supplier-add-row">
+                            <input type="text" id="newSupplierName" placeholder="공급자명 (예: KOGAS)" autocomplete="off">
+                            <input type="text" id="newSupplierAddress" placeholder="출하 주소 (선택)" autocomplete="off">
+                            <button type="button" class="btn btn-primary btn-tiny" id="addSupplierBtn">추가</button>
                         </div>
                     </div>
                 </div>
@@ -374,13 +395,14 @@
         <div class="modal-content">
             <button class="modal-close" aria-label="닫기">&times;</button>
             <h3>공급자 선택</h3>
-            <div id="supplierShippingAddressBlock" class="supplier-shipping-address-block" aria-live="polite">
-                <span class="supplier-shipping-label">출하 주소 확인</span>
-                <p id="supplierShippingAddressDisplay" class="supplier-shipping-address-text"></p>
-            </div>
+            <p class="supplier-modal-hint">등록한 공급자 목록에서 선택하세요.</p>
             <div id="supplierList" class="supplier-list"></div>
+            <div id="supplierShippingAddressBlock" class="supplier-shipping-address-block" aria-live="polite">
+                <span class="supplier-shipping-label">선택된 공급자 출하 주소</span>
+                <p id="supplierShippingAddressDisplay" class="supplier-shipping-address-text">공급자를 선택하면 출하 주소가 표시됩니다.</p>
+            </div>
             <div class="form-group supplier-manual-row">
-                <label for="supplierManualInput">직접 입력</label>
+                <label for="supplierManualInput">직접 입력 (신규 공급자)</label>
                 <input type="text" id="supplierManualInput" class="supplier-manual-input" placeholder="공급자명을 입력하세요" autocomplete="off">
             </div>
             <button type="button" class="btn btn-primary btn-full" id="supplierManualApplyBtn">적용</button>

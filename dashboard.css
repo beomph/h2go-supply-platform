@@ -834,7 +834,7 @@
     box-sizing: border-box;
 }
 
-.order-supply-row .supply-condition-btn {
+.order-supply-row .supply-condition-toggle {
     flex: 1;
     min-width: 0;
 }
@@ -882,16 +882,13 @@
     box-sizing: border-box;
 }
 
-/* 도착도/출하도 버튼 (4칸 중 1칸, 내용 버튼 내부에만 표시) */
-.supply-condition-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
+/* 도착도/출하도 버튼 토글 (라디오 없이 선택 상태만 표시) */
+.supply-condition-toggle {
+    flex: 1;
+    min-width: 0;
     min-height: 2rem;
-    height: 100%;
     max-height: 2.75rem;
-    padding: 0.4rem 0.5rem;
+    padding: 0.4rem 0.75rem;
     border-radius: 10px;
     border: 1px solid var(--border-color);
     background: var(--surface-soft);
@@ -901,30 +898,16 @@
     color: var(--text-muted);
     transition: border-color 0.2s, background 0.2s, color 0.2s;
     box-sizing: border-box;
-    overflow: hidden;
+    font-family: inherit;
+    text-align: center;
 }
 
-.supply-condition-btn span {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.supply-condition-btn input {
-    margin: 0;
-    width: 0.95rem;
-    height: 0.95rem;
-    flex-shrink: 0;
-    accent-color: var(--h2-blue);
-}
-
-.supply-condition-btn:hover {
+.supply-condition-toggle:hover {
     border-color: var(--h2-blue);
     color: var(--text-white);
 }
 
-.supply-condition-btn:has(input:checked) {
+.supply-condition-toggle.active {
     border-color: var(--h2-blue);
     background: rgba(59, 130, 246, 0.18);
     color: var(--h2-blue-light);
@@ -1083,7 +1066,7 @@
         display: none !important;
     }
 
-    .order-supply-row .supply-condition-btn {
+    .order-supply-row .supply-condition-toggle {
         font-size: 0.72rem;
         padding: 0.35rem 0.4rem;
     }
@@ -1602,6 +1585,12 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     background: var(--field-readonly);
 }
 
+.supplier-modal-hint {
+    margin: 0 0 1rem;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+}
+
 .supplier-shipping-address-block {
     margin-bottom: 1rem;
     padding: 0.75rem 1rem;
@@ -1626,11 +1615,101 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     word-break: keep-all;
 }
 
+/* 공급자 등록 페이지 */
+.supplier-registration-content {
+    max-width: 640px;
+}
+
+.supplier-registration-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.5rem;
+}
+
+.supplier-registration-card h3 {
+    margin: 0 0 1rem;
+    font-size: 1.05rem;
+}
+
+#backToConsumerDashboard {
+    margin-bottom: 0.75rem;
+}
+
+.registered-suppliers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    min-height: 2rem;
+}
+
+.registered-suppliers-empty {
+    margin: 0;
+    padding: 1rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.registered-supplier-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: var(--surface-soft);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+}
+
+.registered-supplier-item .supplier-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.registered-supplier-item .supplier-name {
+    font-weight: 600;
+    color: var(--text-white);
+}
+
+.registered-supplier-item .supplier-addr {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+}
+
+.registered-supplier-item .btn-remove {
+    flex-shrink: 0;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.78rem;
+}
+
+.supplier-add-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.supplier-add-row input {
+    flex: 1;
+    min-width: 120px;
+}
+
+.supplier-add-row input:first-of-type {
+    flex: 0 0 140px;
+}
+
 .supplier-list {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     margin: 1rem 0 1.25rem;
+}
+
+.supplier-list-empty {
+    margin: 0;
+    padding: 1rem;
+    color: var(--text-muted);
+    font-size: 0.88rem;
 }
 
 .supplier-list button {

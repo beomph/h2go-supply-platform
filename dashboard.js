@@ -547,8 +547,16 @@ function getActorForOrder(order) {
 function canImmediateCancelOrder(order, actorType) {
     if (!order || actorType !== "consumer") return false;
     const status = normalizeStatus(order.status);
-    // 판매자가 접수하기 전(requested)까지는 5분 지나도 즉시 취소 가능
-    return status === 'requested';
+    // 판매자가 접수하기 전(requested): 승인 없이 즉시 취소 가능
+    if (status === 'requested') return true;
+    // 접수 후에도 최초 주문 후 5분 이내: 즉시 취소 가능
+    if (status === 'accepted' || status === 'change_accepted') {
+        const created = order.createdAt ? new Date(order.createdAt).getTime() : 0;
+        if (!created) return false;
+        const fiveMinMs = 5 * 60 * 1000;
+        return Date.now() - created <= fiveMinMs;
+    }
+    return false;
 }
 
 // 주문 수량 계산 (트레일러 대수 * 용량)
@@ -1010,9 +1018,10 @@ function renderConsumerView() {
 
         const changeBadge = getChangeBadgeText(order);
         const cancelBadge = getCancelBadgeText(order);
+        const showChangeBtn = canRequestChange && !immediateCancelable;
         const actionButtons = `
             ${canCancelChangeRequest ? `<button type="button" class="btn btn-small btn-secondary" data-action="cancel-change-request" data-id="${order.id}">변경요청 취소</button>` : ''}
-            ${canRequestChange ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
+            ${showChangeBtn ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
             ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''}
         `.trim();
         const decisionButtons = `
@@ -1404,23 +1413,53 @@ function buildOrderStatusHistory(order) {
     return items.sort((a, b) => a.at - b.at);
 }
 
-function buildMergedOrderHistory(order) {
-    const statusItems = buildOrderStatusHistory(order);
-    const changeItems = buildOrderChangeHistory(order);
-    const stripDate = (t) => t.replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}에 /g, '');
+function buildDetailedOrderHistory(order) {
+    const items = [];
+    if (!order) return items;
+    const add = (text, at, type) => {
+        const ts = at ? new Date(at).getTime() : 0;
+        if (ts > 0 || type === 'status') items.push({ text, at: ts, type: type || 'event' });
+    };
 
-    const merged = statusItems.map(h => ({ at: h.at, text: h.label, from: 'status' }));
-    changeItems.forEach(ch => {
-        const stripped = stripDate(ch.text);
-        const sameTime = merged.find(m => Math.abs(m.at - ch.at) < 2000);
-        if (sameTime && (sameTime.text.includes('변경') || sameTime.text.includes('취소') || sameTime.text.includes('승인') || sameTime.text.includes('거절'))) {
-            sameTime.text = stripped;
-            sameTime.from = 'change';
-        } else if (!sameTime) {
-            merged.push({ at: ch.at, text: stripped, from: 'change' });
+    add('주문 요청', order.createdAt, 'status');
+    add('접수', order.acceptedAt, 'status');
+
+    const cr = order.changeRequest;
+    const cancelReq = order.cancelRequest;
+    if (cr) {
+        const who = getActorName(order, cr.requestedBy);
+        add(`${who}가 변경 요청`, cr.requestedAt, 'change');
+        if (cr.status === 'approved' && order.lastChange) {
+            const decider = getActorName(order, order.lastChange.decidedBy);
+            add(`${decider}가 변경 승인`, order.lastChange.decidedAt, 'change');
+        } else if (cr.status === 'rejected' && order.lastChange) {
+            const decider = getActorName(order, order.lastChange.decidedBy);
+            add(`${decider}가 변경 거절`, order.lastChange.decidedAt, 'change');
         }
-    });
-    return merged.sort((a, b) => a.at - b.at);
+    }
+    if (cancelReq) {
+        const who = getActorName(order, cancelReq.requestedBy);
+        add(`${who}가 취소 요청`, cancelReq.requestedAt, 'cancel');
+        if (cancelReq.status === 'approved' && order.lastCancel) {
+            const decider = getActorName(order, order.lastCancel.decidedBy);
+            add(`${decider}가 취소 승인 (취소 완료)`, order.lastCancel.decidedAt, 'cancel');
+        } else if (cancelReq.status === 'rejected' && order.lastCancel) {
+            const decider = getActorName(order, order.lastCancel.decidedBy);
+            add(`${decider}가 취소 거절`, order.lastCancel.decidedAt, 'cancel');
+        }
+    }
+    if (order.lastChange && !cr) {
+        const decider = getActorName(order, order.lastChange.decidedBy);
+        add(`${decider}가 변경 ${order.lastChange.result === 'approved' ? '승인' : '거절'}`, order.lastChange.decidedAt, 'change');
+    }
+
+    add('운송 시작', order.transportStartedAt, 'status');
+    add('도착', order.arrivedAt, 'status');
+    add('회수 시작', order.collectingAt, 'status');
+    add('완료', order.completedAt, 'status');
+    add('취소', order.cancelledAt, 'status');
+
+    return items.sort((a, b) => a.at - b.at);
 }
 
 let lastOrderDetailOrderId = null;
@@ -1428,81 +1467,78 @@ let lastOrderDetailOrderId = null;
 function renderOrderDetailBody(orderId) {
     const order = orders.find(o => o.id === orderId);
     if (!order) return '';
-    const mergedHistory = buildMergedOrderHistory(order);
-    const transportInfo = order.transportInfo;
     const actor = getActorForOrder(order);
     const cr = order.changeRequest;
     const cancelReq = order.cancelRequest;
     const hasPendingChange = cr && cr.status === 'pending';
     const hasPendingCancel = cancelReq && cancelReq.status === 'pending';
-    const hasRejectedChange = cr && cr.status === 'rejected';
     const hasRejectedCancel = cancelReq && cancelReq.status === 'rejected';
     const canRequestChange = !hasPendingChange && !hasPendingCancel && ['requested', 'accepted', 'change_accepted', 'in_transit', 'arrived'].includes(normalizeStatus(order.status));
     const canRequestCancel = !hasPendingCancel && !hasPendingChange && !hasRejectedCancel && !['completed', 'cancelled', 'collecting'].includes(normalizeStatus(order.status));
     const immediateCancelable = canRequestCancel && canImmediateCancelOrder(order, actor);
     const canApproveChange = hasPendingChange && cr.requestedBy !== actor;
     const canApproveCancel = hasPendingCancel && cancelReq.requestedBy !== actor;
-
     const canCancelChangeRequest = hasPendingChange && cr.requestedBy === actor;
+
+    const showChangeBtn = canRequestChange && !immediateCancelable;
+    const showCancelBtn = canRequestCancel;
     const actionButtons = [
         canCancelChangeRequest ? `<button type="button" class="btn btn-small btn-secondary" data-action="cancel-change-request" data-id="${order.id}">변경요청 취소</button>` : '',
-        canRequestChange ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-change" data-id="${order.id}">주문 변경</button>` : '',
-        canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''
+        showChangeBtn ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-change" data-id="${order.id}">변경</button>` : '',
+        showCancelBtn ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''
     ].filter(Boolean).join('');
     const decisionButtons = [
         canApproveChange ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${order.id}">승인</button><button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${order.id}">거절</button>` : '',
         canApproveCancel ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${order.id}">승인</button><button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${order.id}">거절</button>` : ''
     ].filter(Boolean).join('');
 
-    const pendingRequestBlock = (canApproveChange || canApproveCancel) ? `
-        <div class="order-detail-pending-request">
-            <p class="order-detail-pending-label">상대방의 요청 확인</p>
-            ${canApproveChange ? `<p class="order-detail-pending-desc">${getActorName(order, cr.requestedBy)}가 주문 변경을 요청했습니다.</p>` : ''}
-            ${canApproveCancel ? `<p class="order-detail-pending-desc">${getActorName(order, cancelReq.requestedBy)}가 취소를 요청했습니다.</p>` : ''}
-            <div class="order-detail-pending-actions">${decisionButtons}</div>
+    const pendingBlock = (canApproveChange || canApproveCancel) ? `
+        <div class="order-detail-pending">
+            <p class="order-detail-pending-title">상대방 요청 확인</p>
+            ${canApproveChange ? `<p>${getActorName(order, cr.requestedBy)}가 주문 변경을 요청했습니다.</p>` : ''}
+            ${canApproveCancel ? `<p>${getActorName(order, cancelReq.requestedBy)}가 취소를 요청했습니다.</p>` : ''}
+            <div class="order-detail-pending-btns">${decisionButtons}</div>
         </div>
     ` : '';
 
-    const historyItems = mergedHistory.map(h => {
-        const isPendingChangeLine = h.from === 'change' && hasPendingChange && h.text.includes('변경 요청');
-        const isPendingCancelLine = h.from === 'change' && hasPendingCancel && h.text.includes('취소 요청');
-        const showDecision = (isPendingChangeLine && canApproveChange) || (isPendingCancelLine && canApproveCancel);
-        const lineDecisionBtns = showDecision ? `
-            <span class="order-detail-history-actions">
-                ${canApproveChange && isPendingChangeLine ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-change" data-id="${order.id}">승인</button><button type="button" class="btn btn-tiny btn-secondary" data-action="reject-change" data-id="${order.id}">거절</button>` : ''}
-                ${canApproveCancel && isPendingCancelLine ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-cancel" data-id="${order.id}">승인</button><button type="button" class="btn btn-tiny btn-secondary" data-action="reject-cancel" data-id="${order.id}">거절</button>` : ''}
+    const detailedHistory = buildDetailedOrderHistory(order);
+    const historyItems = detailedHistory.map(h => {
+        const isPendingChange = h.type === 'change' && hasPendingChange && h.text.includes('변경 요청');
+        const isPendingCancel = h.type === 'cancel' && hasPendingCancel && h.text.includes('취소 요청');
+        const showBtns = (isPendingChange && canApproveChange) || (isPendingCancel && canApproveCancel);
+        const btns = showBtns ? `
+            <span class="order-detail-history-btns">
+                ${canApproveChange && isPendingChange ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-change" data-id="${order.id}">승인</button><button type="button" class="btn btn-tiny btn-secondary" data-action="reject-change" data-id="${order.id}">거절</button>` : ''}
+                ${canApproveCancel && isPendingCancel ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-cancel" data-id="${order.id}">승인</button><button type="button" class="btn btn-tiny btn-secondary" data-action="reject-cancel" data-id="${order.id}">거절</button>` : ''}
             </span>
         ` : '';
-        return `<li>${formatIsoDateTime(h.at)} — ${h.text}${lineDecisionBtns}</li>`;
+        const typeClass = h.type === 'change' ? 'history-change' : h.type === 'cancel' ? 'history-cancel' : 'history-status';
+        return `<li class="order-detail-history-item ${typeClass}"><span class="history-time">${formatIsoDateTime(h.at)}</span><span class="history-text">${h.text}</span>${btns}</li>`;
     }).join('');
 
     return `
-        <div class="order-detail-section order-detail-actions">
-            <button type="button" class="btn btn-small btn-secondary" id="orderDetailMapBtn" data-order-id="${order.id}">지도 보기</button>
-            ${actionButtons ? `<div class="order-detail-action-buttons">${actionButtons}</div>` : ''}
+        <div class="order-detail-header">
+            <h2 class="order-detail-order-id">${order.id}</h2>
+            <button type="button" class="btn btn-tiny btn-secondary" id="orderDetailMapBtn" data-order-id="${order.id}">지도 보기</button>
         </div>
-        <div class="order-detail-section">
-            <h4>기본 정보</h4>
-            <div class="order-detail-grid">
-                <div class="order-detail-row"><span class="label">주문번호</span><span>${order.id}</span></div>
-                <div class="order-detail-row"><span class="label">납품 일시</span><span>${formatOrderDateTime(order)}</span></div>
-                <div class="order-detail-row"><span class="label">공급조건</span><span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span></div>
+        <div class="order-detail-overview">
+            <h4 class="order-detail-overview-title">주문 개요</h4>
+            <div class="order-detail-overview-grid">
+                <div class="order-detail-row"><span class="label">납품일시</span><span>${formatOrderDateTime(order)}</span></div>
+                <div class="order-detail-row"><span class="label">납품주소</span><span>${order.address || '-'}</span></div>
                 <div class="order-detail-row"><span class="label">공급자</span><span>${order.supplierName || '-'}</span></div>
-                <div class="order-detail-row"><span class="label">납품 주소</span><span>${order.address || '-'}</span></div>
-                <div class="order-detail-row"><span class="label">튜브트레일러</span><span>${order.tubeTrailers || 0}대</span></div>
-                <div class="order-detail-row"><span class="label">상태</span><span class="order-status ${normalizeStatus(order.status)}">${getStatusLabel(order.status)}</span></div>
-                ${transportInfo ? `
-                <div class="order-detail-row"><span class="label">T/T 번호</span><span>${(transportInfo.trailerNumbers || []).join(', ') || '-'}</span></div>
-                <div class="order-detail-row"><span class="label">운송기사</span><span>${transportInfo.driverName || '-'}</span></div>
-                ` : ''}
-                ${order.note ? `<div class="order-detail-row full"><span class="label">요청 사항</span><span>${order.note}</span></div>` : ''}
+                <div class="order-detail-row"><span class="label">공급조건</span><span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span></div>
+                <div class="order-detail-row"><span class="label">주문상태</span><span class="order-status ${normalizeStatus(order.status)}">${getStatusLabel(order.status)}</span></div>
             </div>
         </div>
-        <div class="order-detail-section">
-            <h4>주문 이력</h4>
-            ${pendingRequestBlock}
-            ${mergedHistory.length > 0
-                ? `<ul class="order-detail-history">${historyItems}</ul>`
+        <div class="order-detail-actions-row">
+            ${actionButtons || '<span class="order-detail-actions-empty">변경/취소 불가</span>'}
+        </div>
+        ${pendingBlock}
+        <div class="order-detail-history-section">
+            <h4 class="order-detail-history-title">주문 이력</h4>
+            ${detailedHistory.length > 0
+                ? `<ul class="order-detail-history-list">${historyItems}</ul>`
                 : '<p class="order-detail-empty">이력이 없습니다.</p>'}
         </div>
     `;
@@ -1529,7 +1565,6 @@ function openOrderDetailModal(orderId) {
     if (!order) return;
 
     lastOrderDetailOrderId = orderId;
-    document.getElementById('orderDetailTitle').textContent = `주문 ${order.id} 상세`;
     const body = document.getElementById('orderDetailBody');
     body.innerHTML = renderOrderDetailBody(orderId);
 

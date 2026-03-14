@@ -125,12 +125,26 @@
         }
         .print-btn:hover { background: #2563EB; }
         .weight-row { margin-top: 8px; font-size: 9pt; }
+        .qty-watermark-logo {
+            display: none;
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            font-size: 14pt;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            color: #3B82F6;
+            background: transparent;
+            opacity: 0.35;
+            z-index: 1;
+        }
+        .qty-watermark-logo span { color: #6B7280; }
     </style>
 </head>
 <body>
     <button class="print-btn no-print" onclick="window.print()">PDF로 저장 / 인쇄</button>
 
-    <div class="header-row">
+    <div class="header-row" id="qty-header-row">
         <div class="h2go-logo">H2<span class="go">GO</span></div>
         <span style="font-size: 9pt; color: #888;">수소거래 플랫폼</span>
     </div>
@@ -270,9 +284,11 @@
         </div>
     </div>
 
-    <div class="footer-note">
+    <div class="footer-note" id="qty-footer-note">
         (공급받는자 보관용) &nbsp;&nbsp;&nbsp; H2GO
     </div>
+
+    <div class="qty-watermark-logo" id="qty-watermark-logo" aria-hidden="true">H2<span>GO</span></div>
 
     <script>
     (function() {
@@ -283,6 +299,15 @@
         function setText(id, val) {
             const el = document.getElementById(id);
             if (el) el.textContent = val || '';
+        }
+        const embed = getParam('embed') === '1';
+        if (embed) {
+            const h = document.getElementById('qty-header-row');
+            const f = document.getElementById('qty-footer-note');
+            const w = document.getElementById('qty-watermark-logo');
+            if (h) h.style.display = 'none';
+            if (f) f.style.display = 'none';
+            if (w) w.style.display = 'block';
         }
         const orderId = getParam('orderId');
         if (!orderId) return;

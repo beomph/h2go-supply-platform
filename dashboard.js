@@ -1080,7 +1080,7 @@ function renderConsumerView() {
         el.addEventListener('click', (e) => {
             if (e.target.closest('button')) return;
             const orderId = el.dataset.orderId;
-            window.open('물량확인증_양식.html?orderId=' + encodeURIComponent(orderId), '_blank', 'noopener');
+            openQtyConfirmModal(orderId);
         });
     });
 
@@ -1152,9 +1152,27 @@ function renderOrdersTable(tbodyId, showActions) {
         row.addEventListener('click', (e) => {
             if (e.target.closest('button')) return;
             const orderId = row.dataset.orderId;
-            window.open('물량확인증_양식.html?orderId=' + encodeURIComponent(orderId), '_blank', 'noopener');
+            openQtyConfirmModal(orderId);
         });
     });
+}
+
+function openQtyConfirmModal(orderId) {
+    const iframe = document.getElementById('qtyConfirmIframe');
+    const modal = document.getElementById('qtyConfirmModal');
+    if (iframe && modal) {
+        iframe.src = '물량확인증_양식.html?orderId=' + encodeURIComponent(orderId) + '&embed=1';
+        modal.classList.add('active');
+    }
+}
+
+function closeQtyConfirmModal() {
+    const iframe = document.getElementById('qtyConfirmIframe');
+    const modal = document.getElementById('qtyConfirmModal');
+    if (iframe && modal) {
+        modal.classList.remove('active');
+        iframe.src = 'about:blank';
+    }
 }
 
 function renderSupplierView() {
@@ -1857,6 +1875,7 @@ document.querySelector('#orderMapModal .modal-close')?.addEventListener('click',
 document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (document.getElementById('orderMapModal').classList.contains('active')) closeOrderMapModal();
+    else if (document.getElementById('qtyConfirmModal').classList.contains('active')) closeQtyConfirmModal();
     else if (document.getElementById('transportStartModal').classList.contains('active')) closeTransportStartModal();
 });
 document.querySelector('#changeRequestModal .modal-close').addEventListener('click', () => {
@@ -1874,6 +1893,10 @@ document.getElementById('supplierSelectModal')?.addEventListener('click', (e) =>
 document.querySelector('#transportStartModal .modal-close')?.addEventListener('click', closeTransportStartModal);
 document.getElementById('transportStartModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeTransportStartModal();
+});
+document.querySelector('#qtyConfirmModal .modal-close')?.addEventListener('click', closeQtyConfirmModal);
+document.getElementById('qtyConfirmModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeQtyConfirmModal();
 });
 
 document.addEventListener('click', (e) => {

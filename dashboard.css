@@ -2404,6 +2404,10 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
 .order-detail-history li {
     padding: 0.35rem 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .order-detail-history li:last-child {
@@ -2414,6 +2418,49 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     color: var(--text-muted);
     font-size: 0.88rem;
     padding: 0.5rem 0;
+}
+
+.order-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.order-detail-action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.order-detail-pending-request {
+    background: rgba(var(--primary-rgb, 59, 130, 246), 0.12);
+    border: 1px solid rgba(var(--primary-rgb, 59, 130, 246), 0.3);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.order-detail-pending-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.35rem;
+}
+
+.order-detail-pending-desc {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.order-detail-pending-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.order-detail-history-actions {
+    display: inline-flex;
+    gap: 0.35rem;
+    margin-left: auto;
 }
 
 /* 대시보드 모달 */

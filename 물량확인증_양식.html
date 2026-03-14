@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H2GO 수소 공급 물량확인증</title>
+    <style>
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none !important; }
+            body { padding: 12px; }
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", sans-serif;
+            font-size: 10.5pt;
+            line-height: 1.4;
+            color: #222;
+            background: #fff;
+            padding: 20px;
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        .h2go-logo {
+            font-size: 11pt;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            opacity: 0.45;
+        }
+        .h2go-logo .h2 { color: #3B82F6; }
+        .h2go-logo .go { color: #6B7280; }
+        .doc-title {
+            text-align: center;
+            font-size: 16pt;
+            font-weight: 700;
+            padding: 10px 0;
+            margin-bottom: 14px;
+            background: #eef2f7;
+            border: 1px solid #c5d0de;
+        }
+        .doc-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            font-size: 10pt;
+        }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 16px;
+        }
+        @media (max-width: 600px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+        .section {
+            margin-bottom: 12px;
+            border: 1px solid #999;
+        }
+        .section-title {
+            background: #e0e8f0;
+            padding: 5px 8px;
+            font-weight: 700;
+            font-size: 9.5pt;
+            border-bottom: 1px solid #999;
+        }
+        .section-body { padding: 8px; }
+        .row { display: flex; margin-bottom: 6px; align-items: center; }
+        .row:last-child { margin-bottom: 0; }
+        .label {
+            flex: 0 0 90px;
+            font-weight: 600;
+            font-size: 9.5pt;
+            color: #333;
+        }
+        .value {
+            flex: 1;
+            border-bottom: 1px solid #999;
+            min-height: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9.5pt;
+        }
+        th, td {
+            border: 1px solid #999;
+            padding: 5px 6px;
+            text-align: center;
+        }
+        th { background: #eef2f7; font-weight: 600; }
+        .formula {
+            margin-top: 6px;
+            padding: 6px 8px;
+            background: #f8fafc;
+            border: 1px dashed #999;
+            font-size: 8.5pt;
+            color: #555;
+        }
+        .signature-table th { width: 22%; }
+        .signature-table td { min-height: 36px; text-align: left; padding: 6px; }
+        .footer-note {
+            margin-top: 16px;
+            font-size: 8pt;
+            color: #666;
+            text-align: right;
+        }
+        .print-btn {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            padding: 10px 20px;
+            background: #3B82F6;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .print-btn:hover { background: #2563EB; }
+        .weight-row { margin-top: 8px; font-size: 9pt; }
+    </style>
+</head>
+<body>
+    <button class="print-btn no-print" onclick="window.print()">PDF로 저장 / 인쇄</button>
+
+    <div class="header-row">
+        <div class="h2go-logo">H2<span class="go">GO</span></div>
+        <span style="font-size: 9pt; color: #888;">수소거래 플랫폼</span>
+    </div>
+
+    <h1 class="doc-title">물량확인증</h1>
+
+    <div class="doc-meta">
+        <span>입고 일자: _____________ 년 _____ 월 _____ 일</span>
+        <span>출고 일자: _____________ 년 _____ 월 _____ 일</span>
+    </div>
+
+    <div class="main-grid">
+        <div>
+            <div class="section">
+                <div class="section-title">⊙ 고객</div>
+                <div class="section-body">
+                    <div class="row">
+                        <span class="label">고객명:</span>
+                        <span class="value">&nbsp;</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">주소:</span>
+                        <span class="value">&nbsp;</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">전화번호:</span>
+                        <span class="value">&nbsp;</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">⊙ 공급자</div>
+                <div class="section-body">
+                    <div class="row">
+                        <span class="label">공급자명:</span>
+                        <span class="value">&nbsp;</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">주소:</span>
+                        <span class="value">&nbsp;</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">전화번호:</span>
+                        <span class="value">&nbsp;</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">⊙ 수소 튜브트레일러 정보</div>
+                <div class="section-body">
+                    <div class="row">
+                        <span class="label">차량 번호:</span>
+                        <span class="value" style="flex: 0 0 100px;">&nbsp;</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">내용적:</span>
+                        <span class="value" style="flex: 0 0 80px;">&nbsp;</span>
+                        <span>m³</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">⊙ 입출고 확인</div>
+                <div class="section-body">
+                    <table class="signature-table">
+                        <tr>
+                            <th>구분</th>
+                            <th>성명</th>
+                            <th>서명</th>
+                        </tr>
+                        <tr>
+                            <td>고객</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td>입고 기사</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td>출고 기사</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="section">
+                <div class="section-title">⊙ 거래 내역</div>
+                <div class="section-body">
+                    <p style="margin-bottom: 8px; font-weight: 600; font-size: 9.5pt;">(1) 유량계 정산</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>입고 (A)</th>
+                                <th>출고 (B)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td style="height: 26px;">&nbsp;</td><td>&nbsp;</td></tr>
+                            <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+                        </tbody>
+                    </table>
+                    <p style="margin-top: 4px; font-size: 8.5pt;">사용량: 출고 지침값 (B) - 입고 지침값 (A)</p>
+                    <p style="margin-top: 4px; font-size: 9pt;">사용량 A: ___________ &nbsp; 사용량 B: ___________ &nbsp; 합계: ___________</p>
+
+                    <p style="margin: 12px 0 8px; font-weight: 600; font-size: 9.5pt;">(2) 차압 정산</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>입고 압력 (A) bar</th>
+                                <th>출고 압력 (B) bar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td style="height: 26px;">&nbsp;</td><td>&nbsp;</td></tr>
+                        </tbody>
+                    </table>
+                    <p style="margin-top: 4px; font-size: 9pt;">사용량: ___________</p>
+                    <div class="formula">
+                        ▶ 사용량 산정식: (출고 압력 - 입고 압력, bar) × 내용적 (m³)
+                    </div>
+
+                    <div class="weight-row">
+                        <p style="font-weight: 600; margin-bottom: 4px;">(3) 계량기 방식 (선택)</p>
+                        <p>충전전 중량: ___________ kg &nbsp;&nbsp; 충전후 중량: ___________ kg &nbsp;&nbsp; 충전량: ___________ kg</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        (공급받는자 보관용) &nbsp;&nbsp;&nbsp; H2GO
+    </div>
+</body>
+</html>

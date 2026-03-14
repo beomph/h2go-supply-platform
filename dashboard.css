@@ -1869,6 +1869,25 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     justify-self: start;
 }
 
+/* 주문상세 공급조건 라벨: 글자 길이만큼만 가로폭 */
+.order-detail-section .order-detail-row span.supply-condition-badge {
+    width: fit-content;
+    max-width: max-content;
+    display: inline-block;
+    justify-self: start;
+}
+
+.order-detail-history-actions,
+.order-detail-request-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.order-detail-request-actions {
+    margin-top: 0.75rem;
+}
 .order-detail-history {
     list-style: none;
     padding: 0;

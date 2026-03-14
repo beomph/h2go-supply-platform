@@ -1297,6 +1297,7 @@ function openOrderDetailModal(orderId) {
                 ` : ''}
                 ${order.note ? `<div class="order-detail-row full"><span class="label">요청 사항</span><span>${order.note}</span></div>` : ''}
             </div>
+            ${requestButtons ? `<div class="order-detail-request-actions">${requestButtons}</div>` : ''}
         </div>
         <div class="order-detail-section">
             <h4>주문 이력</h4>
@@ -1720,7 +1721,7 @@ document.getElementById('transportStartModal')?.addEventListener('click', (e) =>
     if (e.target === e.currentTarget) closeTransportStartModal();
 });
 
-document.addEventListener('click', (e) => {
+function handleDataActionClick(e) {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
     const action = btn.dataset.action;
@@ -1842,7 +1843,14 @@ document.addEventListener('click', (e) => {
         persistAndRerender();
         alert('취소 요청을 거절했습니다. 사유가 요청자에게 전달됩니다.');
     }
-});
+}
+
+document.addEventListener('click', handleDataActionClick);
+// 주문 상세 모달 내부 클릭은 modal-content의 stopPropagation으로 document에 전달되지 않음 → capture로 수신
+document.getElementById('orderDetailModal').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (btn) handleDataActionClick(e);
+}, true);
 
 document.getElementById('recalculateBtn')?.addEventListener('click', () => renderSupplierView());
 

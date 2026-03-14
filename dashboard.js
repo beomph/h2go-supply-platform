@@ -546,11 +546,9 @@ function getActorForOrder(order) {
 
 function canImmediateCancelOrder(order, actorType) {
     if (!order || actorType !== "consumer") return false;
-    if (!order.createdAt) return false;
-    const createdAtMs = new Date(order.createdAt).getTime();
-    if (!Number.isFinite(createdAtMs)) return false;
-    const elapsedMs = Date.now() - createdAtMs;
-    return elapsedMs >= 0 && elapsedMs <= 5 * 60 * 1000;
+    const status = normalizeStatus(order.status);
+    // 판매자가 접수하기 전(requested)까지는 5분 지나도 즉시 취소 가능
+    return status === 'requested';
 }
 
 // 주문 수량 계산 (트레일러 대수 * 용량)
@@ -1048,10 +1046,16 @@ function renderConsumerView() {
                     <span class="order-datetime">${formatOrderDateTime(order)}</span>
                     <span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span>
                 </div>
-                <div class="order-address">${order.address || '-'}</div>
             </div>
-            <div class="order-item-meta-row">
-                <span class="order-supplier">${order.supplierName || '-'}</span>
+            <div class="order-item-parties-row">
+                <div class="order-party order-party--seller">
+                    <div class="order-party-name">${order.supplierName || '-'}</div>
+                    <div class="order-party-addr">${getSupplierShippingAddress(order.supplierName)}</div>
+                </div>
+                <div class="order-party order-party--buyer">
+                    <div class="order-party-name">${order.consumerName || '-'}</div>
+                    <div class="order-party-addr">${order.address || '-'}</div>
+                </div>
             </div>
             ${transportInfoText ? `<div class="order-transport-info">${transportInfoText}</div>` : ''}
             ${(changeBadge || cancelBadge || actionButtons) ? `
@@ -2075,7 +2079,7 @@ document.addEventListener('click', (e) => {
         }
         const canImmediateCancel = canImmediateCancelOrder(order, actor) && order.changeRequest?.status !== 'pending';
         if (canImmediateCancel) {
-            if (!confirm('주문 등록 후 5분 이내 건은 공급자 동의 없이 즉시 취소됩니다. 지금 취소할까요?')) return;
+            if (!confirm('아직 접수되지 않은 주문은 공급자 동의 없이 즉시 취소됩니다. 지금 취소할까요?')) return;
             order.status = 'cancelled';
             order.cancelledAt = new Date().toISOString();
             order.cancelRequest = { requestedBy: 'consumer', status: 'approved', requestedAt: order.cancelledAt, decidedAt: order.cancelledAt, decidedBy: 'consumer' };

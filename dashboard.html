@@ -59,7 +59,10 @@
                 <!-- 왼쪽: 새 주문 + 주문 현황 -->
                 <div class="consumer-left">
                     <div class="order-form-card">
-                        <h3>새 주문</h3>
+                        <div class="order-form-card-header">
+                            <h3>새 주문</h3>
+                            <button type="submit" form="orderForm" class="btn btn-primary">주문 요청</button>
+                        </div>
                         <form id="orderForm" class="order-form">
                             <div class="form-group">
                                 <label>납품 일시 <small class="order-datetime-inline-help">24시간 단위로 입력해주세요</small></label>
@@ -128,7 +131,6 @@
                                 <label>요청 사항</label>
                                 <textarea id="orderNote" rows="2" placeholder="특별 요청사항을 입력하세요"></textarea>
                             </div>
-                            <button type="submit" class="btn btn-primary">주문 요청</button>
                         </form>
                     </div>
 

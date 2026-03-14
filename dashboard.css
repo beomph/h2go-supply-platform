@@ -763,12 +763,18 @@
     color: var(--text-muted);
 }
 
-/* 새 주문 - 희망 납품 일시 (연/월/일 @ 시·분·도착도·출하도 4칸) */
-.order-datetime-row {
+/* 새 주문 - 납품 일시 (날짜 행 + 시각·공급조건 행 분리) */
+.order-datetime-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.order-date-row {
     display: grid;
-    grid-template-columns: minmax(100px, 1fr) minmax(72px, 0.9fr) minmax(72px, 0.9fr) auto minmax(0, 1fr) minmax(0, 1fr) minmax(7.5rem, 1fr) minmax(7.5rem, 1fr);
+    grid-template-columns: minmax(100px, 1fr) minmax(72px, 0.9fr) minmax(72px, 0.9fr) minmax(72px, 0.9fr) auto;
     gap: 0.45rem;
-    width: 100%;
+    align-items: center;
     padding: 0.5rem;
     border-radius: 14px;
     border: 1px solid var(--border-color);
@@ -779,106 +785,69 @@
     display: none;
 }
 
+.order-datetime-sep {
+    display: none;
+}
+
+/* 시각 + 공급조건 한 줄: 시·분(고정 폭) + 도착도·출하도(여유 폭) */
+.order-time-supply-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    background: var(--surface-soft);
+}
+
+.order-time-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.order-supply-condition-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.order-supply-condition-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-right: 0.25rem;
+    flex-shrink: 0;
+}
+
+/* 시·분 입력 셀 (숫자 시인성·조작성 확보) */
 .order-datetime-field {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto 2rem;
     grid-template-rows: repeat(2, minmax(0, 1fr));
-    min-height: 2.6rem;
-    height: 2.6rem;
+    min-height: 2.75rem;
+    height: 2.75rem;
+    min-width: 5rem;
     background: var(--bg-card);
-    border-radius: 12px;
+    border-radius: 10px;
     border: 1px solid var(--border-color);
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
 .order-datetime-field:focus-within {
     border-color: var(--h2-blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
-/* 시·분 오른쪽 4칸: 시, 분, 도착도, 출하도 */
 .order-datetime-field.field-hour,
 .order-datetime-field.field-minute {
-    min-width: 0;
-}
-
-.supply-condition-cell {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 0.4rem;
-    min-height: 2.6rem;
-    min-width: 7.5rem;
-    padding: 0 0.5rem;
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-    background: var(--surface-soft);
-    cursor: pointer;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    transition: border-color 0.2s, background 0.2s, color 0.2s;
-    white-space: nowrap;
-}
-
-.supply-condition-cell input {
-    flex-shrink: 0;
-    order: -1;
-}
-
-.supply-condition-cell:hover {
-    border-color: var(--h2-blue);
-    color: var(--text-white);
-}
-
-.supply-condition-cell:has(input:checked) {
-    border-color: var(--h2-blue);
-    background: rgba(59, 130, 246, 0.15);
-    color: var(--h2-blue-light);
-}
-
-.supply-condition-cell input {
-    margin: 0;
-    width: 0.9em;
-    height: 0.9em;
-    accent-color: var(--h2-blue);
-    flex-shrink: 0;
-}
-
-/* 공급조건 옵션 인라인(그리드 밖 사용처용) */
-.supply-condition-option-inline {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.4rem 0.65rem;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    background: var(--surface-soft);
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    transition: border-color 0.2s, background 0.2s, color 0.2s;
-    white-space: nowrap;
-}
-
-.supply-condition-option-inline:hover {
-    border-color: var(--h2-blue);
-    color: var(--text-white);
-}
-
-.supply-condition-option-inline:has(input:checked) {
-    border-color: var(--h2-blue);
-    background: rgba(59, 130, 246, 0.15);
-    color: var(--h2-blue-light);
-}
-
-.supply-condition-option-inline input {
-    margin: 0;
-    width: 0.9em;
-    height: 0.9em;
-    accent-color: var(--h2-blue);
+    min-width: 5rem;
 }
 
 .order-datetime-field input[type="number"] {
@@ -886,14 +855,53 @@
     grid-row: 1 / span 2;
     width: 100%;
     min-width: 0;
-    padding: 0.45rem 0.4rem;
-    background: transparent;
+    padding: 0.4rem 0.35rem;
+    background: var(--bg-card);
     border: none;
     color: var(--text-white);
     text-align: center;
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 600;
     line-height: 1;
+}
+
+/* 도착도/출하도 버튼 (전문 표시·클릭 영역 확보) */
+.supply-condition-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-width: 8.5rem;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--surface-soft);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+    white-space: nowrap;
+}
+
+.supply-condition-btn input {
+    margin: 0;
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    accent-color: var(--h2-blue);
+}
+
+.supply-condition-btn:hover {
+    border-color: var(--h2-blue);
+    color: var(--text-white);
+}
+
+.supply-condition-btn:has(input:checked) {
+    border-color: var(--h2-blue);
+    background: rgba(59, 130, 246, 0.18);
+    color: var(--h2-blue-light);
 }
 
 .order-datetime-field input[type="number"]#orderYear {
@@ -904,14 +912,14 @@
     outline: none;
 }
 
-/* 브라우저 기본 위/아래 스핀 버튼 제거 (디자인 통일용) */
-.order-datetime-row input[type="number"]::-webkit-inner-spin-button,
-.order-datetime-row input[type="number"]::-webkit-outer-spin-button {
+/* 브라우저 기본 위/아래 스핀 버튼 제거 */
+.order-datetime-wrap input[type="number"]::-webkit-inner-spin-button,
+.order-datetime-wrap input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
 
-.order-datetime-row input[type="number"] {
+.order-datetime-wrap input[type="number"] {
     -moz-appearance: textfield;
 }
 
@@ -989,117 +997,100 @@
     font-weight: 500;
 }
 
-/* 2열 레이아웃 활성 구간(≥901px)에서 날짜 스테퍼가 form 칼럼을 밀어내는 문제 방지.
-   날짜 선택기(date picker) + 시/분 입력만 표시해 최소 너비를 줄인다.
-   769-900px(1열 구간)에서는 base 스타일(전체 스테퍼)이 그대로 유지된다. */
+/* 901px 이상: 날짜는 date picker만 표시 */
 @media (min-width: 901px) {
-    .order-datetime-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr 1fr;
-        width: 100%;
-        gap: 0.42rem;
-        padding: 0.52rem;
+    .order-date-row {
+        display: block;
+        padding: 0.5rem;
     }
 
     .order-date-mobile-wrap {
         display: block;
-        grid-column: 1 / -1;
     }
 
-    .order-datetime-row .order-date-mobile {
+    .order-datetime-wrap .order-date-mobile {
         width: 100%;
-        min-height: 2.45rem;
-        padding: 0.5rem 0.7rem;
+        min-height: 2.5rem;
+        padding: 0.5rem 0.75rem;
         border: 1px solid var(--border-color);
         border-radius: 10px;
         background: var(--bg-card);
         color: var(--text-white);
         font-family: inherit;
-        font-size: 0.92rem;
+        font-size: 0.95rem;
     }
 
-    .order-datetime-row .order-date-mobile:focus {
+    .order-datetime-wrap .order-date-mobile:focus {
         outline: none;
         border-color: var(--h2-blue);
     }
 
     .order-datetime-field.field-year,
     .order-datetime-field.field-month,
-    .order-datetime-field.field-day {
-        display: none;
-    }
-
-    .order-datetime-field.field-hour { grid-column: 1; }
-    .order-datetime-field.field-minute { grid-column: 2; }
-    .supply-condition-cell:nth-of-type(1) { grid-column: 3; }
-    .supply-condition-cell:nth-of-type(2) { grid-column: 4; }
-
-    .order-datetime-sep {
-        display: none;
+    .order-datetime-field.field-day,
+    .order-date-row .order-datetime-sep {
+        display: none !important;
     }
 }
 
 @media (max-width: 768px) {
-    .order-datetime-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr 1fr;
-        width: 100%;
-        gap: 0.42rem;
-        padding: 0.52rem;
+    .order-date-row {
+        display: block;
+        padding: 0.5rem;
     }
 
     .order-date-mobile-wrap {
         display: block;
-        grid-column: 1 / -1;
     }
 
-    .order-datetime-row .order-date-mobile {
+    .order-datetime-wrap .order-date-mobile {
         width: 100%;
-        min-height: 2.45rem;
-        padding: 0.5rem 0.7rem;
+        min-height: 2.5rem;
+        padding: 0.5rem 0.75rem;
         border: 1px solid var(--border-color);
         border-radius: 10px;
         background: var(--bg-card);
         color: var(--text-white);
         font-family: inherit;
-        font-size: 0.92rem;
+        font-size: 0.95rem;
     }
 
-    .order-datetime-row .order-date-mobile:focus {
+    .order-datetime-wrap .order-date-mobile:focus {
         outline: none;
         border-color: var(--h2-blue);
     }
 
-    .order-datetime-field {
-        width: 100%;
-        min-height: 2.5rem;
-        height: 2.5rem;
-    }
-
     .order-datetime-field.field-year,
     .order-datetime-field.field-month,
-    .order-datetime-field.field-day {
-        display: none;
+    .order-datetime-field.field-day,
+    .order-date-row .order-datetime-sep {
+        display: none !important;
     }
 
-    .order-datetime-field.field-hour { grid-column: 1; }
-    .order-datetime-field.field-minute { grid-column: 2; }
-    .supply-condition-cell:nth-of-type(1) { grid-column: 3; }
-    .supply-condition-cell:nth-of-type(2) { grid-column: 4; }
-
-    .order-datetime-sep {
-        display: none;
+    .order-time-supply-row {
+        flex-direction: column;
+        align-items: stretch;
     }
 
-    .order-datetime-row input,
-    .order-datetime-row input#orderYear,
-    .order-datetime-row input#orderMonth,
-    .order-datetime-row input#orderDay,
-    .order-datetime-row input#orderHour,
-    .order-datetime-row input#orderMinute {
-        width: 100%;
-        min-width: 0;
-        font-size: 0.93rem;
+    .order-time-group {
+        justify-content: flex-start;
+    }
+
+    .order-supply-condition-group {
+        justify-content: flex-start;
+    }
+
+    .supply-condition-btn {
+        min-width: 7.5rem;
+    }
+
+    .order-datetime-field {
+        min-height: 2.65rem;
+        height: 2.65rem;
+    }
+
+    .order-datetime-wrap input[type="number"] {
+        font-size: 1rem;
     }
 
     .dt-toggle {

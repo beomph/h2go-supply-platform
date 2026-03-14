@@ -1595,7 +1595,7 @@ function initDateTimeToggles() {
 function initDateTimeWheelAdjust() {
     // 데스크톱(정밀 포인터)에서만 휠 증감 활성화
     if (!window.matchMedia('(pointer:fine)').matches) return;
-    document.querySelectorAll('.order-datetime-row input[type="number"]').forEach(inputEl => {
+    document.querySelectorAll('.order-datetime-wrap input[type="number"]').forEach(inputEl => {
         inputEl.addEventListener('wheel', (e) => {
             e.preventDefault();
             const delta = e.deltaY < 0 ? 1 : -1;

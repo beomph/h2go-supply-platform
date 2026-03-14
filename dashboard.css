@@ -1913,7 +1913,8 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
 
 /* 대시보드 모달 */
 #changeRequestModal.modal,
-#changeApprovalModal.modal {
+#changeApprovalModal.modal,
+#cancelApprovalModal.modal {
     display: none;
     position: fixed;
     top: 0;
@@ -1929,12 +1930,14 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
 }
 
 #changeRequestModal.modal.active,
-#changeApprovalModal.modal.active {
+#changeApprovalModal.modal.active,
+#cancelApprovalModal.modal.active {
     display: flex;
 }
 
 #changeRequestModal .modal-content,
-#changeApprovalModal .modal-content {
+#changeApprovalModal .modal-content,
+#cancelApprovalModal .modal-content {
     max-width: 480px;
 }
 

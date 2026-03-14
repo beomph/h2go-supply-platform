@@ -2124,14 +2124,6 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     border-left-color: #f59e0b;
 }
 
-.order-item-clickable {
-    cursor: pointer;
-}
-
-.order-item-clickable:hover {
-    background: rgba(59, 130, 246, 0.06);
-}
-
 .order-item .order-transport-info {
     font-size: 0.82rem;
     color: var(--h2-blue-light);
@@ -2231,8 +2223,7 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     background: rgba(245, 158, 11, 0.08);
 }
 
-/* 주문 상세 모달 - 메인 페이지 디자인 통일 */
-#orderDetailModal.modal,
+/* 운송 시작 모달 */
 #transportStartModal.modal {
     display: none;
     position: fixed;
@@ -2248,169 +2239,8 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     padding: 2rem;
 }
 
-#orderDetailModal.modal.active,
 #transportStartModal.modal.active {
     display: flex;
-}
-
-.order-detail-modal-content {
-    max-width: 480px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 2.5rem 1.5rem 1.5rem;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-.order-detail-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.25rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.order-detail-order-id {
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin: 0;
-    color: var(--text-white);
-}
-
-.order-detail-overview {
-    margin-bottom: 1.25rem;
-}
-
-.order-detail-overview-title,
-.order-detail-history-title {
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin: 0 0 0.75rem 0;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border-color);
-    color: var(--text-muted);
-}
-
-.order-detail-overview-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-}
-
-.order-detail-row {
-    display: grid;
-    grid-template-columns: 90px 1fr;
-    gap: 0.75rem;
-    font-size: 0.9rem;
-    align-items: baseline;
-}
-
-.order-detail-row .label {
-    color: var(--text-muted);
-    font-size: 0.85rem;
-}
-
-.order-detail-row span.order-status,
-.order-detail-row span.supply-condition-badge {
-    width: fit-content;
-    display: inline-block;
-}
-
-.order-detail-actions-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.order-detail-actions-empty {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
-
-.order-detail-pending {
-    background: rgba(var(--primary-rgb, 59, 130, 246), 0.1);
-    border: 1px solid rgba(var(--primary-rgb, 59, 130, 246), 0.25);
-    border-radius: 12px;
-    padding: 1rem;
-    margin-bottom: 1.25rem;
-}
-
-.order-detail-pending-title {
-    font-weight: 600;
-    font-size: 0.9rem;
-    margin: 0 0 0.5rem 0;
-}
-
-.order-detail-pending p {
-    font-size: 0.88rem;
-    color: var(--text-muted);
-    margin: 0 0 0.5rem 0;
-}
-
-.order-detail-pending-btns {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-}
-
-.order-detail-history-section {
-    margin-top: 1rem;
-}
-
-.order-detail-history-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    font-size: 0.88rem;
-}
-
-.order-detail-history-item {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.order-detail-history-item:last-child {
-    border-bottom: none;
-}
-
-.order-detail-history-item .history-time {
-    flex: 0 0 100px;
-    color: var(--text-muted);
-    font-size: 0.82rem;
-}
-
-.order-detail-history-item .history-text {
-    flex: 1;
-    min-width: 0;
-}
-
-.order-detail-history-item.history-change .history-text {
-    color: var(--h2-blue-light);
-}
-
-.order-detail-history-item.history-cancel .history-text {
-    color: #f59e0b;
-}
-
-.order-detail-history-btns {
-    display: inline-flex;
-    gap: 0.35rem;
-    margin-left: auto;
-}
-
-.order-detail-empty {
-    color: var(--text-muted);
-    font-size: 0.88rem;
-    padding: 0.75rem 0;
 }
 
 /* 대시보드 모달 */

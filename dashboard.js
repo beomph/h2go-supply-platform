@@ -1036,7 +1036,7 @@ function renderConsumerView() {
 
         const isCancelled = order.status === 'cancelled';
         return `
-        <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
+        <div class="order-item ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
             <div class="order-item-head">
                 <div class="order-id">${order.id}</div>
                 <div class="order-item-head-right">
@@ -1076,14 +1076,6 @@ function renderConsumerView() {
         </div>
     `}).join('');
 
-    list.querySelectorAll('.order-item-clickable[data-order-id]').forEach(el => {
-        el.addEventListener('click', (e) => {
-            if (e.target.closest('button')) return;
-            const orderId = el.dataset.orderId;
-            openOrderDetailModal(orderId);
-        });
-    });
-
     renderInventoryPanel();
 }
 
@@ -1118,7 +1110,7 @@ function renderOrdersTable(tbodyId, showActions) {
 
         const isCancelled = o.status === 'cancelled';
         return `
-        <tr class="order-row ${isCancelled ? 'row-cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'row-change-request' : ''}" data-order-id="${o.id}" title="클릭하여 상세 보기">
+        <tr class="order-row ${isCancelled ? 'row-cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'row-change-request' : ''}" data-order-id="${o.id}">
             <td>${o.id}</td>
             <td>${o.consumerName}</td>
             <td>${formatOrderDate(o)}</td>
@@ -1148,14 +1140,6 @@ function renderOrdersTable(tbodyId, showActions) {
         </tr>
     `}).join('') || `<tr><td colspan="${colspan}" class="empty-state">주문이 없습니다.</td></tr>`;
 
-    // 주문 행 클릭 → 주문 상세 팝업
-    tbody.querySelectorAll('.order-row[data-order-id]').forEach(row => {
-        row.addEventListener('click', (e) => {
-            if (e.target.closest('button')) return;
-            const orderId = row.dataset.orderId;
-            openOrderDetailModal(orderId);
-        });
-    });
 }
 
 function renderSupplierView() {
@@ -1387,203 +1371,6 @@ function buildOrderChangeHistory(order) {
     return history;
 }
 
-function buildOrderStatusHistory(order) {
-    const items = [];
-    if (!order) return items;
-
-    const add = (label, at) => {
-        if (!at) return;
-        const ts = new Date(at).getTime();
-        if (Number.isFinite(ts) && ts > 0) items.push({ label, at: ts });
-    };
-
-    add('주문 요청', order.createdAt);
-    add('접수', order.acceptedAt);
-    if (order.changeRequest?.requestedAt) {
-        const who = getActorName(order, order.changeRequest.requestedBy);
-        add(`변경 요청 (${who})`, order.changeRequest.requestedAt);
-    }
-    if (order.lastChange?.decidedAt && order.lastChange.result === 'approved') add('변경 접수', order.lastChange.decidedAt);
-    add('운송 시작', order.transportStartedAt);
-    add('도착', order.arrivedAt);
-    add('회수 시작', order.collectingAt);
-    add('완료', order.completedAt);
-    add('취소', order.cancelledAt);
-
-    return items.sort((a, b) => a.at - b.at);
-}
-
-function buildDetailedOrderHistory(order) {
-    const items = [];
-    if (!order) return items;
-    const add = (text, at, type) => {
-        const ts = at ? new Date(at).getTime() : 0;
-        if (ts > 0 || type === 'status') items.push({ text, at: ts, type: type || 'event' });
-    };
-
-    add('주문 요청', order.createdAt, 'status');
-    add('접수', order.acceptedAt, 'status');
-
-    const cr = order.changeRequest;
-    const cancelReq = order.cancelRequest;
-    if (cr) {
-        const who = getActorName(order, cr.requestedBy);
-        add(`${who}가 변경 요청`, cr.requestedAt, 'change');
-        if (cr.status === 'approved' && order.lastChange) {
-            const decider = getActorName(order, order.lastChange.decidedBy);
-            add(`${decider}가 변경 승인`, order.lastChange.decidedAt, 'change');
-        } else if (cr.status === 'rejected' && order.lastChange) {
-            const decider = getActorName(order, order.lastChange.decidedBy);
-            add(`${decider}가 변경 거절`, order.lastChange.decidedAt, 'change');
-        }
-    }
-    if (cancelReq) {
-        const who = getActorName(order, cancelReq.requestedBy);
-        add(`${who}가 취소 요청`, cancelReq.requestedAt, 'cancel');
-        if (cancelReq.status === 'approved' && order.lastCancel) {
-            const decider = getActorName(order, order.lastCancel.decidedBy);
-            add(`${decider}가 취소 승인 (취소 완료)`, order.lastCancel.decidedAt, 'cancel');
-        } else if (cancelReq.status === 'rejected' && order.lastCancel) {
-            const decider = getActorName(order, order.lastCancel.decidedBy);
-            add(`${decider}가 취소 거절`, order.lastCancel.decidedAt, 'cancel');
-        }
-    }
-    if (order.lastChange && !cr) {
-        const decider = getActorName(order, order.lastChange.decidedBy);
-        add(`${decider}가 변경 ${order.lastChange.result === 'approved' ? '승인' : '거절'}`, order.lastChange.decidedAt, 'change');
-    }
-
-    add('운송 시작', order.transportStartedAt, 'status');
-    add('도착', order.arrivedAt, 'status');
-    add('회수 시작', order.collectingAt, 'status');
-    add('완료', order.completedAt, 'status');
-    add('취소', order.cancelledAt, 'status');
-
-    return items.sort((a, b) => a.at - b.at);
-}
-
-let lastOrderDetailOrderId = null;
-
-function renderOrderDetailBody(orderId) {
-    const order = orders.find(o => o.id === orderId);
-    if (!order) return '';
-    const actor = getActorForOrder(order);
-    const cr = order.changeRequest;
-    const cancelReq = order.cancelRequest;
-    const hasPendingChange = cr && cr.status === 'pending';
-    const hasPendingCancel = cancelReq && cancelReq.status === 'pending';
-    const hasRejectedCancel = cancelReq && cancelReq.status === 'rejected';
-    const canRequestChange = !hasPendingChange && !hasPendingCancel && ['requested', 'accepted', 'change_accepted', 'in_transit', 'arrived'].includes(normalizeStatus(order.status));
-    const canRequestCancel = !hasPendingCancel && !hasPendingChange && !hasRejectedCancel && !['completed', 'cancelled', 'collecting'].includes(normalizeStatus(order.status));
-    const immediateCancelable = canRequestCancel && canImmediateCancelOrder(order, actor);
-    const canApproveChange = hasPendingChange && cr.requestedBy !== actor;
-    const canApproveCancel = hasPendingCancel && cancelReq.requestedBy !== actor;
-    const canCancelChangeRequest = hasPendingChange && cr.requestedBy === actor;
-
-    const showChangeBtn = canRequestChange && !immediateCancelable;
-    const showCancelBtn = canRequestCancel;
-    const actionButtons = [
-        canCancelChangeRequest ? `<button type="button" class="btn btn-small btn-secondary" data-action="cancel-change-request" data-id="${order.id}">변경요청 취소</button>` : '',
-        showChangeBtn ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-change" data-id="${order.id}">변경</button>` : '',
-        showCancelBtn ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''
-    ].filter(Boolean).join('');
-    const decisionButtons = [
-        canApproveChange ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${order.id}">승인</button><button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${order.id}">거절</button>` : '',
-        canApproveCancel ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${order.id}">승인</button><button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${order.id}">거절</button>` : ''
-    ].filter(Boolean).join('');
-
-    const pendingBlock = (canApproveChange || canApproveCancel) ? `
-        <div class="order-detail-pending">
-            <p class="order-detail-pending-title">상대방 요청 확인</p>
-            ${canApproveChange ? `<p>${getActorName(order, cr.requestedBy)}가 주문 변경을 요청했습니다.</p>` : ''}
-            ${canApproveCancel ? `<p>${getActorName(order, cancelReq.requestedBy)}가 취소를 요청했습니다.</p>` : ''}
-            <div class="order-detail-pending-btns">${decisionButtons}</div>
-        </div>
-    ` : '';
-
-    const detailedHistory = buildDetailedOrderHistory(order);
-    const historyItems = detailedHistory.map(h => {
-        const isPendingChange = h.type === 'change' && hasPendingChange && h.text.includes('변경 요청');
-        const isPendingCancel = h.type === 'cancel' && hasPendingCancel && h.text.includes('취소 요청');
-        const showBtns = (isPendingChange && canApproveChange) || (isPendingCancel && canApproveCancel);
-        const btns = showBtns ? `
-            <span class="order-detail-history-btns">
-                ${canApproveChange && isPendingChange ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-change" data-id="${order.id}">승인</button><button type="button" class="btn btn-tiny btn-secondary" data-action="reject-change" data-id="${order.id}">거절</button>` : ''}
-                ${canApproveCancel && isPendingCancel ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-cancel" data-id="${order.id}">승인</button><button type="button" class="btn btn-tiny btn-secondary" data-action="reject-cancel" data-id="${order.id}">거절</button>` : ''}
-            </span>
-        ` : '';
-        const typeClass = h.type === 'change' ? 'history-change' : h.type === 'cancel' ? 'history-cancel' : 'history-status';
-        return `<li class="order-detail-history-item ${typeClass}"><span class="history-time">${formatIsoDateTime(h.at)}</span><span class="history-text">${h.text}</span>${btns}</li>`;
-    }).join('');
-
-    return `
-        <div class="order-detail-header">
-            <h2 class="order-detail-order-id">${order.id}</h2>
-            <button type="button" class="btn btn-tiny btn-secondary" id="orderDetailMapBtn" data-order-id="${order.id}">지도 보기</button>
-        </div>
-        <div class="order-detail-overview">
-            <h4 class="order-detail-overview-title">주문 개요</h4>
-            <div class="order-detail-overview-grid">
-                <div class="order-detail-row"><span class="label">납품일시</span><span>${formatOrderDateTime(order)}</span></div>
-                <div class="order-detail-row"><span class="label">납품주소</span><span>${order.address || '-'}</span></div>
-                <div class="order-detail-row"><span class="label">공급자</span><span>${order.supplierName || '-'}</span></div>
-                <div class="order-detail-row"><span class="label">공급조건</span><span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span></div>
-                <div class="order-detail-row"><span class="label">주문상태</span><span class="order-status ${normalizeStatus(order.status)}">${getStatusLabel(order.status)}</span></div>
-            </div>
-        </div>
-        <div class="order-detail-actions-row">
-            ${actionButtons || '<span class="order-detail-actions-empty">변경/취소 불가</span>'}
-        </div>
-        ${pendingBlock}
-        <div class="order-detail-history-section">
-            <h4 class="order-detail-history-title">주문 이력</h4>
-            ${detailedHistory.length > 0
-                ? `<ul class="order-detail-history-list">${historyItems}</ul>`
-                : '<p class="order-detail-empty">이력이 없습니다.</p>'}
-        </div>
-    `;
-}
-
-function refreshOrderDetailModalIfOpen() {
-    if (!lastOrderDetailOrderId) return;
-    const modal = document.getElementById('orderDetailModal');
-    if (!modal || !modal.classList.contains('active')) return;
-    const body = document.getElementById('orderDetailBody');
-    if (!body) return;
-    body.innerHTML = renderOrderDetailBody(lastOrderDetailOrderId);
-    const mapBtn = document.getElementById('orderDetailMapBtn');
-    if (mapBtn) {
-        mapBtn.addEventListener('click', () => {
-            closeOrderDetailModal();
-            openOrderMapModal(lastOrderDetailOrderId);
-        });
-    }
-}
-
-function openOrderDetailModal(orderId) {
-    const order = orders.find(o => o.id === orderId);
-    if (!order) return;
-
-    lastOrderDetailOrderId = orderId;
-    const body = document.getElementById('orderDetailBody');
-    body.innerHTML = renderOrderDetailBody(orderId);
-
-    const mapBtn = document.getElementById('orderDetailMapBtn');
-    if (mapBtn) {
-        mapBtn.addEventListener('click', () => {
-            closeOrderDetailModal();
-            openOrderMapModal(orderId);
-        });
-    }
-
-    document.getElementById('orderDetailModal').classList.add('active');
-}
-
-function closeOrderDetailModal() {
-    document.getElementById('orderDetailModal').classList.remove('active');
-    lastOrderDetailOrderId = null;
-}
-
 // ========== 운송 시작 모달 ==========
 function openTransportStartModal(orderId) {
     const order = orders.find(o => o.id === orderId);
@@ -1670,7 +1457,6 @@ function applyChange(orderId, approved) {
         order.status = order.changeRequest.originalStatus || 'accepted';
     }
 
-    refreshOrderDetailModalIfOpen();
     localStorage.setItem('h2go_orders', JSON.stringify(orders));
     pendingApprovalOrderId = null;
     document.getElementById('changeApprovalModal').classList.remove('active');
@@ -1868,12 +1654,6 @@ document.getElementById("supplierManualApplyBtn")?.addEventListener("click", () 
     modal?.classList.remove("active");
 });
 
-function updateNavSupplierRegistrationVisibility() {
-    const item = document.getElementById('navSupplierRegistrationItem');
-    if (!item) return;
-    item.style.display = currentUser.type === 'consumer' ? '' : 'none';
-}
-
 document.getElementById('roleSelect').addEventListener('change', (e) => {
     if (e.target.disabled) return;
     const role = e.target.value;
@@ -1886,16 +1666,8 @@ document.getElementById('roleSelect').addEventListener('change', (e) => {
         localStorage.setItem(AUTH_KEY, JSON.stringify(nextAuth));
     } catch (_) {}
     showView(role);
-    updateNavSupplierRegistrationVisibility();
     if (role === 'consumer') renderConsumerView();
     if (role === 'supplier') renderSupplierView();
-});
-
-document.getElementById('navSupplierRegistration')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (currentUser.type !== 'consumer') return;
-    showView('supplierRegistration');
-    renderSupplierRegistration();
 });
 
 document.getElementById('backToConsumerDashboard')?.addEventListener('click', () => {
@@ -2013,7 +1785,6 @@ document.getElementById('changeRequestForm').addEventListener('submit', (e) => {
 
     localStorage.setItem('h2go_orders', JSON.stringify(orders));
     document.getElementById('changeRequestModal').classList.remove('active');
-    refreshOrderDetailModalIfOpen();
     renderConsumerView();
     renderSupplierView();
     alert('변경 요청이 제출되었습니다. 상대방의 확정을 기다립니다.');
@@ -2071,7 +1842,6 @@ document.querySelector('#orderMapModal .modal-close')?.addEventListener('click',
 document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (document.getElementById('orderMapModal').classList.contains('active')) closeOrderMapModal();
-    else if (document.getElementById('orderDetailModal').classList.contains('active')) closeOrderDetailModal();
     else if (document.getElementById('transportStartModal').classList.contains('active')) closeTransportStartModal();
 });
 document.querySelector('#changeRequestModal .modal-close').addEventListener('click', () => {
@@ -2085,10 +1855,6 @@ document.querySelector('#supplierSelectModal .modal-close')?.addEventListener('c
 });
 document.getElementById('supplierSelectModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
-});
-document.querySelector('#orderDetailModal .modal-close')?.addEventListener('click', closeOrderDetailModal);
-document.getElementById('orderDetailModal')?.addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeOrderDetailModal();
 });
 document.querySelector('#transportStartModal .modal-close')?.addEventListener('click', closeTransportStartModal);
 document.getElementById('transportStartModal')?.addEventListener('click', (e) => {
@@ -2106,7 +1872,6 @@ document.addEventListener('click', (e) => {
         localStorage.setItem('h2go_orders', JSON.stringify(orders));
         renderConsumerView();
         renderSupplierView();
-        refreshOrderDetailModalIfOpen();
         lastOrdersSnapshot = deepClone(orders);
     }
 
@@ -2280,7 +2045,6 @@ initSupplyConditionToggles();
 toggleOrderAddressBySupplyCondition();
 renderAddressHistoryOptions();
 setSupplierName(currentUser.name);
-updateNavSupplierRegistrationVisibility();
 showView(initialRole);
 if (initialRole === 'consumer') renderConsumerView();
 if (initialRole === 'supplier') renderSupplierView();

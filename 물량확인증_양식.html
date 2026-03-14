@@ -139,8 +139,15 @@
             font-size: 8.5pt;
             color: #555;
         }
-        .signature-table th { width: 22%; }
-        .signature-table td { min-height: 36px; text-align: left; padding: 6px; }
+        #qty-inout-table th:nth-child(1), #qty-inout-table td:nth-child(1) { width: 12%; }
+        #qty-inout-table th:nth-child(2), #qty-inout-table td:nth-child(2) { width: 22%; }
+        #qty-inout-table th:nth-child(3), #qty-inout-table td:nth-child(3) { width: 18%; }
+        #qty-inout-table th:nth-child(4), #qty-inout-table td:nth-child(4) { width: 16%; }
+        #qty-inout-table th:nth-child(5), #qty-inout-table td:nth-child(5) { width: 18%; }
+        #qty-inout-table th:nth-child(6), #qty-inout-table td:nth-child(6) { width: 14%; }
+        .signature-table th, .signature-table td { min-height: 32px; padding: 4px 6px; }
+        .signature-table td { text-align: center; }
+        .qty-datetime { font-size: 9pt; }
         .footer-note {
             margin-top: 16px;
             font-size: 8pt;
@@ -188,11 +195,6 @@
     </div>
 
     <h1 class="doc-title">물량확인증</h1>
-
-    <div class="doc-meta">
-        <span>입고 일자: <span id="qty-in-year"></span> 년 <span id="qty-in-month"></span> 월 <span id="qty-in-day"></span> 일</span>
-        <span>출고 일자: <span id="qty-out-year"></span> 년 <span id="qty-out-month"></span> 월 <span id="qty-out-day"></span> 일</span>
-    </div>
 
     <div class="main-grid">
         <div>
@@ -250,27 +252,35 @@
             <div class="section">
                 <div class="section-title">⊙ 입출고 확인</div>
                 <div class="section-body">
-                    <table class="signature-table">
-                        <tr>
-                            <th>구분</th>
-                            <th>성명</th>
-                            <th>서명</th>
-                        </tr>
-                        <tr>
-                            <td>고객</td>
-                            <td id="qty-sign-customer">&nbsp;</td>
-                            <td>&nbsp;</td>
-                        </tr>
-                        <tr>
-                            <td>입고 기사</td>
-                            <td id="qty-sign-in-driver">&nbsp;</td>
-                            <td>&nbsp;</td>
-                        </tr>
-                        <tr>
-                            <td>출고 기사</td>
-                            <td id="qty-sign-out-driver">&nbsp;</td>
-                            <td>&nbsp;</td>
-                        </tr>
+                    <table class="signature-table" id="qty-inout-table">
+                        <thead>
+                            <tr>
+                                <th>구분</th>
+                                <th>일시</th>
+                                <th>기사명</th>
+                                <th>서명</th>
+                                <th>고객명</th>
+                                <th>서명</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>입고</td>
+                                <td><input type="text" class="qty-input qty-datetime" id="qty-in-datetime" placeholder="년 월 일"></td>
+                                <td id="qty-sign-in-driver">&nbsp;</td>
+                                <td>&nbsp;</td>
+                                <td>&nbsp;</td>
+                                <td>&nbsp;</td>
+                            </tr>
+                            <tr>
+                                <td>출고</td>
+                                <td><input type="text" class="qty-input qty-datetime" id="qty-out-datetime" placeholder="년 월 일"></td>
+                                <td id="qty-sign-out-driver">&nbsp;</td>
+                                <td>&nbsp;</td>
+                                <td>&nbsp;</td>
+                                <td>&nbsp;</td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -385,14 +395,6 @@
             return map[n] || '인천시 남동구 논현고잔로 123 (인천 수소생산공장)';
         }
 
-        var y = order.year || '', m = order.month || '', d = order.day || '';
-        setText('qty-in-year', y);
-        setText('qty-in-month', m);
-        setText('qty-in-day', d);
-        setText('qty-out-year', y);
-        setText('qty-out-month', m);
-        setText('qty-out-day', d);
-
         setText('qty-customer-name', order.consumerName || '');
         setText('qty-customer-addr', order.address || '');
         setText('qty-customer-phone', '');
@@ -406,10 +408,32 @@
         setText('qty-trailer-no', trailerNos);
         setText('qty-trailer-vol', '');
 
-        setText('qty-sign-customer', order.consumerName || '');
-        var driver = ti && ti.driverName ? ti.driverName : '';
-        setText('qty-sign-in-driver', driver);
-        setText('qty-sign-out-driver', driver);
+        var y = order.year || '', m = order.month || '', d = order.day || '';
+        setText('qty-in-datetime', (y && m && d) ? y + '년 ' + m + '월 ' + d + '일' : '');
+        setText('qty-out-datetime', '');
+
+        var inDriver = ti && ti.driverName ? ti.driverName : '';
+        setText('qty-sign-in-driver', inDriver);
+
+        var prevOrder = null;
+        var consumerKey = String((order.consumerName || '') + '|' + (order.address || '')).toLowerCase();
+        var currY = parseInt(order.year, 10) || 0, currM = parseInt(order.month, 10) || 0, currD = parseInt(order.day, 10) || 0;
+        var currTs = order.createdAt ? new Date(order.createdAt).getTime() : 0;
+        orders.forEach(function(o) {
+            if (o.id === order.id || !o.transportInfo || !o.transportInfo.driverName) return;
+            if (String((o.consumerName || '') + '|' + (o.address || '')).toLowerCase() !== consumerKey) return;
+            var oy = parseInt(o.year, 10) || 0, om = parseInt(o.month, 10) || 0, od = parseInt(o.day, 10) || 0;
+            var ots = o.createdAt ? new Date(o.createdAt).getTime() : 0;
+            var isBefore = oy < currY || (oy === currY && om < currM) || (oy === currY && om === currM && od < currD) || (oy === currY && om === currM && od === currD && ots < currTs);
+            if (!isBefore) return;
+            if (!prevOrder) { prevOrder = o; return; }
+            var py = parseInt(prevOrder.year, 10) || 0, pm = parseInt(prevOrder.month, 10) || 0, pd = parseInt(prevOrder.day, 10) || 0;
+            var pts = prevOrder.createdAt ? new Date(prevOrder.createdAt).getTime() : 0;
+            var oIsNewer = oy > py || (oy === py && om > pm) || (oy === py && om === pm && od > pd) || (oy === py && om === pm && od === pd && ots > pts);
+            if (oIsNewer) prevOrder = o;
+        });
+        var outDriver = prevOrder && prevOrder.transportInfo && prevOrder.transportInfo.driverName ? prevOrder.transportInfo.driverName : '';
+        setText('qty-sign-out-driver', outDriver);
 
         function addFlowRow() {
             var tbody = document.querySelector('#qty-flow-table tbody');

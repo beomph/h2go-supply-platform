@@ -529,12 +529,19 @@ function getSupplierAdvanceAction(status) {
         case 'accepted':
         case 'change_accepted':
             return { label: '운송 시작', next: 'in_transit' };
-        case 'in_transit':
-            return { label: '도착 처리', next: 'arrived' };
-        case 'arrived':
-            return { label: '회수 시작', next: 'collecting' };
         case 'collecting':
             return { label: '회수 완료', next: 'completed' };
+        default:
+            return null;
+    }
+}
+
+function getConsumerAdvanceAction(status) {
+    switch (status) {
+        case 'in_transit':
+            return { label: '도착', next: 'arrived' };
+        case 'arrived':
+            return { label: '회수 출발', next: 'collecting' };
         default:
             return null;
     }
@@ -1019,7 +1026,9 @@ function renderConsumerView() {
         const changeBadge = getChangeBadgeText(order);
         const cancelBadge = getCancelBadgeText(order);
         const showChangeBtn = canRequestChange && !immediateCancelable;
+        const consumerAdvanceAction = !hasPendingChange && !hasPendingCancel ? getConsumerAdvanceAction(status) : null;
         const actionButtons = `
+            ${consumerAdvanceAction ? `<button type="button" class="btn btn-small btn-primary" data-action="advance-status" data-next-status="${consumerAdvanceAction.next}" data-id="${order.id}">${consumerAdvanceAction.label}</button>` : ''}
             ${canCancelChangeRequest ? `<button type="button" class="btn btn-small btn-secondary" data-action="cancel-change-request" data-id="${order.id}">변경요청 취소</button>` : ''}
             ${showChangeBtn ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
             ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''}
@@ -1967,12 +1976,20 @@ document.addEventListener('click', (e) => {
     } else if (action === 'advance-status') {
         if (!order) return;
         const actor = getActorForOrder(order);
-        if (actor !== 'supplier') return;
         if (order.changeRequest?.status === 'pending' || order.cancelRequest?.status === 'pending') return;
         const nextStatus = String(btn.dataset.nextStatus || '').trim();
         if (!nextStatus) return;
-        if (nextStatus === 'in_transit') {
-            openTransportStartModal(orderId);
+        if (actor === 'supplier') {
+            if (nextStatus === 'in_transit') {
+                openTransportStartModal(orderId);
+                return;
+            }
+            const supplierAction = getSupplierAdvanceAction(normalizeStatus(order.status));
+            if (!supplierAction || supplierAction.next !== nextStatus) return;
+        } else if (actor === 'consumer') {
+            const consumerAction = getConsumerAdvanceAction(normalizeStatus(order.status));
+            if (!consumerAction || consumerAction.next !== nextStatus) return;
+        } else {
             return;
         }
         order.status = nextStatus;

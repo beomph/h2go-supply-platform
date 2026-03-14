@@ -335,8 +335,7 @@
 
     .nav-controls-stack .role-select,
     .nav-controls-stack .btn,
-    .nav-controls-stack #logoutBtn,
-    .nav-controls-stack #supplierRegisterBtn {
+    .nav-controls-stack #logoutBtn {
         width: 100%;
     }
 
@@ -432,11 +431,6 @@
         width: 50%;
     }
 
-    #supplierRegisterBtn {
-        width: 50%;
-        min-width: 0;
-    }
-
     .role-select {
         padding: 0.5rem 0.7rem;
         font-size: 0.9rem;
@@ -461,12 +455,9 @@
         font-size: 0.75rem;
     }
 
-    #logoutBtn {
-        width: auto;
+    .nav-row-1 #logoutBtn {
         padding: 0.48rem 0.7rem;
         font-size: 0.82rem;
-        line-height: 1.2;
-        white-space: nowrap;
     }
 
     .dashboard-main {
@@ -1914,45 +1905,46 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     background: rgba(59, 130, 246, 0.12);
 }
 
-/* 공급자 선택 모달 - 직접 입력 칸 (전체 톤 통일) */
-#supplierSelectModal .supplier-manual-row {
-    margin-top: 0.5rem;
-    margin-bottom: 1.25rem;
+/* 공급자 선택 모달 - 신규 공급자 등록 */
+#supplierSelectModal .supplier-modal-add-section {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
 }
 
-#supplierSelectModal .supplier-manual-row label {
-    display: block;
-    font-size: 0.88rem;
+#supplierSelectModal .supplier-modal-add-section h4 {
+    font-size: 0.9rem;
     color: var(--text-muted);
-    margin-bottom: 0.5rem;
-    font-weight: 500;
+    margin-bottom: 0.6rem;
+    font-weight: 600;
 }
 
-#supplierSelectModal .supplier-manual-input {
-    width: 100%;
-    padding: 0.85rem 1rem;
-    border-radius: 10px;
+#supplierSelectModal .supplier-add-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+#supplierSelectModal .supplier-add-row input {
+    flex: 1;
+    min-width: 120px;
+    padding: 0.6rem 0.85rem;
+    border-radius: 8px;
     border: 1px solid var(--surface-soft-border);
     background: var(--surface-soft);
     color: var(--text-white);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-family: inherit;
-    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-#supplierSelectModal .supplier-manual-input::placeholder {
+#supplierSelectModal .supplier-add-row input::placeholder {
     color: var(--text-muted);
-    opacity: 0.85;
 }
 
-#supplierSelectModal .supplier-manual-input:hover {
-    border-color: var(--border-color);
-}
-
-#supplierSelectModal .supplier-manual-input:focus {
+#supplierSelectModal .supplier-add-row input:focus {
     outline: none;
     border-color: var(--h2-blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 /* 변경요청 요약 텍스트

@@ -639,36 +639,6 @@ function showView(viewId) {
     if (el) el.classList.add('active');
 }
 
-function renderSupplierRegistration() {
-    const listEl = document.getElementById('registeredSuppliersList');
-    if (!listEl) return;
-    const list = readRegisteredSuppliers();
-    if (list.length === 0) {
-        listEl.innerHTML = '<p class="registered-suppliers-empty">등록된 공급자가 없습니다. 아래에서 추가하세요.</p>';
-        return;
-    }
-    listEl.innerHTML = list.map((s, i) => {
-        const name = typeof s === 'string' ? s : (s?.name || '');
-        const addr = typeof s === 'object' && s?.address ? s.address : getSupplierShippingAddress(name);
-        return `<div class="registered-supplier-item" data-index="${i}">
-            <div class="supplier-info">
-                <div class="supplier-name">${String(name).replace(/</g, '&lt;')}</div>
-                <div class="supplier-addr">${String(addr).replace(/</g, '&lt;')}</div>
-            </div>
-            <button type="button" class="btn btn-tiny btn-secondary btn-remove" data-index="${i}">삭제</button>
-        </div>`;
-    }).join('');
-    listEl.querySelectorAll('.btn-remove').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const idx = parseInt(btn.dataset.index, 10);
-            const list = readRegisteredSuppliers();
-            list.splice(idx, 1);
-            writeRegisteredSuppliers(list);
-            renderSupplierRegistration();
-        });
-    });
-}
-
 // 주문 상태: 요청/접수/변경/운송/도착/회수/완료
 const ORDER_STATUSES = [
     { value: 'requested', label: '주문 요청' },
@@ -1691,11 +1661,33 @@ function toggleOrderAddressBySupplyCondition() {
     }
 }
 
+function refreshSupplierListInModal(listEl, addressDisplay) {
+    if (!listEl) return;
+    const modal = document.getElementById("supplierSelectModal");
+    const candidates = getSupplierCandidates(currentUser.name);
+    if (candidates.length === 0) {
+        listEl.innerHTML = '<p class="supplier-list-empty">등록된 공급자가 없습니다. 아래에서 신규 공급자를 추가하세요.</p>';
+    } else {
+        listEl.innerHTML = candidates.map(n => {
+            const addr = getSupplierShippingAddress(n);
+            return `<button type="button" data-supplier="${String(n).replace(/"/g, "&quot;")}" data-address="${String(addr).replace(/"/g, "&quot;")}">${n}</button>`;
+        }).join("");
+    }
+    listEl.querySelectorAll("button[data-supplier]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            setSupplierName(btn.dataset.supplier);
+            if (addressDisplay && btn.dataset.address) addressDisplay.textContent = btn.dataset.address;
+            if (modal) modal.classList.remove("active");
+        });
+    });
+}
+
 function openSupplierSelectModal() {
     const modal = document.getElementById("supplierSelectModal");
     const listEl = document.getElementById("supplierList");
-    const manualEl = document.getElementById("supplierManualInput");
     const addressDisplay = document.getElementById("supplierShippingAddressDisplay");
+    const nameEl = document.getElementById("supplierModalNewName");
+    const addrEl = document.getElementById("supplierModalNewAddress");
     if (!modal || !listEl) return;
 
     const currentSupplier = String(selectedSupplierName || "").trim();
@@ -1705,25 +1697,9 @@ function openSupplierSelectModal() {
             : "공급자를 선택하면 출하 주소가 표시됩니다.";
     }
 
-    const candidates = getSupplierCandidates(currentUser.name);
-    if (candidates.length === 0) {
-        listEl.innerHTML = '<p class="supplier-list-empty">등록된 공급자가 없습니다. 공급자 등록 메뉴에서 추가하거나 아래 직접 입력을 이용하세요.</p>';
-    } else {
-        listEl.innerHTML = candidates.map(n => {
-            const addr = getSupplierShippingAddress(n);
-            return `<button type="button" data-supplier="${String(n).replace(/"/g, "&quot;")}" data-address="${String(addr).replace(/"/g, "&quot;")}">${n}</button>`;
-        }).join("");
-    }
-
-    listEl.querySelectorAll("button[data-supplier]").forEach(btn => {
-        btn.addEventListener("click", () => {
-            setSupplierName(btn.dataset.supplier);
-            if (addressDisplay && btn.dataset.address) addressDisplay.textContent = btn.dataset.address;
-            modal.classList.remove("active");
-        });
-    });
-
-    if (manualEl) manualEl.value = "";
+    refreshSupplierListInModal(listEl, addressDisplay);
+    if (nameEl) nameEl.value = "";
+    if (addrEl) addrEl.value = "";
     modal.classList.add("active");
 }
 
@@ -1745,26 +1721,32 @@ function initSupplyConditionToggles() {
 }
 
 document.getElementById("changeSupplierBtn")?.addEventListener("click", openSupplierSelectModal);
-document.getElementById("supplierRegisterBtn")?.addEventListener("click", () => {
-    if (currentUser.type === 'consumer') {
-        showView('supplierRegistration');
-        renderSupplierRegistration();
-    } else {
-        showView('supplier');
-    }
-});
-document.getElementById("supplierManualApplyBtn")?.addEventListener("click", () => {
-    const modal = document.getElementById("supplierSelectModal");
-    const manualEl = document.getElementById("supplierManualInput");
+document.getElementById("supplierModalAddBtn")?.addEventListener("click", () => {
+    const nameEl = document.getElementById("supplierModalNewName");
+    const addrEl = document.getElementById("supplierModalNewAddress");
+    const listEl = document.getElementById("supplierList");
     const addressDisplay = document.getElementById("supplierShippingAddressDisplay");
-    const v = String(manualEl?.value || "").trim();
-    if (!v) {
+    const modal = document.getElementById("supplierSelectModal");
+    const name = String(nameEl?.value || "").trim();
+    const addr = String(addrEl?.value || "").trim();
+    if (!name) {
         alert("공급자명을 입력해 주세요.");
         return;
     }
-    setSupplierName(v);
-    if (addressDisplay) addressDisplay.textContent = getSupplierShippingAddress(v);
-    modal?.classList.remove("active");
+    const list = readRegisteredSuppliers();
+    const exists = list.some(s => (typeof s === 'string' ? s : s?.name || '').toLowerCase() === name.toLowerCase());
+    if (exists) {
+        alert("이미 등록된 공급자입니다.");
+        return;
+    }
+    list.push(addr ? { name, address: addr } : name);
+    writeRegisteredSuppliers(list);
+    if (nameEl) nameEl.value = "";
+    if (addrEl) addrEl.value = "";
+    setSupplierName(name);
+    if (addressDisplay) addressDisplay.textContent = addr || getSupplierShippingAddress(name);
+    refreshSupplierListInModal(listEl, addressDisplay);
+    if (modal) modal.classList.remove("active");
 });
 
 document.getElementById('roleSelect').addEventListener('change', (e) => {
@@ -1783,32 +1765,6 @@ document.getElementById('roleSelect').addEventListener('change', (e) => {
     if (role === 'supplier') renderSupplierView();
 });
 
-document.getElementById('backToConsumerDashboard')?.addEventListener('click', () => {
-    showView('consumer');
-    renderConsumerView();
-});
-
-document.getElementById('addSupplierBtn')?.addEventListener('click', () => {
-    const nameEl = document.getElementById('newSupplierName');
-    const addrEl = document.getElementById('newSupplierAddress');
-    const name = String(nameEl?.value || '').trim();
-    const addr = String(addrEl?.value || '').trim();
-    if (!name) {
-        alert('공급자명을 입력해 주세요.');
-        return;
-    }
-    const list = readRegisteredSuppliers();
-    const exists = list.some(s => (typeof s === 'string' ? s : s?.name || '').toLowerCase() === name.toLowerCase());
-    if (exists) {
-        alert('이미 등록된 공급자입니다.');
-        return;
-    }
-    list.push(addr ? { name, address: addr } : name);
-    writeRegisteredSuppliers(list);
-    if (nameEl) nameEl.value = '';
-    if (addrEl) addrEl.value = '';
-    renderSupplierRegistration();
-});
 
 document.getElementById('orderForm').addEventListener('submit', (e) => {
     e.preventDefault();

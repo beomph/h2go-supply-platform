@@ -763,7 +763,7 @@
     color: var(--text-muted);
 }
 
-/* 새 주문 - 납품 일시 (날짜 행 + 시각·공급조건 4칸 행) */
+/* 새 주문 - 납품 일시 (연월일·시·분 한 줄 + 도착도·출하도 한 줄) */
 .order-datetime-wrap {
     display: flex;
     flex-direction: column;
@@ -771,12 +771,20 @@
     width: 100%;
 }
 
-.order-date-row {
-    display: grid;
-    grid-template-columns: minmax(100px, 1fr) minmax(72px, 0.9fr) minmax(72px, 0.9fr) minmax(72px, 0.9fr) auto;
+/* 연월일(50%) | 시 | 분 한 줄 */
+.order-datetime-main-row {
+    display: flex;
+    align-items: stretch;
     gap: 0.45rem;
-    align-items: center;
     min-height: 3rem;
+    width: 100%;
+}
+
+.order-date-block {
+    flex: 0 0 50%;
+    min-width: 0;
+    display: flex;
+    align-items: stretch;
     padding: 0.5rem;
     border-radius: 14px;
     border: 1px solid var(--border-color);
@@ -785,16 +793,37 @@
 
 .order-date-mobile-wrap {
     display: none;
+    width: 100%;
 }
 
-.order-datetime-sep {
-    display: none;
-}
-
-/* 시·분·도착도·출하도 4칸 동일 너비, 날짜 행과 동일 너비·높이 */
-.order-time-supply-row {
+.order-date-steppers {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: minmax(72px, 0.9fr) minmax(72px, 0.9fr) minmax(72px, 0.9fr);
+    gap: 0.35rem;
+    align-items: center;
+    width: 100%;
+}
+
+.order-time-block {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: stretch;
+    gap: 0.35rem;
+    padding: 0.5rem;
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    background: var(--surface-soft);
+}
+
+.order-time-block .order-datetime-field {
+    flex: 1;
+    min-width: 0;
+}
+
+/* 도착도·출하도 한 줄 (날짜·시각 행 아래) */
+.order-supply-row {
+    display: flex;
     gap: 0.35rem;
     min-height: 3rem;
     padding: 0.5rem;
@@ -805,10 +834,9 @@
     box-sizing: border-box;
 }
 
-.order-time-supply-row .order-datetime-field,
-.order-time-supply-row .supply-condition-btn {
+.order-supply-row .supply-condition-btn {
+    flex: 1;
     min-width: 0;
-    overflow: hidden;
 }
 
 /* 시·분 입력 셀 (숫자 시인성·조작성 확보) */
@@ -832,7 +860,8 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
-.order-time-supply-row .order-datetime-field {
+.order-time-block .order-datetime-field,
+.order-date-steppers .order-datetime-field {
     min-height: 2rem;
     max-height: 2.75rem;
 }
@@ -901,17 +930,6 @@
     color: var(--h2-blue-light);
 }
 
-/* 시/분 필드: 두 자리 숫자가 모두 보이도록 최소 너비 확보 */
-.order-datetime-field.field-hour,
-.order-datetime-field.field-minute {
-    grid-template-columns: minmax(2.6em, 1fr) auto 2rem;
-}
-
-.order-datetime-field.field-hour input,
-.order-datetime-field.field-minute input {
-    min-width: 2.5em;
-}
-
 .order-datetime-field input[type="number"]#orderYear {
     font-size: 0.94rem;
 }
@@ -929,10 +947,6 @@
 
 .order-datetime-wrap input[type="number"] {
     -moz-appearance: textfield;
-}
-
-.order-datetime-sep {
-    display: none;
 }
 
 .order-datetime-unit {
@@ -1005,60 +1019,8 @@
     font-weight: 500;
 }
 
-/* 도착도/출하도 토글 버튼 - 체크박스 없이 글자만, 눌렀을 때/안 눌렀을 때 구분 */
-.order-time-type-row {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.6rem;
-}
-
-.order-time-type-btn {
-    flex: 1;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    border: 2px solid var(--border-color);
-    background: var(--surface-soft);
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    -webkit-appearance: none;
-    appearance: none;
-}
-
-.order-time-type-btn:hover {
-    border-color: rgba(59, 130, 246, 0.5);
-    color: var(--text-white);
-}
-
-.order-time-type-btn.active {
-    background: var(--h2-blue);
-    border-color: var(--h2-blue);
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
-}
-
-body.theme-light .order-time-type-btn {
-    background: #f1f5f9;
-    color: #64748b;
-    border-color: #cbd5e1;
-}
-
-body.theme-light .order-time-type-btn.active {
-    background: #2563eb;
-    border-color: #2563eb;
-    color: #fff;
-}
-
 /* 901px 이상: 날짜는 date picker만 표시 */
 @media (min-width: 901px) {
-    .order-date-row {
-        display: block;
-        padding: 0.5rem;
-    }
-
     .order-date-mobile-wrap {
         display: block;
     }
@@ -1081,22 +1043,19 @@ body.theme-light .order-time-type-btn.active {
         border-color: var(--h2-blue);
     }
 
-    .order-datetime-field.field-year,
-    .order-datetime-field.field-month,
-    .order-datetime-field.field-day,
-    .order-date-row .order-datetime-sep {
+    .order-date-steppers {
         display: none !important;
-    }
-
-    .order-time-supply-row .order-datetime-field input {
-        min-width: 2.5em;
     }
 }
 
 @media (max-width: 768px) {
-    .order-date-row {
-        display: block;
-        padding: 0.5rem;
+    .order-datetime-main-row {
+        flex-direction: column;
+    }
+
+    .order-date-block {
+        flex: 1 1 auto;
+        width: 100%;
     }
 
     .order-date-mobile-wrap {
@@ -1120,37 +1079,21 @@ body.theme-light .order-time-type-btn.active {
         border-color: var(--h2-blue);
     }
 
-    .order-datetime-field.field-year,
-    .order-datetime-field.field-month,
-    .order-datetime-field.field-day,
-    .order-date-row .order-datetime-sep {
+    .order-date-steppers {
         display: none !important;
     }
 
-    .order-time-supply-row {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .order-time-supply-row .order-datetime-field input {
-        min-width: 2.8em;
-    }
-
-    .supply-condition-btn {
+    .order-supply-row .supply-condition-btn {
         font-size: 0.72rem;
         padding: 0.35rem 0.4rem;
     }
 
-    .order-time-supply-row .order-datetime-field {
+    .order-time-block .order-datetime-field {
         min-height: 2rem;
     }
 
     .order-datetime-wrap input[type="number"] {
         font-size: 0.95rem;
-    }
-
-    .order-time-supply-row input#orderHour,
-    .order-time-supply-row input#orderMinute {
-        min-width: 2.8em;
     }
 
     .dt-toggle {
@@ -1277,18 +1220,40 @@ body.theme-light .order-time-type-btn.active {
     color: var(--text-muted);
 }
 
-.orders-filter input[type="date"] {
-    padding: 0.4rem 0.6rem;
-    border-radius: 6px;
+/* 조회일 입력: 새 주문 날짜 선택과 동일 디자인 (화면 통일) */
+.orders-filter-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 3rem;
+    padding: 0.5rem;
+    border-radius: 14px;
     border: 1px solid var(--border-color);
-    background: var(--bg-black);
+    background: var(--surface-soft);
+}
+
+.orders-filter-input-wrap .orders-date-input {
+    flex: 1;
+    min-width: 0;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-card);
     color: var(--text-white);
-    font-size: 0.8rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    box-sizing: border-box;
+}
+
+.orders-filter-input-wrap .orders-date-input:focus {
+    outline: none;
+    border-color: var(--h2-blue);
 }
 
 #ordersDateApplyBtn {
-    padding: 0.26rem 0.54rem;
-    margin-top: -1px;
+    padding: 0.35rem 0.6rem;
+    flex-shrink: 0;
 }
 
 @media (max-width: 640px) {

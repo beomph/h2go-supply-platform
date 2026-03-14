@@ -57,9 +57,17 @@
         }
         .main-grid {
             display: grid;
-            grid-template-columns: 1fr 1.2fr;
+            grid-template-columns: 1fr 1.5fr;
             gap: 16px;
+            align-items: start;
         }
+        .grid-inout-full {
+            grid-column: 1 / -1;
+            margin-top: 0;
+            width: 100%;
+        }
+        .grid-left { min-width: 0; }
+        .grid-right { min-width: 0; }
         @media (max-width: 600px) {
             .main-grid { grid-template-columns: 1fr; }
         }
@@ -103,8 +111,8 @@
             padding: 4px 6px;
             text-align: center;
             word-break: keep-all;
-            overflow: hidden;
         }
+        #qty-flow-table th, #qty-flow-table td, #qty-pressure-table th, #qty-pressure-table td { overflow: hidden; }
         th { background: #eef2f7; font-weight: 600; }
         .qty-input {
             width: 100%;
@@ -139,15 +147,17 @@
             font-size: 8.5pt;
             color: #555;
         }
-        #qty-inout-table th:nth-child(1), #qty-inout-table td:nth-child(1) { width: 12%; }
-        #qty-inout-table th:nth-child(2), #qty-inout-table td:nth-child(2) { width: 22%; }
-        #qty-inout-table th:nth-child(3), #qty-inout-table td:nth-child(3) { width: 18%; }
-        #qty-inout-table th:nth-child(4), #qty-inout-table td:nth-child(4) { width: 16%; }
-        #qty-inout-table th:nth-child(5), #qty-inout-table td:nth-child(5) { width: 18%; }
-        #qty-inout-table th:nth-child(6), #qty-inout-table td:nth-child(6) { width: 14%; }
-        .signature-table th, .signature-table td { min-height: 32px; padding: 4px 6px; }
+        #qty-inout-table { table-layout: fixed; width: 100%; }
+        #qty-inout-table th:nth-child(1), #qty-inout-table td:nth-child(1) { width: 8%; min-width: 48px; }
+        #qty-inout-table th:nth-child(2), #qty-inout-table td:nth-child(2) { width: 20%; min-width: 100px; }
+        #qty-inout-table th:nth-child(3), #qty-inout-table td:nth-child(3) { width: 18%; min-width: 80px; }
+        #qty-inout-table th:nth-child(4), #qty-inout-table td:nth-child(4) { width: 18%; min-width: 70px; }
+        #qty-inout-table th:nth-child(5), #qty-inout-table td:nth-child(5) { width: 18%; min-width: 70px; }
+        #qty-inout-table th:nth-child(6), #qty-inout-table td:nth-child(6) { width: 18%; min-width: 70px; }
+        #qty-inout-table th, #qty-inout-table td { overflow: visible; text-overflow: clip; }
+        .signature-table th, .signature-table td { min-height: 32px; padding: 5px 8px; }
         .signature-table td { text-align: center; }
-        .qty-datetime { font-size: 9pt; }
+        .qty-datetime { font-size: 9pt; width: 100%; }
         .footer-note {
             margin-top: 16px;
             font-size: 8pt;
@@ -169,7 +179,12 @@
             font-family: inherit;
         }
         .print-btn:hover { background: #2563EB; }
-        .weight-row { margin-top: 8px; font-size: 9pt; }
+        .weight-row { margin-top: 6px; font-size: 9pt; }
+        .qty-txn-section .section-body { padding: 6px 8px; }
+        .qty-txn-section p { margin: 4px 0; }
+        .qty-txn-section .formula { margin-top: 4px; padding: 4px 6px; font-size: 8pt; }
+        .qty-txn-section table { font-size: 9pt; }
+        .qty-txn-section .qty-add-row { margin-top: 2px; }
         .qty-watermark-logo {
             display: none;
             position: fixed;
@@ -197,7 +212,7 @@
     <h1 class="doc-title">물량확인증</h1>
 
     <div class="main-grid">
-        <div>
+        <div class="grid-left">
             <div class="section">
                 <div class="section-title">⊙ 고객</div>
                 <div class="section-body">
@@ -248,46 +263,10 @@
                     </div>
                 </div>
             </div>
-
-            <div class="section">
-                <div class="section-title">⊙ 입출고 확인</div>
-                <div class="section-body">
-                    <table class="signature-table" id="qty-inout-table">
-                        <thead>
-                            <tr>
-                                <th>구분</th>
-                                <th>일시</th>
-                                <th>기사명</th>
-                                <th>서명</th>
-                                <th>고객명</th>
-                                <th>서명</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>입고</td>
-                                <td><input type="text" class="qty-input qty-datetime" id="qty-in-datetime" placeholder="년 월 일"></td>
-                                <td id="qty-sign-in-driver">&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                            </tr>
-                            <tr>
-                                <td>출고</td>
-                                <td><input type="text" class="qty-input qty-datetime" id="qty-out-datetime" placeholder="년 월 일"></td>
-                                <td id="qty-sign-out-driver">&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                                <td>&nbsp;</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
 
-        <div>
-            <div class="section">
+        <div class="grid-right">
+            <div class="section qty-txn-section">
                 <div class="section-title">⊙ 거래 내역</div>
                 <div class="section-body">
                     <p style="margin-bottom: 8px; font-weight: 600; font-size: 9.5pt;">(1) 유량계 정산</p>
@@ -338,6 +317,42 @@
                         </p>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="section grid-inout-full">
+            <div class="section-title">⊙ 입출고 확인</div>
+            <div class="section-body">
+                <table class="signature-table" id="qty-inout-table">
+                    <thead>
+                        <tr>
+                            <th>구분</th>
+                            <th>일시</th>
+                            <th>기사명</th>
+                            <th>서명</th>
+                            <th>고객명</th>
+                            <th>서명</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>입고</td>
+                            <td><input type="text" class="qty-input qty-datetime" id="qty-in-datetime" placeholder="년 월 일"></td>
+                            <td id="qty-sign-in-driver">&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td>출고</td>
+                            <td><input type="text" class="qty-input qty-datetime" id="qty-out-datetime" placeholder="년 월 일"></td>
+                            <td id="qty-sign-out-driver">&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

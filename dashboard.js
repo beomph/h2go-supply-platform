@@ -375,10 +375,12 @@ function formatTimeText(rawTime) {
 }
 
 function formatOrderDateTime(order) {
+    if (!order) return '-';
     return `${order.year}/${order.month}/${order.day} ${formatTimeText(order.time)}`;
 }
 
 function formatOrderDate(order) {
+    if (!order) return '-';
     return `${order.year}/${order.month}/${order.day}`;
 }
 
@@ -470,9 +472,9 @@ function calculateTransportPlan() {
     const activeOrders = getAllOrders().filter(o => activeStatuses.includes(normalizeStatus(o.status)));
     if (activeOrders.length === 0) return null;
 
-    const drivers = parseInt(document.getElementById('availableDrivers')?.value || 5);
-    const trailers = parseInt(document.getElementById('availableTrailers')?.value || 3);
-    const trailerCapacity = parseInt(document.getElementById('trailerCapacity')?.value || 400);
+    const drivers = parseInt(document.getElementById('availableDrivers')?.value || 5, 10);
+    const trailers = parseInt(document.getElementById('availableTrailers')?.value || 3, 10);
+    const trailerCapacity = parseInt(document.getElementById('trailerCapacity')?.value || 400, 10);
 
     const ordersByAddress = {};
     activeOrders.forEach(order => {
@@ -692,9 +694,9 @@ function renderInventoryPanel() {
     listEl.querySelectorAll('.pressure-val').forEach(inp => {
         inp.addEventListener('change', () => {
             const inv2 = readInventory();
-            const t = inv2.trailers.find(x => x.id === parseInt(inp.dataset.id));
+            const t = inv2.trailers.find(x => x.id === parseInt(inp.dataset.id, 10));
             if (t) {
-                t.pressure = Math.max(0, Math.min(INV_MAX_PRESSURE, parseInt(inp.value) || 0));
+                t.pressure = Math.max(0, Math.min(INV_MAX_PRESSURE, parseInt(inp.value, 10) || 0));
                 saveInventory(inv2);
                 renderInventoryPanel();
             }
@@ -704,7 +706,7 @@ function renderInventoryPanel() {
     listEl.querySelectorAll('.trailer-remove-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const inv2 = readInventory();
-            inv2.trailers = inv2.trailers.filter(t => t.id !== parseInt(btn.dataset.id));
+            inv2.trailers = inv2.trailers.filter(t => t.id !== parseInt(btn.dataset.id, 10));
             saveInventory(inv2);
             renderInventoryPanel();
         });
@@ -827,6 +829,7 @@ function renderPrediction(inv, leadInfo) {
 
 function renderConsumerView() {
     const list = document.getElementById('consumerOrdersList');
+    if (!list) return;
     const allMyOrders = getConsumerOrders(currentUser.name);
 
     // 조회일 필터(일별 조회)
@@ -2010,7 +2013,7 @@ document.getElementById('addTrailerBtn')?.addEventListener('click', () => {
 
 document.getElementById('waitingCustomers')?.addEventListener('change', (e) => {
     const inv = readInventory();
-    inv.waitingCustomers = Math.max(0, parseInt(e.target.value) || 0);
+    inv.waitingCustomers = Math.max(0, parseInt(e.target.value, 10) || 0);
     saveInventory(inv);
     renderInventoryPanel();
 });
@@ -2087,6 +2090,8 @@ if (needsMigration) {
         }
         return o;
     });
-    localStorage.setItem('h2go_orders', JSON.stringify(orders));
+    try {
+        localStorage.setItem('h2go_orders', JSON.stringify(orders));
+    } catch (_) {}
 }
 

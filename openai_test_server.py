@@ -437,7 +437,19 @@ class Handler(BaseHTTPRequestHandler):
 
             return _json(self, 500, {"error": "OpenAI API 호출 실패", "detail": detail})
 
-        return _json(self, 200, {"text": r.output_text})
+        # OpenAI Responses API: output_text 또는 output 등 응답 구조에 따라 안전하게 추출
+        output_text = getattr(r, "output_text", None) or getattr(r, "output", None)
+        if output_text is None:
+            return _json(
+                self,
+                500,
+                {
+                    "error": "OpenAI 응답 형식 오류",
+                    "detail": "응답에서 텍스트를 추출할 수 없습니다.",
+                },
+            )
+        text = str(output_text).strip() if output_text else ""
+        return _json(self, 200, {"text": text})
 
 
 def main() -> int:

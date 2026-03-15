@@ -469,10 +469,12 @@ function formatTimeText(rawTime) {
 }
 
 function formatOrderDateTime(order) {
+    if (!order) return '-';
     return `${order.year}/${order.month}/${order.day} ${formatTimeText(order.time)}`;
 }
 
 function formatOrderDate(order) {
+    if (!order) return '-';
     return `${order.year}/${order.month}/${order.day}`;
 }
 
@@ -577,9 +579,9 @@ function calculateTransportPlan() {
     const activeOrders = getAllOrders().filter(o => activeStatuses.includes(normalizeStatus(o.status)));
     if (activeOrders.length === 0) return null;
 
-    const drivers = parseInt(document.getElementById('availableDrivers')?.value || 5);
-    const trailers = parseInt(document.getElementById('availableTrailers')?.value || 3);
-    const trailerCapacity = parseInt(document.getElementById('trailerCapacity')?.value || 400);
+    const drivers = parseInt(document.getElementById('availableDrivers')?.value || 5, 10);
+    const trailers = parseInt(document.getElementById('availableTrailers')?.value || 3, 10);
+    const trailerCapacity = parseInt(document.getElementById('trailerCapacity')?.value || 400, 10);
 
     const ordersByAddress = {};
     activeOrders.forEach(order => {
@@ -621,7 +623,7 @@ function calculateTransportPlan() {
         const isPickup = isExFactoryDest(dest);
         schedule.push({
             time: `${Math.floor(currentTime)}:${((currentTime % 1) * 60).toString().padStart(2, '0')}`,
-            route: isPickup ? `출하지 픽업 (${dest.address.substring(0, 16)}...)` : `생산지 → ${dest.address.substring(0, 20)}...`,
+            route: isPickup ? `출하지 픽업 (${(dest.address || '').substring(0, 16)}...)` : `생산지 → ${(dest.address || '').substring(0, 20)}...`,
             quantity: dest.tubeTrailers + '대 (' + dest.quantity + ' kg)',
             trailer: `트레일러 ${Math.min(dest.tubeTrailers, trailersToUse)}대`,
             driver: isPickup ? '—' : `기사 ${driverNum}`,
@@ -650,7 +652,7 @@ function calculateTransportPlan() {
 // ========== 뷰 렌더링 ==========
 function showView(viewId) {
     document.querySelectorAll('.dashboard-view').forEach(v => v.classList.remove('active'));
-    const el = document.getElementById(viewId + 'View');
+    const el = document.getElementById((viewId || '') + 'View');
     if (el) el.classList.add('active');
 }
 
@@ -750,6 +752,8 @@ function readInventory() {
         delete raw.waitingVehicles;
         delete raw.leadTimeDays;
     }
+    // trailers 배열 보장 (손상된 데이터 방지)
+    if (!Array.isArray(raw.trailers)) raw.trailers = defaultInventory().trailers;
     return raw;
 }
 
@@ -809,8 +813,9 @@ function renderInventoryPanel() {
 
     const inv = readInventory();
     const kgPerBar = INV_KG_PER_TRAILER / INV_MAX_PRESSURE;
+    const trailers = Array.isArray(inv.trailers) ? inv.trailers : [];
 
-    listEl.innerHTML = inv.trailers.map(t => {
+    listEl.innerHTML = trailers.map(t => {
         const pct = Math.min(100, Math.round((t.pressure / INV_MAX_PRESSURE) * 100));
         const kg = Math.round(t.pressure * kgPerBar);
         const lvl = pct > 60 ? 'full' : pct > 25 ? 'mid' : 'low';
@@ -833,9 +838,9 @@ function renderInventoryPanel() {
     listEl.querySelectorAll('.pressure-val').forEach(inp => {
         inp.addEventListener('change', () => {
             const inv2 = readInventory();
-            const t = inv2.trailers.find(x => x.id === parseInt(inp.dataset.id));
+            const t = inv2.trailers.find(x => x.id === parseInt(inp.dataset.id, 10));
             if (t) {
-                t.pressure = Math.max(0, Math.min(INV_MAX_PRESSURE, parseInt(inp.value) || 0));
+                t.pressure = Math.max(0, Math.min(INV_MAX_PRESSURE, parseInt(inp.value, 10) || 0));
                 saveInventory(inv2);
                 renderInventoryPanel();
             }
@@ -845,7 +850,7 @@ function renderInventoryPanel() {
     listEl.querySelectorAll('.trailer-remove-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const inv2 = readInventory();
-            inv2.trailers = inv2.trailers.filter(t => t.id !== parseInt(btn.dataset.id));
+            inv2.trailers = inv2.trailers.filter(t => t.id !== parseInt(btn.dataset.id, 10));
             saveInventory(inv2);
             renderInventoryPanel();
         });
@@ -968,6 +973,7 @@ function renderPrediction(inv, leadInfo) {
 
 function renderConsumerView() {
     const list = document.getElementById('consumerOrdersList');
+    if (!list) return;
     const hiddenConsumerIds = new Set(readHiddenConsumerIds());
     let allMyOrders = getConsumerOrders(currentUser.name).filter(o => !hiddenConsumerIds.has(o.id));
 
@@ -1189,16 +1195,20 @@ function renderSupplierView() {
     const activeOrders = allOrders.filter(o => o.status !== 'cancelled');
     const totalTrailers = activeOrders.reduce((s, o) => s + (o.tubeTrailers || 0), 0);
 
-    document.getElementById('totalOrders').textContent = activeOrders.length;
+    const totalOrdersEl = document.getElementById('totalOrders');
+    if (totalOrdersEl) totalOrdersEl.textContent = activeOrders.length;
     const totalEl = document.getElementById('totalTrailers');
     if (totalEl) totalEl.textContent = totalTrailers + '대';
 
-    if (activeOrders.length > 0) {
-        const dates = activeOrders.map(o => formatOrderDate(o));
-        const uniqueDates = [...new Set(dates)];
-        document.getElementById('deliveryRange').textContent = uniqueDates.length === 1 ? uniqueDates[0] : `${uniqueDates[0]} ~ ${uniqueDates[uniqueDates.length - 1]}`;
-    } else {
-        document.getElementById('deliveryRange').textContent = '-';
+    const deliveryRangeEl = document.getElementById('deliveryRange');
+    if (deliveryRangeEl) {
+        if (activeOrders.length > 0) {
+            const dates = activeOrders.map(o => formatOrderDate(o));
+            const uniqueDates = [...new Set(dates)];
+            deliveryRangeEl.textContent = uniqueDates.length === 1 ? uniqueDates[0] : `${uniqueDates[0]} ~ ${uniqueDates[uniqueDates.length - 1]}`;
+        } else {
+            deliveryRangeEl.textContent = '-';
+        }
     }
 
     renderOrdersTable('supplierOrdersTable', true);
@@ -1800,20 +1810,28 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
     alert('주문이 등록되었습니다. 공급자에게 전달됩니다.');
 });
 
-document.getElementById('changeRequestForm').addEventListener('submit', (e) => {
+document.getElementById('changeRequestForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
-    const orderId = document.getElementById('changeOrderId').value;
-    const requestedBy = document.getElementById('changeRequestedBy').value;
+    const orderId = document.getElementById('changeOrderId')?.value;
+    const requestedBy = document.getElementById('changeRequestedBy')?.value;
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
 
+    const year = parseInt(document.getElementById('changeYear')?.value, 10);
+    const month = parseInt(document.getElementById('changeMonth')?.value, 10);
+    const day = parseInt(document.getElementById('changeDay')?.value, 10);
+    const tubeTrailers = parseInt(document.getElementById('changeTrailers')?.value, 10);
+    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day) || !Number.isFinite(tubeTrailers)) {
+        alert('날짜와 트레일러 대수를 올바르게 입력해 주세요.');
+        return;
+    }
     const proposed = {
-        year: parseInt(document.getElementById('changeYear').value),
-        month: parseInt(document.getElementById('changeMonth').value),
-        day: parseInt(document.getElementById('changeDay').value),
-        time: `${String(document.getElementById('changeHour').value).padStart(2, '0')}:${String(document.getElementById('changeMinute').value).padStart(2, '0')}`,
-        tubeTrailers: parseInt(document.getElementById('changeTrailers').value),
-        address: document.getElementById('changeAddress').value
+        year,
+        month,
+        day,
+        time: `${String(document.getElementById('changeHour')?.value ?? '09').padStart(2, '0')}:${String(document.getElementById('changeMinute')?.value ?? '00').padStart(2, '0')}`,
+        tubeTrailers,
+        address: document.getElementById('changeAddress')?.value ?? order.address
     };
 
     order.changeRequest = {
@@ -2063,7 +2081,7 @@ document.getElementById('addTrailerBtn')?.addEventListener('click', () => {
 
 document.getElementById('waitingCustomers')?.addEventListener('change', (e) => {
     const inv = readInventory();
-    inv.waitingCustomers = Math.max(0, parseInt(e.target.value) || 0);
+    inv.waitingCustomers = Math.max(0, parseInt(e.target.value, 10) || 0);
     saveInventory(inv);
     renderInventoryPanel();
 });
@@ -2086,9 +2104,11 @@ const initialRole = (currentUser.type === 'supplier' || currentUser.type === 'co
 const bizEl = document.getElementById('bizName');
 if (bizEl) bizEl.textContent = currentUser.name;
 const roleSelectEl = document.getElementById('roleSelect');
-roleSelectEl.value = initialRole;
-roleSelectEl.disabled = false;
-roleSelectEl.title = "구매/판매 모드를 전환할 수 있습니다.";
+if (roleSelectEl) {
+    roleSelectEl.value = initialRole;
+    roleSelectEl.disabled = false;
+    roleSelectEl.title = "구매/판매 모드를 전환할 수 있습니다.";
+}
 
 initTheme();
 initFormDefaults();
@@ -2140,6 +2160,8 @@ if (needsMigration) {
         }
         return o;
     });
-    localStorage.setItem('h2go_orders', JSON.stringify(orders));
+    try {
+        localStorage.setItem('h2go_orders', JSON.stringify(orders));
+    } catch (_) {}
 }
 

@@ -234,6 +234,18 @@ class Handler(BaseHTTPRequestHandler):
                 },
             )
 
+        if parsed.path == "/api/verify":
+            access_required = (os.getenv(ACCESS_CODE_ENV) or "").strip()
+            if access_required:
+                provided = (self.headers.get("X-H2GO-Access-Code") or "").strip()
+                if not provided or provided != access_required:
+                    return _json(
+                        self,
+                        401,
+                        {"error": "access_code_required", "detail": "올바른 접속 코드가 아닙니다."},
+                    )
+            return _json(self, 200, {"ok": True})
+
         if parsed.path == "/whoami":
             body = (
                 "OK: H2GO openai_test_server.py\n"

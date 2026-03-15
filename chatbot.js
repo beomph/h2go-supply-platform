@@ -261,7 +261,48 @@ if (!chatbotFab || !chatbotPanel || !chatbotForm || !chatbotInput) {
         }
     }
 
-    chatbotFab.addEventListener("click", () => setChatOpen(!chatbotPanel.classList.contains("open")));
+    async function ensureAccessAndOpen() {
+        const health = await checkChatHealth(apiConfig.base || "");
+        if (health?.access_required && !getAccessCode()) {
+            let code = await promptForAccessCode();
+            while (code) {
+                const base = apiConfig.base || getPreferredBase() || "";
+                const verifyUrl = `${base}/api/verify`;
+                try {
+                    const res = await fetch(verifyUrl, {
+                        method: "GET",
+                        headers: { "X-H2GO-Access-Code": code },
+                    });
+                    if (res.ok) {
+                        setAccessCode(code);
+                        setChatOpen(true);
+                        return;
+                    }
+                    const data = await res.json().catch(() => ({}));
+                    if (res.status === 401) {
+                        alert(data?.detail || "올바른 접속 코드가 아닙니다. 다시 입력해 주세요.");
+                        code = await promptForAccessCode();
+                        continue;
+                    }
+                } catch (_) {
+                    alert("서버 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+                    return;
+                }
+                break;
+            }
+        } else {
+            setChatOpen(true);
+        }
+    }
+
+    chatbotFab.addEventListener("click", async () => {
+        if (chatbotPanel.classList.contains("open")) {
+            setChatOpen(false);
+        } else {
+            await detectApi();
+            await ensureAccessAndOpen();
+        }
+    });
     chatbotClose?.addEventListener("click", () => setChatOpen(false));
     chatbotPanel.addEventListener("click", (e) => {
         if (e.target === chatbotPanel) setChatOpen(false);

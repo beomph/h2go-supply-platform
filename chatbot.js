@@ -131,7 +131,7 @@ if (!chatbotFab || !chatbotPanel || !chatbotForm || !chatbotInput) {
     function setChatBusy(on, statusText = "") {
         chatState.busy = !!on;
         if (chatbotSend) chatbotSend.disabled = !!on;
-        chatbotInput.disabled = !!on;
+        if (chatbotInput) chatbotInput.disabled = !!on;
         if (chatbotStatus) chatbotStatus.textContent = statusText || "";
     }
 

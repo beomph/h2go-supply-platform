@@ -350,6 +350,7 @@ function getConsumerOrders(consumerName) {
     return orders.filter(o => o.consumerName === consumerName);
 }
 
+// 공급자별 주문 (supplierName이 비어있으면 현재 공급자와 매칭)
 function getSupplierOrders(supplierName) {
     return orders.filter(o => (o.supplierName || supplierName) === supplierName);
 }
@@ -506,7 +507,7 @@ function calculateTransportPlan() {
         const driverNum = (i % driversToUse) + 1;
         schedule.push({
             time: `${Math.floor(currentTime)}:${((currentTime % 1) * 60).toString().padStart(2, '0')}`,
-            route: `생산지 → ${dest.address.substring(0, 20)}...`,
+            route: `생산지 → ${(dest.address || '').substring(0, 20)}...`,
             quantity: dest.tubeTrailers + '대 (' + dest.quantity + ' kg)',
             trailer: `트레일러 ${Math.min(dest.tubeTrailers, trailersToUse)}대`,
             driver: `기사 ${driverNum}`,
@@ -535,7 +536,8 @@ function calculateTransportPlan() {
 // ========== 뷰 렌더링 ==========
 function showView(viewId) {
     document.querySelectorAll('.dashboard-view').forEach(v => v.classList.remove('active'));
-    document.getElementById(viewId + 'View').classList.add('active');
+    const viewEl = document.getElementById((viewId || '') + 'View');
+    if (viewEl) viewEl.classList.add('active');
 }
 
 // 주문 상태: 요청/접수/변경/운송/도착/회수/완료
@@ -604,6 +606,8 @@ function readInventory() {
         delete raw.waitingVehicles;
         delete raw.leadTimeDays;
     }
+    // trailers 배열 보장 (손상된 데이터 방지)
+    if (!Array.isArray(raw.trailers)) raw.trailers = defaultInventory().trailers;
     return raw;
 }
 
@@ -663,8 +667,9 @@ function renderInventoryPanel() {
 
     const inv = readInventory();
     const kgPerBar = INV_KG_PER_TRAILER / INV_MAX_PRESSURE;
+    const trailers = Array.isArray(inv.trailers) ? inv.trailers : [];
 
-    listEl.innerHTML = inv.trailers.map(t => {
+    listEl.innerHTML = trailers.map(t => {
         const pct = Math.min(100, Math.round((t.pressure / INV_MAX_PRESSURE) * 100));
         const kg = Math.round(t.pressure * kgPerBar);
         const lvl = pct > 60 ? 'full' : pct > 25 ? 'mid' : 'low';
@@ -1003,16 +1008,20 @@ function renderSupplierView() {
     const activeOrders = allOrders.filter(o => o.status !== 'cancelled');
     const totalTrailers = activeOrders.reduce((s, o) => s + (o.tubeTrailers || 0), 0);
 
-    document.getElementById('totalOrders').textContent = activeOrders.length;
+    const totalOrdersEl = document.getElementById('totalOrders');
+    if (totalOrdersEl) totalOrdersEl.textContent = activeOrders.length;
     const totalEl = document.getElementById('totalTrailers');
     if (totalEl) totalEl.textContent = totalTrailers + '대';
 
-    if (activeOrders.length > 0) {
-        const dates = activeOrders.map(o => formatOrderDate(o));
-        const uniqueDates = [...new Set(dates)];
-        document.getElementById('deliveryRange').textContent = uniqueDates.length === 1 ? uniqueDates[0] : `${uniqueDates[0]} ~ ${uniqueDates[uniqueDates.length - 1]}`;
-    } else {
-        document.getElementById('deliveryRange').textContent = '-';
+    const deliveryRangeEl = document.getElementById('deliveryRange');
+    if (deliveryRangeEl) {
+        if (activeOrders.length > 0) {
+            const dates = activeOrders.map(o => formatOrderDate(o)).filter(Boolean);
+            const uniqueDates = [...new Set(dates)];
+            deliveryRangeEl.textContent = uniqueDates.length === 1 ? uniqueDates[0] : `${uniqueDates[0]} ~ ${uniqueDates[uniqueDates.length - 1]}`;
+        } else {
+            deliveryRangeEl.textContent = '-';
+        }
     }
 
     renderOrdersTable('supplierOrdersTable', true);
@@ -1505,8 +1514,9 @@ function initFormDefaults() {
 }
 
 function initOrdersDateFilterDefault() {
-    // 기본값 미설정: 날짜 필터가 비어 있으면 전체 주문 표시.
+    // 날짜 필터 기본값 미설정 → 전체 주문 표시.
     // (변경 승인 시 납품일이 바뀌어도 주문이 목록에서 사라지지 않도록 함)
+    // 별도 초기화 로직 없음.
 }
 
 function syncDateInputFromNumericFields() {
@@ -1614,7 +1624,7 @@ document.getElementById("supplierManualApplyBtn")?.addEventListener("click", () 
     modal?.classList.remove("active");
 });
 
-document.getElementById('roleSelect').addEventListener('change', (e) => {
+document.getElementById('roleSelect')?.addEventListener('change', (e) => {
     if (e.target.disabled) return;
     const role = e.target.value;
     currentUser.type = role;
@@ -1630,10 +1640,10 @@ document.getElementById('roleSelect').addEventListener('change', (e) => {
     if (role === 'supplier') renderSupplierView();
 });
 
-document.getElementById('orderForm').addEventListener('submit', (e) => {
+document.getElementById('orderForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
     const supplierName = String(selectedSupplierName || auth?.name || currentUser.name).trim();
-    const addressValue = normalizeAddress(document.getElementById('orderAddress').value);
+    const addressValue = normalizeAddress(document.getElementById('orderAddress')?.value);
     if (!addressValue) {
         alert('납품 주소를 입력해 주세요.');
         return;
@@ -1659,7 +1669,7 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
         time: `${String(document.getElementById('orderHour').value).padStart(2, '0')}:${String(document.getElementById('orderMinute').value).padStart(2, '0')}`,
         tubeTrailers: 1,
         address: addressValue,
-        note: document.getElementById('orderNote').value,
+        note: document.getElementById('orderNote')?.value ?? '',
         status: 'requested',
         createdAt: new Date().toISOString()
     };
@@ -1667,7 +1677,7 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
     localStorage.setItem('h2go_orders', JSON.stringify(orders));
     addAddressToHistory(addressValue);
     renderAddressHistoryOptions();
-    document.getElementById('orderForm').reset();
+    document.getElementById('orderForm')?.reset();
     initFormDefaults();
     initTimeInputs();
     renderConsumerView();
@@ -1675,20 +1685,31 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
     alert('주문이 등록되었습니다. 공급자에게 전달됩니다.');
 });
 
-document.getElementById('changeRequestForm').addEventListener('submit', (e) => {
+document.getElementById('changeRequestForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
     const orderId = document.getElementById('changeOrderId').value;
     const requestedBy = document.getElementById('changeRequestedBy').value;
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
 
+    const year = parseInt(document.getElementById('changeYear')?.value, 10);
+    const month = parseInt(document.getElementById('changeMonth')?.value, 10);
+    const day = parseInt(document.getElementById('changeDay')?.value, 10);
+    const hour = document.getElementById('changeHour')?.value ?? '09';
+    const minute = document.getElementById('changeMinute')?.value ?? '00';
+    const tubeTrailers = parseInt(document.getElementById('changeTrailers')?.value, 10);
+    const address = document.getElementById('changeAddress')?.value ?? order.address;
+    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day) || !Number.isFinite(tubeTrailers)) {
+        alert('날짜와 트레일러 대수를 올바르게 입력해 주세요.');
+        return;
+    }
     const proposed = {
-        year: parseInt(document.getElementById('changeYear').value),
-        month: parseInt(document.getElementById('changeMonth').value),
-        day: parseInt(document.getElementById('changeDay').value),
-        time: `${String(document.getElementById('changeHour').value).padStart(2, '0')}:${String(document.getElementById('changeMinute').value).padStart(2, '0')}`,
-        tubeTrailers: parseInt(document.getElementById('changeTrailers').value),
-        address: document.getElementById('changeAddress').value
+        year,
+        month,
+        day,
+        time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+        tubeTrailers,
+        address
     };
 
     order.changeRequest = {
@@ -1707,7 +1728,7 @@ document.getElementById('changeRequestForm').addEventListener('submit', (e) => {
     alert('변경 요청이 제출되었습니다. 상대방의 확정을 기다립니다.');
 });
 
-document.getElementById('transportStartForm').addEventListener('submit', (e) => {
+document.getElementById('transportStartForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
     const orderId = document.getElementById('transportStartOrderId').value;
     const trailerInput = String(document.getElementById('transportTrailerNumbers').value || '').trim();
@@ -1729,13 +1750,13 @@ document.getElementById('transportStartForm').addEventListener('submit', (e) => 
     alert('운송이 시작되었습니다. T/T 번호와 운송기사 정보가 구매자에게 표시됩니다.');
 });
 
-document.getElementById('approveChangeBtn').addEventListener('click', () => {
+document.getElementById('approveChangeBtn')?.addEventListener('click', () => {
     if (!pendingApprovalOrderId) return;
     applyChange(pendingApprovalOrderId, true);
     alert('변경 요청이 승인되었습니다. 주문 상태가 "변경 접수"로 변경됩니다.');
 });
 
-document.getElementById('rejectChangeBtn').addEventListener('click', () => {
+document.getElementById('rejectChangeBtn')?.addEventListener('click', () => {
     if (!pendingApprovalOrderId) return;
     applyChange(pendingApprovalOrderId, false);
     alert('변경 요청이 거절되었습니다. 주문 상태가 이전 단계로 유지됩니다.');
@@ -1785,13 +1806,13 @@ document.getElementById('rejectCancelModalBtn')?.addEventListener('click', () =>
     alert('취소 요청을 거절했습니다.');
 });
 
-document.getElementById('changeRequestModal').addEventListener('click', (e) => {
+document.getElementById('changeRequestModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) e.target.classList.remove('active');
 });
-document.getElementById('orderMapModal').addEventListener('click', (e) => {
+document.getElementById('orderMapModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeOrderMapModal();
 });
-document.getElementById('changeApprovalModal').addEventListener('click', (e) => {
+document.getElementById('changeApprovalModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) e.target.classList.remove('active');
 });
 
@@ -1810,10 +1831,10 @@ document.addEventListener('keydown', (e) => {
         pendingCancelApprovalOrderId = null;
     }
 });
-document.querySelector('#changeRequestModal .modal-close').addEventListener('click', () => {
+document.querySelector('#changeRequestModal .modal-close')?.addEventListener('click', () => {
     document.getElementById('changeRequestModal').classList.remove('active');
 });
-document.querySelector('#changeApprovalModal .modal-close').addEventListener('click', () => {
+document.querySelector('#changeApprovalModal .modal-close')?.addEventListener('click', () => {
     document.getElementById('changeApprovalModal').classList.remove('active');
 });
 document.querySelector('#cancelApprovalModal .modal-close')?.addEventListener('click', () => {
@@ -2012,9 +2033,11 @@ const initialRole = (currentUser.type === 'supplier' || currentUser.type === 'co
 const bizEl = document.getElementById('bizName');
 if (bizEl) bizEl.textContent = currentUser.name;
 const roleSelectEl = document.getElementById('roleSelect');
-roleSelectEl.value = initialRole;
-roleSelectEl.disabled = false;
-roleSelectEl.title = "구매/판매 모드를 전환할 수 있습니다.";
+if (roleSelectEl) {
+    roleSelectEl.value = initialRole;
+    roleSelectEl.disabled = false;
+    roleSelectEl.title = "구매/판매 모드를 전환할 수 있습니다.";
+}
 
 initTheme();
 initFormDefaults();

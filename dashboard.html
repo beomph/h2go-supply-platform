@@ -135,9 +135,11 @@
                         <div class="my-orders-header">
                             <h3>주문 현황</h3>
                             <div class="orders-filter">
-                                <label for="ordersDateFilter">조회일</label>
+                                <label for="ordersFromDate">조회기간</label>
                                 <div class="orders-filter-input-wrap">
-                                    <input type="date" id="ordersDateFilter" class="orders-date-input">
+                                    <input type="date" id="ordersFromDate" class="orders-date-input">
+                                    <span class="range-separator">~</span>
+                                    <input type="date" id="ordersToDate" class="orders-date-input">
                                     <button type="button" class="btn btn-tiny btn-secondary" id="ordersDateApplyBtn">조회</button>
                                 </div>
                             </div>
@@ -217,12 +219,11 @@
                     <div class="my-orders-header supplier-orders-header">
                         <h3>주문 현황</h3>
                         <div class="orders-filter">
-                            <label for="supplierFromDate">기간</label>
+                            <label for="supplierFromDate">조회기간</label>
                             <div class="orders-filter-input-wrap supplier-range-inputs">
                                 <input type="date" id="supplierFromDate" class="orders-date-input">
                                 <span class="range-separator">~</span>
                                 <input type="date" id="supplierToDate" class="orders-date-input">
-                                <button type="button" class="btn btn-tiny btn-secondary" id="supplierTodayBtn">오늘</button>
                                 <button type="button" class="btn btn-tiny btn-secondary" id="supplierDateApplyBtn">조회</button>
                             </div>
                         </div>

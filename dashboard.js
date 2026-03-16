@@ -977,17 +977,21 @@ function renderConsumerView() {
     const hiddenConsumerIds = new Set(readHiddenConsumerIds());
     let allMyOrders = getConsumerOrders(currentUser.name).filter(o => !hiddenConsumerIds.has(o.id));
 
-    // 조회일 필터(일별 조회)
+    // 조회기간 필터(시작일~종료일)
     let myOrders = allMyOrders;
-    const filterInput = document.getElementById('ordersDateFilter');
-    if (filterInput && filterInput.value) {
-        const [y, m, d] = filterInput.value.split('-').map(v => parseInt(v, 10));
-        if (y && m && d) {
-            myOrders = allMyOrders.filter(o =>
-                o.year === y &&
-                o.month === m &&
-                o.day === d
-            );
+    const fromInput = document.getElementById('ordersFromDate');
+    const toInput = document.getElementById('ordersToDate');
+    const fromVal = fromInput?.value;
+    const toVal = toInput?.value;
+    if (fromVal && toVal) {
+        const fromTime = new Date(fromVal + 'T00:00:00').getTime();
+        const toTime = new Date(toVal + 'T23:59:59').getTime();
+        if (Number.isFinite(fromTime) && Number.isFinite(toTime) && fromTime <= toTime) {
+            myOrders = allMyOrders.filter(o => {
+                const key = getOrderDateTimeSortKey(o);
+                const t = new Date(key.replace(' ', 'T')).getTime();
+                return Number.isFinite(t) && t >= fromTime && t <= toTime;
+            });
         }
     }
 
@@ -1004,8 +1008,8 @@ function renderConsumerView() {
         if (!allMyOrders.length) {
             list.innerHTML = '<div class="empty-state"><p>등록된 주문이 없습니다.</p><p>새 주문을 등록하세요.</p></div>';
         } else {
-            const label = (filterInput && filterInput.value) ? filterInput.value : '선택한 날짜';
-            list.innerHTML = `<div class="empty-state"><p>${label}에는 주문 이력이 없습니다.</p><p>다른 날짜를 선택하거나 전체 보기를 이용해 보세요.</p></div>`;
+            const label = (fromVal && toVal) ? `${fromVal} ~ ${toVal}` : '선택한 기간';
+            list.innerHTML = `<div class="empty-state"><p>${label}에는 주문 이력이 없습니다.</p><p>다른 기간을 선택하거나 전체 보기를 이용해 보세요.</p></div>`;
         }
         renderInventoryPanel();
         return;
@@ -1642,11 +1646,14 @@ function initFormDefaults() {
 }
 
 function initOrdersDateFilterDefault() {
-    const filterInput = document.getElementById('ordersDateFilter');
-    if (filterInput && !filterInput.value) {
-        const today = getTodayParts();
-        filterInput.value = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
-    }
+    const fromInput = document.getElementById('ordersFromDate');
+    const toInput = document.getElementById('ordersToDate');
+    if (!fromInput || !toInput) return;
+    if (fromInput.value && toInput.value) return;
+    const today = getTodayParts();
+    const val = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
+    fromInput.value = val;
+    toInput.value = val;
 }
 
 function initSupplierDateFilterDefault() {
@@ -2229,11 +2236,6 @@ document.getElementById('ordersDateApplyBtn')?.addEventListener('click', () => {
 
 // 판매 대시보드 기간 필터
 document.getElementById('supplierDateApplyBtn')?.addEventListener('click', () => {
-    renderSupplierView();
-});
-
-document.getElementById('supplierTodayBtn')?.addEventListener('click', () => {
-    initSupplierDateFilterDefault();
     renderSupplierView();
 });
 

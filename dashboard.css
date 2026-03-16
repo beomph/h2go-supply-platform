@@ -1364,11 +1364,27 @@
 }
 
 /* 모바일: 리스트 높이를 화면에 맞게 자연스럽게(잘림/스크롤 피로 감소)
-   사용처: `dashboard.html`의 `#consumerOrdersList`가 포함된 `.orders-list` */
+   가로 스크롤로 긴 주소 줄바꿈 방지
+   사용처: `dashboard.html`의 `#consumerOrdersList`, `#supplierOrdersList` */
 @media (max-width: 768px) {
     .orders-list {
         max-height: 48vh;
         padding-right: 0.12rem;
+        overflow-x: auto;
+        overflow-y: auto;
+    }
+
+    .order-item {
+        min-width: max-content;
+    }
+
+    .order-item-parties-row .order-party {
+        min-width: min-content;
+    }
+
+    .order-party-name,
+    .order-party-addr {
+        white-space: nowrap;
     }
 }
 

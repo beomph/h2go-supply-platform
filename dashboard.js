@@ -977,22 +977,17 @@ function renderConsumerView() {
     const hiddenConsumerIds = new Set(readHiddenConsumerIds());
     let allMyOrders = getConsumerOrders(currentUser.name).filter(o => !hiddenConsumerIds.has(o.id));
 
-    // 조회 기간 필터(시작일~종료일)
+    // 조회일 필터(일별 조회)
     let myOrders = allMyOrders;
-    const filterStart = document.getElementById('ordersDateFilter');
-    const filterEnd = document.getElementById('ordersDateFilterEnd');
-    const startVal = filterStart?.value;
-    const endVal = filterEnd?.value;
-    if (startVal && endVal) {
-        const [sy, sm, sd] = startVal.split('-').map(v => parseInt(v, 10));
-        const [ey, em, ed] = endVal.split('-').map(v => parseInt(v, 10));
-        if (sy && sm && sd && ey && em && ed) {
-            const startKey = sy * 10000 + sm * 100 + sd;
-            const endKey = ey * 10000 + em * 100 + ed;
-            myOrders = allMyOrders.filter(o => {
-                const k = (o.year || 0) * 10000 + (o.month || 0) * 100 + (o.day || 0);
-                return k >= startKey && k <= endKey;
-            });
+    const filterInput = document.getElementById('ordersDateFilter');
+    if (filterInput && filterInput.value) {
+        const [y, m, d] = filterInput.value.split('-').map(v => parseInt(v, 10));
+        if (y && m && d) {
+            myOrders = allMyOrders.filter(o =>
+                o.year === y &&
+                o.month === m &&
+                o.day === d
+            );
         }
     }
 
@@ -1009,8 +1004,8 @@ function renderConsumerView() {
         if (!allMyOrders.length) {
             list.innerHTML = '<div class="empty-state"><p>등록된 주문이 없습니다.</p><p>새 주문을 등록하세요.</p></div>';
         } else {
-            const label = (startVal && endVal) ? (startVal === endVal ? startVal : `${startVal} ~ ${endVal}`) : '선택한 기간';
-            list.innerHTML = `<div class="empty-state"><p>${label}에는 주문 이력이 없습니다.</p><p>다른 기간을 선택해 보세요.</p></div>`;
+            const label = (filterInput && filterInput.value) ? filterInput.value : '선택한 날짜';
+            list.innerHTML = `<div class="empty-state"><p>${label}에는 주문 이력이 없습니다.</p><p>다른 날짜를 선택하거나 전체 보기를 이용해 보세요.</p></div>`;
         }
         renderInventoryPanel();
         return;
@@ -1107,106 +1102,72 @@ function renderConsumerView() {
     renderInventoryPanel();
 }
 
-function renderSupplierOrdersList() {
-    const list = document.getElementById('supplierOrdersList');
-    if (!list) return;
+function renderOrdersTable(tbodyId, showActions) {
     const hiddenSupplierIds = new Set(readHiddenSupplierIds());
-    let allOrders = getAllOrders().filter(o => !hiddenSupplierIds.has(o.id));
+    const allOrders = getAllOrders().filter(o => !hiddenSupplierIds.has(o.id));
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
 
-    // 조회 기간 필터
-    const filterStart = document.getElementById('supplierOrdersDateFilter');
-    const filterEnd = document.getElementById('supplierOrdersDateFilterEnd');
-    const startVal = filterStart?.value;
-    const endVal = filterEnd?.value;
-    if (startVal && endVal) {
-        const [sy, sm, sd] = startVal.split('-').map(v => parseInt(v, 10));
-        const [ey, em, ed] = endVal.split('-').map(v => parseInt(v, 10));
-        if (sy && sm && sd && ey && em && ed) {
-            const startKey = sy * 10000 + sm * 100 + sd;
-            const endKey = ey * 10000 + em * 100 + ed;
-            allOrders = allOrders.filter(o => {
-                const k = (o.year || 0) * 10000 + (o.month || 0) * 100 + (o.day || 0);
-                return k >= startKey && k <= endKey;
-            });
-        }
-    }
+    const colspan = 10;
+    tbody.innerHTML = allOrders.map(o => {
+        const status = normalizeStatus(o.status);
+        const hasPendingChange = o.changeRequest && o.changeRequest.status === 'pending';
+        const hasPendingCancel = o.cancelRequest && o.cancelRequest.status === 'pending';
 
-    const myOrders = allOrders.slice().sort((a, b) => {
-        const ka = getOrderDateTimeSortKey(a);
-        const kb = getOrderDateTimeSortKey(b);
-        return ka.localeCompare(kb) || String(a.id || "").localeCompare(String(b.id || ""));
-    });
+        const canApproveChange = showActions && hasPendingChange && o.changeRequest.requestedBy === 'consumer';
+        const canApproveCancel = showActions && hasPendingCancel && o.cancelRequest.requestedBy === 'consumer';
 
-    if (myOrders.length === 0) {
-        list.innerHTML = '<div class="empty-state order-line-empty"><p>해당 기간에 주문이 없습니다.</p></div>';
-    } else {
-        list.innerHTML = myOrders.map(o => {
-            const status = normalizeStatus(o.status);
-            const hasPendingChange = o.changeRequest && o.changeRequest.status === 'pending';
-            const hasPendingCancel = o.cancelRequest && o.cancelRequest.status === 'pending';
-            const canApproveChange = hasPendingChange && o.changeRequest.requestedBy === 'consumer';
-            const canApproveCancel = hasPendingCancel && o.cancelRequest.requestedBy === 'consumer';
-            const canProposeChange = !hasPendingChange && !hasPendingCancel && ['requested', 'accepted', 'change_accepted'].includes(status);
-            const canRequestCancel = !hasPendingChange && !hasPendingCancel && !['completed', 'cancelled'].includes(status);
-            const canCancelChangeRequest = hasPendingChange && o.changeRequest.requestedBy === 'supplier';
-            const advanceAction = !hasPendingChange && !hasPendingCancel ? getSupplierAdvanceAction(status) : null;
-            const travelTimeMin = getOrderTravelTimeMinutes(o);
-            const travelTimeText = travelTimeMin === 0 ? '—' : `${travelTimeMin}분`;
-            const changeBadge = getChangeBadgeText(o);
-            const cancelBadge = getCancelBadgeText(o);
-            const supplierStatus = getSupplierStatusLabel(o);
-            const supplyLabel = getSupplyConditionLabel(o);
-            const isCancelled = o.status === 'cancelled';
+        const canProposeChange = showActions && !hasPendingChange && !hasPendingCancel && ['requested', 'accepted', 'change_accepted'].includes(status);
+        const canRequestCancel = showActions && !hasPendingChange && !hasPendingCancel && !['completed', 'cancelled'].includes(status);
+        const canCancelChangeRequest = showActions && hasPendingChange && o.changeRequest.requestedBy === 'supplier';
+        const advanceAction = showActions && !hasPendingChange && !hasPendingCancel ? getSupplierAdvanceAction(status) : null;
 
-            const hasDecisionRequest = canApproveChange || canApproveCancel;
-            const actionBtns = [
-                isCancelled ? `<button type="button" class="btn btn-tiny order-remove-cancelled-btn" data-action="remove-cancelled-supplier" data-id="${o.id}" title="취소 주문 목록에서 삭제">&times;</button>` : '',
-                advanceAction ? `<button type="button" class="btn btn-tiny btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : '',
-                canCancelChangeRequest ? `<button type="button" class="btn btn-tiny btn-secondary" data-action="cancel-change-request" data-id="${o.id}">변경요청 취소</button>` : '',
-                canProposeChange ? `<button type="button" class="btn btn-tiny" data-action="request-change" data-id="${o.id}">변경</button>` : '',
-                canRequestCancel ? `<button type="button" class="btn btn-tiny btn-secondary" data-action="request-cancel" data-id="${o.id}">취소</button>` : '',
-            ].filter(Boolean).join('');
+        const travelTimeMin = getOrderTravelTimeMinutes(o);
+        const travelTimeText = travelTimeMin === 0 ? '—' : `${travelTimeMin}분`;
+        const changeBadge = getChangeBadgeText(o);
+        const cancelBadge = getCancelBadgeText(o);
+        const noteText = String(o.note || '').trim();
 
-            const decisionButtons = [
-                canApproveChange ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-change" data-id="${o.id}">변경 확정</button><button type="button" class="btn btn-tiny btn-secondary" data-action="reject-change" data-id="${o.id}">변경 거절</button>` : '',
-                canApproveCancel ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-cancel" data-id="${o.id}">취소 승인</button><button type="button" class="btn btn-tiny btn-secondary" data-action="reject-cancel" data-id="${o.id}">취소 거절</button>` : '',
-            ].filter(Boolean).join('');
-            const hasDecisionRequest = canApproveChange || canApproveCancel;
-            const transportInfoText = o.transportInfo ? `T/T: ${(o.transportInfo.trailerNumbers || []).join(', ')} · 기사: ${o.transportInfo.driverName || '-'}` : '';
+        const supplierStatus = getSupplierStatusLabel(o);
+        const supplyLabel = getSupplyConditionLabel(o);
 
-            return `
-            <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'has-change-request' : ''}" data-order-id="${o.id}">
-                <div class="order-item-head">
-                    <div class="order-id">${o.id}</div>
-                    <div class="order-item-head-right">
-                        ${hasDecisionRequest ? `<div class="order-status ${status} order-status--action"><span class="order-status-action-label">${supplierStatus}</span><div class="order-status-action-buttons">${decisionButtons}</div></div>` : `<span class="order-status ${status}">${supplierStatus}</span>`}
-                        ${isCancelled ? `<button type="button" class="order-remove-cancelled-btn" data-action="remove-cancelled-supplier" data-id="${o.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
-                    </div>
-                </div>
-                <div class="order-item-datetime-row">
-                    <div class="order-datetime-with-badge">
-                        <span class="order-datetime">${formatOrderDateTime(o)}</span>
-                        <span class="supply-condition-badge supply-condition-${o.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${supplyLabel}</span>
-                        <span class="travel-time-badge">${travelTimeText}</span>
-                    </div>
-                    ${actionBtns ? `<div class="order-actions order-actions--inline">${actionBtns}</div>` : ''}
-                </div>
-                <div class="order-item-parties-row">
-                    <div class="order-party order-party--buyer">
-                        <div class="order-party-name">${o.consumerName || '-'}</div>
-                        <div class="order-party-addr">${o.address || '-'}</div>
-                    </div>
-                </div>
-                ${transportInfoText ? `<div class="order-transport-info">${transportInfoText}</div>` : ''}
-                ${(changeBadge || cancelBadge) ? `<div class="order-item-foot"><div class="order-item-badges"><div class="change-summary">${changeBadge || ''} ${cancelBadge || ''}</div></div></div>` : ''}
-            </div>`;
-        }).join('');
-    }
+        const isCancelled = o.status === 'cancelled';
+        return `
+        <tr class="order-row ${isCancelled ? 'row-cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'row-change-request' : ''}" data-order-id="${o.id}">
+            <td>${o.id}</td>
+            <td>${o.consumerName}</td>
+            <td>${formatOrderDate(o)}</td>
+            <td>${formatTimeText(o.time)}</td>
+            <td>${o.tubeTrailers}대</td>
+            <td>${o.address}</td>
+            <td><span class="supply-condition-badge supply-condition-${o.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${supplyLabel}</span></td>
+            <td><span class="travel-time">${travelTimeText}</span></td>
+            <td>
+                <span class="order-status ${status}">${supplierStatus}</span>
+                ${noteText ? `<div class="change-summary">메모: ${noteText}</div>` : ''}
+                ${changeBadge ? `<div class="change-summary">${changeBadge}</div>` : ''}
+                ${cancelBadge ? `<div class="change-summary">${cancelBadge}</div>` : ''}
+                ${o.transportInfo ? `<div class="change-summary">T/T: ${(o.transportInfo.trailerNumbers || []).join(', ')} · 기사: ${o.transportInfo.driverName || '-'}</div>` : ''}
+            </td>
+            <td class="table-actions">
+                ${isCancelled ? `<button type="button" class="btn btn-tiny order-remove-cancelled-btn" data-action="remove-cancelled-supplier" data-id="${o.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
+                ${advanceAction ? `<button type="button" class="btn btn-tiny btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : ''}
+                ${canCancelChangeRequest ? `<button type="button" class="btn btn-tiny btn-secondary" data-action="cancel-change-request" data-id="${o.id}">변경요청 취소</button>` : ''}
+                ${canProposeChange ? `<button type="button" class="btn btn-tiny" data-action="request-change" data-id="${o.id}">변경</button>` : ''}
+                ${canRequestCancel ? `<button type="button" class="btn btn-tiny btn-secondary" data-action="request-cancel" data-id="${o.id}">취소</button>` : ''}
+                ${canApproveChange ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-change" data-id="${o.id}">변경 확정</button>
+                <button type="button" class="btn btn-tiny btn-secondary" data-action="reject-change" data-id="${o.id}">변경 거절</button>` : ''}
+                ${canApproveCancel ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-cancel" data-id="${o.id}">취소 승인</button>
+                <button type="button" class="btn btn-tiny btn-secondary" data-action="reject-cancel" data-id="${o.id}">취소 거절</button>` : ''}
+            </td>
+        </tr>
+    `}).join('') || `<tr><td colspan="${colspan}" class="empty-state">주문이 없습니다.</td></tr>`;
 
-    list.querySelectorAll('.order-item-clickable[data-order-id]').forEach(el => {
-        el.addEventListener('click', (e) => {
+    tbody.querySelectorAll('.order-row[data-order-id]').forEach(row => {
+        row.addEventListener('click', (e) => {
             if (e.target.closest('button')) return;
-            openQtyConfirmModal(el.dataset.orderId);
+            const orderId = row.dataset.orderId;
+            openQtyConfirmModal(orderId);
         });
     });
 }
@@ -1250,7 +1211,7 @@ function renderSupplierView() {
         }
     }
 
-    renderSupplierOrdersList();
+    renderOrdersTable('supplierOrdersTable', true);
 
     const totalQty = activeOrders.reduce((s, o) => s + getOrderQuantity(o), 0);
     const planEl = document.getElementById('productionPlanSummary');
@@ -1583,21 +1544,11 @@ function initFormDefaults() {
 }
 
 function initOrdersDateFilterDefault() {
-    const today = getTodayParts();
-    const todayStr = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
-    const filterStart = document.getElementById('ordersDateFilter');
-    const filterEnd = document.getElementById('ordersDateFilterEnd');
-    if (filterStart && !filterStart.value) filterStart.value = todayStr;
-    if (filterEnd && !filterEnd.value) filterEnd.value = todayStr;
-}
-
-function initSupplierOrdersDateFilterDefault() {
-    const today = getTodayParts();
-    const todayStr = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
-    const filterStart = document.getElementById('supplierOrdersDateFilter');
-    const filterEnd = document.getElementById('supplierOrdersDateFilterEnd');
-    if (filterStart && !filterStart.value) filterStart.value = todayStr;
-    if (filterEnd && !filterEnd.value) filterEnd.value = todayStr;
+    const filterInput = document.getElementById('ordersDateFilter');
+    if (filterInput && !filterInput.value) {
+        const today = getTodayParts();
+        filterInput.value = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
+    }
 }
 
 function syncDateInputFromNumericFields() {
@@ -2143,12 +2094,9 @@ document.getElementById('orderDateMobile')?.addEventListener('change', () => {
     document.getElementById(id)?.addEventListener('change', syncDateInputFromNumericFields);
 });
 
-// 주문 현황 - 기간별 필터 이벤트(조회 버튼 클릭 시 적용)
+// 주문 현황 - 일별 필터 이벤트(조회 버튼 클릭 시 적용)
 document.getElementById('ordersDateApplyBtn')?.addEventListener('click', () => {
     renderConsumerView();
-});
-document.getElementById('supplierOrdersDateApplyBtn')?.addEventListener('click', () => {
-    renderSupplierView();
 });
 
 // 초기화
@@ -2165,7 +2113,6 @@ if (roleSelectEl) {
 initTheme();
 initFormDefaults();
 initOrdersDateFilterDefault();
-initSupplierOrdersDateFilterDefault();
 initTimeInputs();
 initDateTimeToggles();
 initDateTimeWheelAdjust();

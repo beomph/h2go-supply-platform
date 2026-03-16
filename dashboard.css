@@ -914,12 +914,13 @@
     min-width: 0;
 }
 
-/* 도착도·출하도 한 줄 (연월일·시분과 동일한 패딩) */
+/* 공급 조건: 도착도·출하도 (시·분 선택란과 동일한 높이/형태) */
 .order-supply-row {
     display: flex;
     align-items: stretch;
     gap: 0.35rem;
     padding: 0.5rem;
+    min-height: 3rem;
     border-radius: 14px;
     border: 1px solid var(--border-color);
     background: var(--surface-soft);
@@ -930,6 +931,9 @@
 .order-supply-row .supply-condition-toggle {
     flex: 1;
     min-width: 0;
+    min-height: 2rem;
+    height: 100%;
+    align-self: stretch;
 }
 
 /* 시·분 입력 셀 (숫자 시인성·조작성 확보) */
@@ -975,11 +979,11 @@
     box-sizing: border-box;
 }
 
-/* 도착도/출하도 버튼 토글 (라디오 없이 선택 상태만 표시) */
+/* 도착도/출하도 버튼 토글 (시·분 선택란과 동일 높이) */
 .supply-condition-toggle {
     flex: 1;
     min-width: 0;
-    min-height: 2rem;
+    min-height: 2.5rem;
     padding: 0 0.75rem;
     border-radius: 10px;
     display: flex;

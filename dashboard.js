@@ -473,6 +473,27 @@ function formatOrderDateTime(order) {
     return `${order.year}/${order.month}/${order.day} ${formatTimeText(order.time)}`;
 }
 
+// 도착도(납품)인 경우 운송시간을 뺀 출하일시 반환. 출하도는 null(표시 안 함)
+function formatShipmentDateTime(order) {
+    if (!order || order.supplyCondition === 'ex_factory') return null;
+    const travelMin = getOrderTravelTimeMinutes(order);
+    if (travelMin <= 0) return null;
+    const y = order.year, m = order.month, d = order.day;
+    const [hRaw = '0', mRaw = '0'] = String(order.time || '0:0').split(':');
+    let h = parseInt(hRaw, 10) || 0;
+    let min = (parseInt(mRaw, 10) || 0) - travelMin;
+    while (min < 0) { min += 60; h -= 1; }
+    let day = d, month = m, year = y;
+    while (h < 0) { h += 24; day -= 1; }
+    if (day < 1) {
+        day += new Date(year, month, 0).getDate();
+        month -= 1;
+        if (month < 1) { month += 12; year -= 1; }
+    }
+    const timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+    return `${year}/${month}/${day} ${timeStr}`;
+}
+
 function formatOrderDate(order) {
     if (!order) return '-';
     return `${order.year}/${order.month}/${order.day}`;
@@ -1228,6 +1249,7 @@ function renderSupplierOrdersCards() {
 
         const travelTimeMin = getOrderTravelTimeMinutes(o);
         const travelTimeText = travelTimeMin === 0 ? '—' : `${travelTimeMin}분`;
+        const shipmentDt = formatShipmentDateTime(o);
         const changeBadge = getChangeBadgeText(o);
         const cancelBadge = getCancelBadgeText(o);
         const noteText = String(o.note || '').trim();
@@ -1258,11 +1280,13 @@ function renderSupplierOrdersCards() {
                     <span class="order-datetime">${formatOrderDateTime(o)}</span>
                     <span class="supply-condition-badge ${supplyBadgeClass}">${supplyLabel}</span>
                     <span class="travel-time">${travelTimeText}</span>
+                    ${shipmentDt ? `<span class="shipment-datetime" title="운송시간 고려 출하일시">출하 ${shipmentDt}</span>` : ''}
                 </div>
                 ${actionButtons ? `<div class="order-actions order-actions--inline">${actionButtons}</div>` : ''}
             </div>
-            <div class="order-item-parties-row">
-                <div class="order-party order-party--buyer">
+            <div class="order-item-parties-row order-item-parties-row--supplier">
+                <div class="order-party order-party--buyer order-party--buyer-emphasis">
+                    <span class="order-party-label">구매자</span>
                     <div class="order-party-name">${o.consumerName || '-'}</div>
                     <div class="order-party-addr">${o.address || '-'}</div>
                 </div>

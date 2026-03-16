@@ -823,6 +823,7 @@
 }
 
 .my-orders-card h3,
+.supplier-orders-card h3,
 .orders-table-card h3,
 .production-plan-card h3,
 .transport-resources-card h3,
@@ -1329,7 +1330,8 @@
     border-color: var(--h2-blue);
 }
 
-#ordersDateApplyBtn {
+#ordersDateApplyBtn,
+#supplierDateApplyBtn {
     padding: 0.35rem 0.6rem;
     flex-shrink: 0;
 }
@@ -1342,8 +1344,22 @@
 
     .orders-filter {
         width: 100%;
+        max-width: 100%;
         justify-content: flex-start;
         flex-wrap: wrap;
+    }
+
+    /* 모바일: 조회기간 칸이 다른 칸과 동일한 너비로 정렬되도록 */
+    .orders-filter-input-wrap {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .orders-filter-input-wrap .orders-date-input {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
     }
 }
 
@@ -1472,6 +1488,42 @@
 
 .order-party--buyer {
     text-align: right;
+}
+
+/* 판매 대시보드: 구매자 표시 강화 */
+.order-item-parties-row--supplier .order-party--buyer-emphasis {
+    text-align: left;
+}
+
+.order-party--buyer-emphasis .order-party-label {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--h2-blue-light);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    background: rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.order-party--buyer-emphasis .order-party-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-white);
+}
+
+.order-party--buyer-emphasis .order-party-addr {
+    font-size: 0.85rem;
+}
+
+.shipment-datetime {
+    display: inline-block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
 }
 
 .supply-condition-badge {
@@ -1631,9 +1683,13 @@ body.theme-light .order-status.collecting { background: #ede9fe; color: #6d28d9;
 body.theme-light .order-status.completed { background: #e5e7eb; color: #374151; border-color: #d1d5db; }
 body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
 
-/* 생산자 화면 */
+/* 생산자 화면 - 구매 대시보드와 동일한 카드 스타일로 통일 */
 .supplier-orders-card {
     margin-bottom: 2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 2rem;
 }
 
 .table-wrapper {

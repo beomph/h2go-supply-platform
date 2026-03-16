@@ -1260,7 +1260,8 @@
 }
 
 .orders-list {
-    max-height: 400px;
+    /* 한 화면에서 최소 6개 정도의 주문 카드가 보이도록 높이를 넉넉히 확보 */
+    max-height: 560px;
     overflow-y: auto;
 }
 

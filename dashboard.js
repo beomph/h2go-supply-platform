@@ -1641,8 +1641,9 @@ function toggleOrderAddressBySupplyCondition() {
 function openSupplierSelectModal() {
     const modal = document.getElementById("supplierSelectModal");
     const listEl = document.getElementById("supplierList");
-    const manualEl = document.getElementById("supplierManualInput");
     const addressDisplay = document.getElementById("supplierShippingAddressDisplay");
+    const manualNameEl = document.getElementById("supplierManualNameInput");
+    const manualAddressEl = document.getElementById("supplierManualAddressInput");
     if (!modal || !listEl) return;
 
     const currentSupplier = String(selectedSupplierName || "").trim();
@@ -1670,7 +1671,8 @@ function openSupplierSelectModal() {
         });
     });
 
-    if (manualEl) manualEl.value = "";
+    if (manualNameEl) manualNameEl.value = "";
+    if (manualAddressEl) manualAddressEl.value = "";
     modal.classList.add("active");
 }
 
@@ -1694,15 +1696,32 @@ function initSupplyConditionToggles() {
 document.getElementById("changeSupplierBtn")?.addEventListener("click", openSupplierSelectModal);
 document.getElementById("supplierManualApplyBtn")?.addEventListener("click", () => {
     const modal = document.getElementById("supplierSelectModal");
-    const manualEl = document.getElementById("supplierManualInput");
     const addressDisplay = document.getElementById("supplierShippingAddressDisplay");
-    const v = String(manualEl?.value || "").trim();
-    if (!v) {
+    const manualNameEl = document.getElementById("supplierManualNameInput");
+    const manualAddressEl = document.getElementById("supplierManualAddressInput");
+    const name = String(manualNameEl?.value || "").trim();
+    const address = String(manualAddressEl?.value || "").trim();
+    if (!name) {
         alert("공급자명을 입력해 주세요.");
         return;
     }
-    setSupplierName(v);
-    if (addressDisplay) addressDisplay.textContent = getSupplierShippingAddress(v);
+    if (!address) {
+        alert("공급자 주소를 입력해 주세요.");
+        return;
+    }
+    setSupplierName(name);
+    if (addressDisplay) addressDisplay.textContent = address;
+    // 직접 입력한 신규 공급자는 등록된 공급자 목록에도 함께 저장해 출하 주소로 활용
+    const list = readRegisteredSuppliers();
+    const exists = list.some(s => {
+        const n = typeof s === 'string' ? s : s?.name;
+        return String(n || "").trim().toLowerCase() === name.toLowerCase();
+    });
+    if (!exists) {
+        list.push({ name, address });
+        writeRegisteredSuppliers(list);
+        renderSupplierRegistration();
+    }
     modal?.classList.remove("active");
 });
 

@@ -213,42 +213,21 @@
             </div>
             
             <div class="supplier-content">
-                <div class="summary-cards">
-                    <div class="summary-card">
-                        <span class="summary-label">총 주문 건수</span>
-                        <span class="summary-value" id="totalOrders">0</span>
+                <div class="supplier-orders-card">
+                    <div class="my-orders-header supplier-orders-header">
+                        <h3>주문 현황</h3>
+                        <div class="orders-filter">
+                            <label for="supplierFromDate">기간</label>
+                            <div class="orders-filter-input-wrap supplier-range-inputs">
+                                <input type="date" id="supplierFromDate" class="orders-date-input">
+                                <span class="range-separator">~</span>
+                                <input type="date" id="supplierToDate" class="orders-date-input">
+                                <button type="button" class="btn btn-tiny btn-secondary" id="supplierTodayBtn">오늘</button>
+                                <button type="button" class="btn btn-tiny btn-secondary" id="supplierDateApplyBtn">조회</button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="summary-card">
-                        <span class="summary-label">총 튜브트레일러</span>
-                        <span class="summary-value" id="totalTrailers">0</span>
-                    </div>
-                    <div class="summary-card">
-                        <span class="summary-label">납품 예정</span>
-                        <span class="summary-value" id="deliveryRange">-</span>
-                    </div>
-                </div>
-                
-                <div class="orders-table-card">
-                    <h3>전체 주문 취합</h3>
-                    <div class="table-wrapper">
-                        <table class="orders-table">
-                            <thead>
-                                <tr>
-                                    <th>주문번호</th>
-                                    <th>수요처</th>
-                                    <th>연/월/일</th>
-                                    <th>시각</th>
-                                    <th>트레일러</th>
-                                    <th>납품지</th>
-                                    <th>공급조건</th>
-                                    <th>운송시간</th>
-                                    <th>상태</th>
-                                    <th>작업</th>
-                                </tr>
-                            </thead>
-                            <tbody id="supplierOrdersTable"></tbody>
-                        </table>
-                    </div>
+                    <div id="supplierOrdersList" class="orders-list"></div>
                 </div>
                 
                 <div class="supplier-bottom-grid">

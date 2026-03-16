@@ -798,9 +798,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
-    padding-bottom: 0;
-    border-bottom: none;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
     min-height: 2.5rem;
 }
 
@@ -1633,42 +1633,8 @@ body.theme-light .order-status.completed { background: #e5e7eb; color: #374151; 
 body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
 
 /* 생산자 화면 */
-.summary-cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
+.supplier-orders-card {
     margin-bottom: 2rem;
-}
-
-@media (max-width: 768px) {
-    .summary-cards {
-        grid-template-columns: 1fr;
-    }
-}
-
-.summary-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 1.5rem;
-    text-align: center;
-}
-
-.summary-card:hover {
-    border-color: var(--h2-blue);
-}
-
-.summary-label {
-    display: block;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    margin-bottom: 0.5rem;
-}
-
-.summary-value {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--h2-blue-light);
 }
 
 .table-wrapper {

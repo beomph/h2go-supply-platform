@@ -1293,34 +1293,34 @@ function renderSupplierOrdersCards() {
         `.trim();
 
         return `
-        <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'has-change-request' : ''}" data-order-id="${o.id}">
-            <div class="order-item-head">
-                <div class="order-id">${o.id}</div>
-                <div class="order-item-head-right">
-                    <span class="order-status ${status}">${supplierStatus}</span>
-                </div>
-            </div>
-            <div class="order-item-datetime-row">
-                <div class="order-datetime-with-badge">
-                    <span class="order-datetime">${formatOrderDateTime(o)}</span>
-                    <span class="supply-condition-badge ${supplyBadgeClass}">${supplyLabel}</span>
-                    <span class="travel-time">${travelTimeText}</span>
-                </div>
-                ${actionButtons ? `<div class="order-actions order-actions--inline">${actionButtons}</div>` : ''}
-            </div>
-            ${(shipmentDt || returnDt) ? `
-            <div class="order-shipment-return-row">
-                ${shipmentDt ? `<span class="shipment-datetime">출하 ${shipmentDt}</span>` : ''}
-                ${returnDt ? `<span class="return-datetime">회차 ${returnDt}</span>` : ''}
-            </div>
-            ` : ''}
-            <div class="order-item-parties-row order-item-parties-row--supplier">
-                <div class="order-party order-party--buyer order-party--buyer-emphasis">
+        <div class="order-item order-item-supplier order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'has-change-request' : ''}" data-order-id="${o.id}">
+            <div class="order-item-supplier-main">
+                <div class="order-item-supplier-buyer">
                     <div class="order-party-name">${o.consumerName || '-'}</div>
                     <div class="order-party-addr">${o.address || '-'}</div>
                 </div>
+                <div class="order-item-supplier-datetimes">
+                    <div class="order-datetime-with-badge">
+                        <span class="order-datetime">${formatOrderDateTime(o)}</span>
+                        <span class="supply-condition-badge ${supplyBadgeClass}">${supplyLabel}</span>
+                        <span class="travel-time">${travelTimeText}</span>
+                    </div>
+                    ${(shipmentDt || returnDt) ? `
+                    <div class="order-shipment-return-row">
+                        ${shipmentDt ? `<span class="shipment-datetime">출하 ${shipmentDt}</span>` : ''}
+                        ${returnDt ? `<span class="return-datetime">회차 ${returnDt}</span>` : ''}
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="order-item-supplier-actions">
+                    <span class="order-status ${status}">${supplierStatus}</span>
+                    ${actionButtons ? `<div class="order-actions order-actions--supplier">${actionButtons}</div>` : ''}
+                </div>
             </div>
-            ${o.transportInfo ? `<div class="order-transport-info">T/T: ${(o.transportInfo.trailerNumbers || []).join(', ')} · 기사: ${o.transportInfo.driverName || '-'}</div>` : ''}
+            <div class="order-item-supplier-meta">
+                <span class="order-id">${o.id}</span>
+                ${o.transportInfo ? `<span class="order-transport-info">T/T: ${(o.transportInfo.trailerNumbers || []).join(', ')} · 기사: ${o.transportInfo.driverName || '-'}</span>` : ''}
+            </div>
             ${(noteText || changeBadge || cancelBadge) ? `
             <div class="order-item-foot">
                 <div class="order-item-badges">

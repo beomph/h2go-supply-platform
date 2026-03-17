@@ -856,17 +856,19 @@
     color: var(--text-muted);
 }
 
-/* 공급자 + 공급 조건 한 가로라인 */
+/* 공급자 + 공급 조건: 웹 좌우 배치(동일 높이), 모바일 위아래(동일 너비) */
 .supplier-condition-row {
     display: flex;
     gap: 1rem;
-    align-items: flex-start;
+    align-items: stretch;
     flex-wrap: wrap;
 }
 
 .supplier-condition-col {
     flex: 1 1 0;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .supplier-condition-col--supplier {
@@ -883,8 +885,24 @@
     margin-bottom: 0.5rem;
 }
 
+.supplier-condition-col .supplier-select-row {
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+    min-height: 3rem;
+}
+
 .supplier-condition-col .supplier-select-row input {
     min-width: 0;
+}
+
+.supplier-condition-col .order-supply-row {
+    flex: 1;
+    min-height: 3rem;
+}
+
+.supplier-condition-col .supply-condition-toggle {
+    font-size: 0.75rem;
 }
 
 /* 새 주문 - 납품 일시 (연월일·시·분 한 줄 + 도착도·출하도 한 줄) */
@@ -1202,17 +1220,23 @@
 
     .supplier-condition-row {
         flex-direction: column;
+        align-items: stretch;
     }
 
     .supplier-condition-col--supplier,
     .supplier-condition-col--condition {
         flex: 1 1 100%;
+        width: 100%;
         min-width: 0;
     }
 
+    .supplier-condition-col .supplier-select-row {
+        min-height: 2.5rem;
+    }
+
     .order-supply-row .supply-condition-toggle {
-        font-size: 0.72rem;
-        padding: 0 0.5rem;
+        font-size: 0.68rem;
+        padding: 0 0.4rem;
         min-height: 2.5rem;
         height: 100%;
     }
@@ -1433,9 +1457,17 @@
         min-width: min-content;
     }
 
-    .order-party-name,
-    .order-party-addr {
+    .order-item:not(.order-item-supplier) .order-party-name,
+    .order-item:not(.order-item-supplier) .order-party-addr {
         white-space: nowrap;
+    }
+
+    .order-item-supplier-main {
+        gap: 0.6rem;
+    }
+
+    .order-item-supplier-buyer {
+        max-width: 40%;
     }
 }
 
@@ -1750,6 +1782,110 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     border: 1px solid var(--border-color);
     border-radius: 16px;
     padding: 2rem;
+}
+
+/* 판매 대시보드 주문카드: 구매자 왼쪽, 일시 중앙, 상태·버튼 오른쪽 (위아래 폭 축소) */
+.order-item-supplier {
+    padding: 0.4rem 0.6rem;
+}
+
+.order-item-supplier-main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.25rem;
+}
+
+.order-item-supplier-buyer {
+    flex: 0 0 auto;
+    min-width: 0;
+    max-width: 35%;
+}
+
+.order-item-supplier-buyer .order-party-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 0.08rem;
+}
+
+.order-item-supplier-buyer .order-party-addr {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.order-item-supplier-datetimes {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.order-item-supplier-datetimes .order-datetime-with-badge {
+    margin-bottom: 0.08rem;
+}
+
+.order-item-supplier-datetimes .order-shipment-return-row {
+    margin-bottom: 0;
+}
+
+.order-item-supplier-datetimes .order-datetime {
+    font-size: 0.95rem;
+}
+
+.order-item-supplier-datetimes .supply-condition-badge,
+.order-item-supplier-datetimes .travel-time,
+.order-item-supplier-datetimes .shipment-datetime,
+.order-item-supplier-datetimes .return-datetime {
+    font-size: 0.72rem;
+}
+
+.order-item-supplier-actions {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.35rem;
+}
+
+.order-item-supplier-actions .order-status {
+    font-size: 0.72rem;
+    min-height: 1.5rem;
+    padding: 0.2rem 0.4rem;
+}
+
+.order-actions--supplier {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+}
+
+.order-actions--supplier .btn-small {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.7rem;
+    min-height: 1.5rem;
+}
+
+.order-item-supplier-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.order-item-supplier-meta .order-id {
+    font-size: 0.72rem;
+}
+
+.order-item-supplier-meta .order-transport-info {
+    font-size: 0.72rem;
+    color: var(--h2-blue-light);
+}
+
+.order-item-supplier .order-item-foot {
+    margin-top: 0.2rem;
+    padding-top: 0.2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .table-wrapper {

@@ -1165,9 +1165,15 @@
         display: none !important;
     }
 
+    .order-supply-row {
+        min-height: 3rem;
+    }
+
     .order-supply-row .supply-condition-toggle {
         font-size: 0.72rem;
-        padding: 0.4rem 0.5rem;
+        padding: 0 0.5rem;
+        min-height: 2.5rem;
+        height: 100%;
     }
 
     .order-time-block .order-datetime-field {

@@ -856,6 +856,37 @@
     color: var(--text-muted);
 }
 
+/* 공급자 + 공급 조건 한 가로라인 */
+.supplier-condition-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.supplier-condition-col {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.supplier-condition-col--supplier {
+    flex: 1 1 45%;
+    min-width: 140px;
+}
+
+.supplier-condition-col--condition {
+    flex: 1 1 45%;
+    min-width: 180px;
+}
+
+.supplier-condition-col label {
+    margin-bottom: 0.5rem;
+}
+
+.supplier-condition-col .supplier-select-row input {
+    min-width: 0;
+}
+
 /* 새 주문 - 납품 일시 (연월일·시·분 한 줄 + 도착도·출하도 한 줄) */
 .order-datetime-wrap {
     display: flex;
@@ -1167,6 +1198,16 @@
 
     .order-supply-row {
         min-height: 3rem;
+    }
+
+    .supplier-condition-row {
+        flex-direction: column;
+    }
+
+    .supplier-condition-col--supplier,
+    .supplier-condition-col--condition {
+        flex: 1 1 100%;
+        min-width: 0;
     }
 
     .order-supply-row .supply-condition-toggle {
@@ -1516,23 +1557,9 @@
     text-align: right;
 }
 
-/* 판매 대시보드: 구매자 표시 강화 */
+/* 판매 대시보드: 구매자 표시 */
 .order-item-parties-row--supplier .order-party--buyer-emphasis {
     text-align: left;
-}
-
-.order-party--buyer-emphasis .order-party-label {
-    display: inline-block;
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--h2-blue-light);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.25rem;
-    padding: 0.15rem 0.5rem;
-    border-radius: 6px;
-    background: rgba(59, 130, 246, 0.2);
-    border: 1px solid rgba(59, 130, 246, 0.4);
 }
 
 .order-party--buyer-emphasis .order-party-name {
@@ -1545,10 +1572,17 @@
     font-size: 0.85rem;
 }
 
-.shipment-datetime {
-    display: inline-block;
+.order-shipment-return-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 0.35rem;
     font-size: 0.8rem;
     color: var(--text-muted);
+}
+
+.shipment-datetime,
+.return-datetime {
     font-weight: 500;
 }
 

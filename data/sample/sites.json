@@ -1,0 +1,12 @@
+[
+  {
+    "site_id": "SITE-INCHEON-01",
+    "name": "인천 수소생산공장",
+    "address": "인천광역시 남동구 논현고잔로 123",
+    "lat": 37.4489,
+    "lng": 126.7317,
+    "max_daily_output_kg": 25000,
+    "storage_limit_kg": 12000
+  }
+]
+

@@ -1,0 +1,55 @@
+[
+  {
+    "station_id": "ST-SEOUL-GANGNAM-01",
+    "name": "강남 수소충전소",
+    "region": "서울-강남",
+    "address": "서울특별시 강남구 테헤란로 123",
+    "lat": 37.5012,
+    "lng": 127.0396,
+    "business_hours": { "open": "06:00", "close": "22:00" },
+    "closed_weekdays": [],
+    "dispensers": 4,
+    "storage_capacity_kg": 1200,
+    "safety_stock_kg": 250
+  },
+  {
+    "station_id": "ST-INCHEON-NAMDONG-01",
+    "name": "인천 남동 수소충전소",
+    "region": "인천-남동",
+    "address": "인천광역시 남동구 논현고잔로 45",
+    "lat": 37.4489,
+    "lng": 126.7317,
+    "business_hours": { "open": "06:00", "close": "23:00" },
+    "closed_weekdays": [],
+    "dispensers": 3,
+    "storage_capacity_kg": 1000,
+    "safety_stock_kg": 220
+  },
+  {
+    "station_id": "ST-SUWON-01",
+    "name": "수원 수소충전소",
+    "region": "경기-수원",
+    "address": "경기도 수원시 영통구 광교로 88",
+    "lat": 37.2839,
+    "lng": 127.0446,
+    "business_hours": { "open": "07:00", "close": "21:00" },
+    "closed_weekdays": [0],
+    "dispensers": 2,
+    "storage_capacity_kg": 900,
+    "safety_stock_kg": 200
+  },
+  {
+    "station_id": "ST-ANSAN-01",
+    "name": "안산 수소충전소",
+    "region": "경기-안산",
+    "address": "경기도 안산시 단원구 중앙대로 11",
+    "lat": 37.3219,
+    "lng": 126.8309,
+    "business_hours": { "open": "07:00", "close": "22:00" },
+    "closed_weekdays": [],
+    "dispensers": 2,
+    "storage_capacity_kg": 950,
+    "safety_stock_kg": 210
+  }
+]
+

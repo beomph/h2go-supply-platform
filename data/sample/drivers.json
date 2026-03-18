@@ -1,0 +1,6 @@
+[
+  { "driver_id": "DRV-001", "name": "기사 1", "home_region": "인천", "max_shift_minutes": 480, "status": "available" },
+  { "driver_id": "DRV-002", "name": "기사 2", "home_region": "경기", "max_shift_minutes": 480, "status": "available" },
+  { "driver_id": "DRV-003", "name": "기사 3", "home_region": "서울", "max_shift_minutes": 480, "status": "off" }
+]
+

@@ -1,0 +1,33 @@
+[
+  {
+    "trailer_id": "TT-001",
+    "capacity_kg": 180,
+    "max_pressure_bar": 200,
+    "current_pressure_bar": 200,
+    "status": "available",
+    "current_lat": 37.4489,
+    "current_lng": 126.7317,
+    "last_maintenance_at": "2026-02-20T00:00:00Z"
+  },
+  {
+    "trailer_id": "TT-002",
+    "capacity_kg": 180,
+    "max_pressure_bar": 200,
+    "current_pressure_bar": 140,
+    "status": "available",
+    "current_lat": 37.4489,
+    "current_lng": 126.7317,
+    "last_maintenance_at": "2026-02-25T00:00:00Z"
+  },
+  {
+    "trailer_id": "TT-003",
+    "capacity_kg": 180,
+    "max_pressure_bar": 200,
+    "current_pressure_bar": 55,
+    "status": "maintenance",
+    "current_lat": 37.4602,
+    "current_lng": 126.4407,
+    "last_maintenance_at": "2026-03-10T00:00:00Z"
+  }
+]
+

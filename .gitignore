@@ -19,3 +19,7 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Taskmaster-AI (local state/config)
+.taskmaster/config.json
+.taskmaster/state.json
+

@@ -1,0 +1,23 @@
+{
+  "version": "sample-v1",
+  "generated_at": "2026-03-18T00:00:00Z",
+  "nodes": [
+    { "id": "SITE-INCHEON-01", "type": "site", "lat": 37.4489, "lng": 126.7317 },
+    { "id": "ST-SEOUL-GANGNAM-01", "type": "station", "lat": 37.5012, "lng": 127.0396 },
+    { "id": "ST-INCHEON-NAMDONG-01", "type": "station", "lat": 37.4489, "lng": 126.7317 },
+    { "id": "ST-SUWON-01", "type": "station", "lat": 37.2839, "lng": 127.0446 },
+    { "id": "ST-ANSAN-01", "type": "station", "lat": 37.3219, "lng": 126.8309 }
+  ],
+  "edges": [
+    { "from": "SITE-INCHEON-01", "to": "ST-SEOUL-GANGNAM-01", "distance_km": 40.5, "eta_minutes": 60 },
+    { "from": "SITE-INCHEON-01", "to": "ST-INCHEON-NAMDONG-01", "distance_km": 2.1, "eta_minutes": 10 },
+    { "from": "SITE-INCHEON-01", "to": "ST-SUWON-01", "distance_km": 44.2, "eta_minutes": 50 },
+    { "from": "SITE-INCHEON-01", "to": "ST-ANSAN-01", "distance_km": 28.5, "eta_minutes": 40 },
+
+    { "from": "ST-SEOUL-GANGNAM-01", "to": "SITE-INCHEON-01", "distance_km": 40.5, "eta_minutes": 60 },
+    { "from": "ST-INCHEON-NAMDONG-01", "to": "SITE-INCHEON-01", "distance_km": 2.1, "eta_minutes": 10 },
+    { "from": "ST-SUWON-01", "to": "SITE-INCHEON-01", "distance_km": 44.2, "eta_minutes": 50 },
+    { "from": "ST-ANSAN-01", "to": "SITE-INCHEON-01", "distance_km": 28.5, "eta_minutes": 40 }
+  ]
+}
+

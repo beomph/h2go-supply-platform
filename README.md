@@ -45,6 +45,18 @@ python openai_test_server.py
 브라우저 접속:
 - `http://127.0.0.1:3000/`
 
+### (개발) PRD → 태스크 자동 생성 (OpenAI API Key 사용)
+
+Taskmaster MCP의 `parse_prd`가 특정 공급자(예: Perplexity) 설정에 묶여 동작하지 않는 환경에서는,
+아래 스크립트로 **OpenAI API 키를 사용해** `.taskmaster/docs/prd.txt`를 `.taskmaster/tasks/tasks.json`으로 자동 변환할 수 있습니다.
+
+```powershell
+$env:OPENAI_API_KEY="여기에_본인_키"
+python scripts/parse_prd_openai.py --backup --num-tasks 12
+```
+
+- `--backup`: 기존 `tasks.json`을 `*.bak_YYYYMMDD_HHMMSS`로 백업합니다.
+
 ### GitHub에 올릴 때
 
 - `.env` 파일은 **절대 커밋하지 마세요** (`.gitignore`로 제외됨)

@@ -134,6 +134,60 @@ def parse_prd_with_openai(prd_text: str, num_tasks: int, model: str) -> dict[str
     return _validate_tasks_json(parsed)
 
 
+def _preserve_status_from_existing(new_doc: dict[str, Any], existing_path: Path) -> dict[str, Any]:
+    """기존 tasks.json의 status, updatedAt을 새 결과에 병합하여 작업 히스토리가 초기화되지 않게 함."""
+    if not existing_path.exists():
+        return new_doc
+
+    try:
+        existing = json.loads(existing_path.read_text(encoding="utf-8"))
+    except Exception:
+        return new_doc
+
+    old_tasks = []
+    if isinstance(existing, dict):
+        if "master" in existing and isinstance(existing["master"], dict):
+            old_tasks = existing["master"].get("tasks") or []
+        elif "tasks" in existing:
+            old_tasks = existing.get("tasks") or []
+
+    if not isinstance(old_tasks, list) or not old_tasks:
+        return new_doc
+
+    old_by_id: dict[str, dict[str, Any]] = {}
+    for t in old_tasks:
+        if isinstance(t, dict) and t.get("id"):
+            old_by_id[str(t["id"])] = t
+
+    new_tasks = new_doc.get("master", {}).get("tasks") or new_doc.get("tasks") or []
+    preserved = 0
+    for t in new_tasks:
+        if not isinstance(t, dict) or not t.get("id"):
+            continue
+        tid = str(t["id"])
+        old = old_by_id.get(tid)
+        if not old:
+            continue
+        # 같은 id의 기존 태스크에서 status, updatedAt 유지
+        if old.get("status") in ("done", "in-progress", "deferred", "blocked", "review", "cancelled"):
+            t["status"] = old["status"]
+            preserved += 1
+        if old.get("updatedAt"):
+            t["updatedAt"] = old["updatedAt"]
+
+    # metadata.completedCount 갱신
+    if "master" in new_doc and isinstance(new_doc["master"], dict):
+        tasks = new_doc["master"].get("tasks") or []
+        done_count = sum(1 for x in tasks if isinstance(x, dict) and x.get("status") == "done")
+        meta = new_doc["master"].get("metadata") or {}
+        meta["completedCount"] = done_count
+        new_doc["master"]["metadata"] = meta
+
+    if preserved > 0:
+        print(f"[preserve] {preserved} task(s) status kept from existing file")
+    return new_doc
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description="Parse PRD into Task Master tasks.json using OpenAI.")
     p.add_argument("--prd", default=".taskmaster/docs/prd.txt", help="PRD path (default: .taskmaster/docs/prd.txt)")
@@ -141,6 +195,7 @@ def main() -> int:
     p.add_argument("--num-tasks", type=int, default=12, help="Number of top-level tasks to generate (default: 12)")
     p.add_argument("--model", default="gpt-4.1-mini", help="OpenAI model (default: gpt-4.1-mini)")
     p.add_argument("--backup", action="store_true", help="Create a timestamped backup of existing out file")
+    p.add_argument("--no-preserve-status", action="store_true", help="Do NOT preserve done/in-progress status from existing tasks (fresh start)")
     args = p.parse_args()
 
     prd_path = Path(args.prd).resolve()
@@ -154,6 +209,10 @@ def main() -> int:
         _write_text(backup_path, _read_text(out_path))
 
     doc = parse_prd_with_openai(prd_text=prd_text, num_tasks=max(2, args.num_tasks), model=args.model)
+
+    if not args.no_preserve_status and out_path.exists():
+        doc = _preserve_status_from_existing(doc, out_path)
+
     _write_text(out_path, json.dumps(doc, ensure_ascii=False, indent=2) + "\n")
     print(f"[ok] wrote: {out_path}")
     return 0

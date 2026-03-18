@@ -56,6 +56,8 @@ python scripts/parse_prd_openai.py --backup --num-tasks 12
 ```
 
 - `--backup`: 기존 `tasks.json`을 `*.bak_YYYYMMDD_HHMMSS`로 백업합니다.
+- **기본 동작**: 재파싱 시 **같은 id의 기존 태스크**에서 `done`/`in-progress` 등 상태를 유지합니다(작업 히스토리 보존).
+- `--no-preserve-status`: 상태를 초기화하고 새로 시작하려면 이 옵션을 사용합니다.
 
 ### GitHub에 올릴 때
 

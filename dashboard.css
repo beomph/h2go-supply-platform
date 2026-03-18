@@ -1486,7 +1486,7 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 0.45rem;
-    margin-bottom: 0.06rem;
+    margin-bottom: 0.04rem;
 }
 
 .order-item-head-right {
@@ -1537,7 +1537,7 @@
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.2rem;
 }
 
 .order-datetime-with-badge {
@@ -1566,7 +1566,7 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 1rem;
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.12rem;
 }
 
 .order-party {
@@ -1660,7 +1660,7 @@
 }
 
 .order-item-foot {
-    margin-top: 0.1rem;
+    margin-top: 0.08rem;
     display: flex;
     align-items: flex-start;
 }
@@ -1680,27 +1680,26 @@
 
 .order-item .order-status.order-status--action {
     display: inline-flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.18rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.35rem;
     padding: 0.2rem 0.28rem;
     border: 1px solid var(--border-color);
     border-radius: 6px;
     background: var(--surface-soft);
-    min-width: 100px;
     min-height: 1.75rem;
+    flex-wrap: wrap;
 }
 
 .order-status-action-label {
     font-size: 0.7rem;
     line-height: 1.1;
-    text-align: center;
 }
 
 .order-status-action-buttons {
     display: flex;
     gap: 0.2rem;
-    justify-content: center;
+    align-items: center;
 }
 
 .order-status-action-buttons .btn-small {
@@ -1711,8 +1710,8 @@
 
 @media (max-width: 768px) {
     .order-item {
-        padding: 0.56rem 0.6rem;
-        margin-bottom: 0.3rem;
+        padding: 0.45rem 0.55rem;
+        margin-bottom: 0.28rem;
     }
 
     .order-item .order-detail {
@@ -1742,8 +1741,8 @@
     }
 
     .order-item .order-status.order-status--action {
-        min-width: 102px;
         padding: 0.16rem 0.2rem;
+        gap: 0.25rem;
     }
 
     .order-status-action-label {

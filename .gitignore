@@ -19,6 +19,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Node
+node_modules/
+
 # Taskmaster-AI (local state/config)
 .taskmaster/config.json
 .taskmaster/state.json

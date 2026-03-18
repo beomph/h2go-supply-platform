@@ -5,12 +5,13 @@
         "id": "1",
         "title": "Taskmaster-AI 초기 세팅 확인",
         "description": "프로젝트에 Taskmaster-AI 작업 흐름을 적용하기 위한 기본 구조/파일을 확인하고 정리한다.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "details": "`.taskmaster/docs/prd.txt` 및 `.taskmaster/tasks/tasks.json` 존재를 확인한다. 팀 규칙(작업 단위/상태 정의/PRD 업데이트 규칙)이 문서화되어 있는지 확인한다.",
         "testStrategy": "Taskmaster MCP/CLI에서 tasks.json을 정상적으로 읽고, next/show 등의 명령이 동작하는지 확인한다.",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-03-18T10:31:26.417Z"
       },
       {
         "id": "2",
@@ -171,9 +172,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-03-18T10:30:31.331Z",
+      "lastModified": "2026-03-18T10:31:26.417Z",
       "taskCount": 12,
-      "completedCount": 1,
+      "completedCount": 2,
       "tags": [
         "master"
       ]

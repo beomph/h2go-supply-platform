@@ -1,0 +1,137 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "title": "Taskmaster-AI 초기 세팅 확인",
+      "description": "프로젝트에 Taskmaster-AI 작업 흐름을 적용하기 위한 기본 구조/파일을 확인하고 정리한다.",
+      "status": "pending",
+      "dependencies": [],
+      "priority": "high",
+      "details": "`.taskmaster/docs/prd.txt` 및 `.taskmaster/tasks/tasks.json` 존재를 확인한다. 팀 규칙(작업 단위/상태 정의/PRD 업데이트 규칙)이 문서화되어 있는지 확인한다.",
+      "testStrategy": "Taskmaster MCP/CLI에서 tasks.json을 정상적으로 읽고, next/show 등의 명령이 동작하는지 확인한다.",
+      "subtasks": []
+    },
+    {
+      "id": 2,
+      "title": "AI API 서버 골격 정리 (FastAPI)",
+      "description": "수요예측/배차/이상탐지/챗봇을 위한 통합 AI API 서버 골격을 설계하고 엔드포인트 구조를 확정한다.",
+      "status": "pending",
+      "dependencies": [1],
+      "priority": "high",
+      "details": "PRD의 `/api/v1/forecast`, `/api/v1/dispatch`, `/api/v1/anomaly`, `/api/v1/chat` 엔드포인트 규격(요청/응답 JSON, 오류 포맷, 인증 방식)을 정의한다. 초기에는 더미 응답으로 시작해 프론트 대시보드 연동을 우선한다.",
+      "testStrategy": "로컬에서 서버 기동 후 각 엔드포인트가 200으로 더미 JSON을 반환하고 CORS 포함 브라우저 호출이 가능한지 확인한다.",
+      "subtasks": []
+    },
+    {
+      "id": 3,
+      "title": "데이터 스키마/샘플 데이터 정의",
+      "description": "수요예측/배차/이상탐지에 필요한 최소 데이터 스키마와 더미/시뮬레이션 데이터 생성 규격을 정의한다.",
+      "status": "pending",
+      "dependencies": [1],
+      "priority": "high",
+      "details": "충전소, 판매(수요) 시계열, T/T 자원, 기사, 출하센터, 경로/ETA 매트릭스, 센서(압력/온도/유량) 테이블 또는 JSON 스키마를 정의한다. MVP 단계에 맞춰 SQLite 또는 JSON 파일 기반으로 시작한다.",
+      "testStrategy": "샘플 데이터로 대시보드/서버가 예측/배차/이상탐지 더미 결과를 생성할 수 있는지 확인한다.",
+      "subtasks": []
+    },
+    {
+      "id": 4,
+      "title": "수요 예측 베이스라인(ML) 구현",
+      "description": "LightGBM/Scikit-learn 기반의 수요 예측 베이스라인 모델을 구현하고 예측 API에 연결한다.",
+      "status": "pending",
+      "dependencies": [2, 3],
+      "priority": "high",
+      "details": "피처(시간 피처, lag, rolling)를 정의하고 학습/추론 코드를 분리한다. MAPE/RMSE 평가를 지원하고, 예측 결과(포인트 + 신뢰구간 또는 간이 불확실성 추정)를 API로 제공한다.",
+      "testStrategy": "샘플 데이터로 학습/추론이 실행되고, 예측 결과가 일정한 포맷으로 반환되는지 확인한다. 간단한 성능 리포트(MAPE)를 출력한다.",
+      "subtasks": []
+    },
+    {
+      "id": 5,
+      "title": "배차 최적화 v1 (OR-Tools VRP)",
+      "description": "OR-Tools 기반 VRP 근사해로 T/T 배차 계획을 생성하는 v1을 구현한다.",
+      "status": "pending",
+      "dependencies": [2, 3, 4],
+      "priority": "high",
+      "details": "입력(수요/시간대/위치, T/T/기사 제약)을 받아 단일 출하센터 기준 1일 배차를 생성한다. 목적함수는 총 거리/시간 최소화 + 재고 부족 페널티를 포함한다.",
+      "testStrategy": "샘플 지도/거리 매트릭스로 실행 시, 제약 조건을 위반하지 않는 스케줄이 생성되는지 확인한다.",
+      "subtasks": []
+    },
+    {
+      "id": 6,
+      "title": "이상 탐지 v1 (통계/ML)",
+      "description": "운영/센서 데이터의 이상치를 탐지하는 v1을 구현하고 알림 이벤트 포맷을 정의한다.",
+      "status": "pending",
+      "dependencies": [2, 3],
+      "priority": "medium",
+      "details": "Z-score/IQR 또는 Isolation Forest 기반으로 이상 스코어를 산출한다. 알림은 심각도(주의/경고/긴급), 근거(피처/지표), 권장조치 텍스트를 포함한다.",
+      "testStrategy": "의도적으로 이상치를 포함한 샘플 데이터에서 이상 이벤트가 생성되고 API로 노출되는지 확인한다.",
+      "subtasks": []
+    },
+    {
+      "id": 7,
+      "title": "대시보드 AI 위젯 연동",
+      "description": "예측 그래프, 배차 결과, 이상 알림을 대시보드 화면에 표시한다.",
+      "status": "pending",
+      "dependencies": [2, 4, 5, 6],
+      "priority": "medium",
+      "details": "기존 `dashboard.html/.js`를 확장해 예측(Chart.js), 배차 테이블, 이상 알림 패널을 추가한다. 로딩/오류 상태를 명확히 표시한다.",
+      "testStrategy": "로컬 서버와 연결해 버튼/필터 조작 시 데이터가 갱신되고 UI가 깨지지 않는지 확인한다.",
+      "subtasks": []
+    },
+    {
+      "id": 8,
+      "title": "실험 관리/모델 버전 관리 (MLflow)",
+      "description": "MLflow로 실험 추적 및 모델 레지스트리 기반 버전 관리를 도입한다.",
+      "status": "pending",
+      "dependencies": [4],
+      "priority": "medium",
+      "details": "학습 파이프라인에서 파라미터/지표/아티팩트(모델 파일)를 기록한다. 모델 버전별로 서빙에 연결할 수 있도록 기준(Production/Staging)을 정한다.",
+      "testStrategy": "학습 실행 후 MLflow UI에서 실험 기록과 아티팩트를 확인하고, 특정 버전을 로드해 추론이 되는지 확인한다.",
+      "subtasks": []
+    },
+    {
+      "id": 9,
+      "title": "RAG 기반 AI 어시스턴트 v1",
+      "description": "운영 문서/FAQ/계약 개념을 기반으로 RAG 챗봇을 구현하고 챗 UI와 연결한다.",
+      "status": "pending",
+      "dependencies": [2, 3],
+      "priority": "medium",
+      "details": "ChromaDB/FAISS에 문서를 인덱싱하고, 질의 시 관련 문서를 검색해 LLM 컨텍스트로 주입한다. 환각 방지를 위해 출처 링크/근거를 함께 반환한다.",
+      "testStrategy": "대표 질문 10개에 대해 근거 포함 응답이 생성되고, 잘못된 단정 응답을 줄이는 가드레일이 동작하는지 확인한다.",
+      "subtasks": []
+    },
+    {
+      "id": 10,
+      "title": "DL 고도화: 수요 예측(TFT/LSTM) 및 이상 탐지(AE)",
+      "description": "딥러닝 기반 모델을 도입해 예측/탐지 성능을 개선한다.",
+      "status": "pending",
+      "dependencies": [4, 6, 8],
+      "priority": "low",
+      "details": "PyTorch 기반 TFT/LSTM 예측 모델을 추가하고, Autoencoder 또는 LSTM-AE로 이상 탐지를 고도화한다. 운영 가능성을 위해 학습 시간/서빙 지연을 측정한다.",
+      "testStrategy": "베이스라인 대비 MAPE 개선 및 이상탐지 F1 개선 여부를 비교 리포트로 확인한다.",
+      "subtasks": []
+    },
+    {
+      "id": 11,
+      "title": "강화학습 기반 배차 최적화(시뮬레이터 포함)",
+      "description": "동적 환경에서 배차를 최적화하기 위한 RL 접근을 설계/구현한다.",
+      "status": "pending",
+      "dependencies": [5],
+      "priority": "low",
+      "details": "시뮬레이션 환경(상태/행동/보상)을 정의하고 Stable-Baselines3로 PPO/DQN을 실험한다. 온라인 적용 전 오프라인 평가 기준과 안전장치를 마련한다.",
+      "testStrategy": "휴리스틱/VRP 대비 비용/서비스레벨 지표가 개선되는지 시뮬레이터에서 검증한다.",
+      "subtasks": []
+    },
+    {
+      "id": 12,
+      "title": "운영 모니터링 및 드리프트 감지",
+      "description": "예측/탐지 모델의 성능 추이 및 데이터 분포 변화(드리프트)를 모니터링한다.",
+      "status": "pending",
+      "dependencies": [4, 6, 8],
+      "priority": "medium",
+      "details": "PSI/KS 통계 기반 드리프트 지표를 계산하고 대시보드 또는 로그로 노출한다. 재학습 트리거 기준을 정의한다.",
+      "testStrategy": "인위적으로 분포가 변한 데이터를 넣었을 때 드리프트 경고가 발생하는지 확인한다.",
+      "subtasks": []
+    }
+  ]
+}
+

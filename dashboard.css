@@ -899,6 +899,8 @@
 .supplier-condition-col .order-supply-row {
     flex: 1;
     min-height: 3rem;
+    display: flex;
+    align-items: center;
 }
 
 .supplier-condition-col .supply-condition-toggle {
@@ -1472,10 +1474,10 @@
 }
 
 .order-item {
-    padding: 0.5rem 0.65rem;
+    padding: 0.4rem 0.55rem;
     background: var(--bg-dark);
     border-radius: 8px;
-    margin-bottom: 0.34rem;
+    margin-bottom: 0.28rem;
     border-left: 3px solid var(--h2-blue);
 }
 
@@ -1786,15 +1788,15 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
 
 /* 판매 대시보드 주문카드: 구매자 왼쪽, 일시 중앙, 상태·버튼 오른쪽 (위아래 폭 축소) */
 .order-item-supplier {
-    padding: 0.4rem 0.6rem;
+    padding: 0.3rem 0.5rem;
 }
 
 .order-item-supplier-main {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 1rem;
     flex-wrap: wrap;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.15rem;
 }
 
 .order-item-supplier-buyer {
@@ -1817,14 +1819,24 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
 .order-item-supplier-datetimes {
     flex: 1 1 auto;
     min-width: 0;
+    display: grid;
+    grid-template-rows: auto auto;
+    gap: 0.08rem;
 }
 
 .order-item-supplier-datetimes .order-datetime-with-badge {
-    margin-bottom: 0.08rem;
+    margin-bottom: 0;
 }
 
 .order-item-supplier-datetimes .order-shipment-return-row {
-    margin-bottom: 0;
+    display: flex;
+    gap: 1rem;
+    min-height: 1.1em;
+}
+
+.order-item-supplier-datetimes .shipment-datetime--empty,
+.order-item-supplier-datetimes .return-datetime--empty {
+    visibility: hidden;
 }
 
 .order-item-supplier-datetimes .order-datetime {
@@ -1841,9 +1853,10 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
 .order-item-supplier-actions {
     flex: 0 0 auto;
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
+    flex-direction: row;
+    align-items: center;
     gap: 0.35rem;
+    flex-wrap: wrap;
 }
 
 .order-item-supplier-actions .order-status {
@@ -1854,9 +1867,10 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
 
 .order-actions--supplier {
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
     gap: 0.25rem;
+    flex-wrap: wrap;
 }
 
 .order-actions--supplier .btn-small {
@@ -1871,6 +1885,7 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     gap: 0.75rem;
     font-size: 0.72rem;
     color: var(--text-muted);
+    margin-top: 0.05rem;
 }
 
 .order-item-supplier-meta .order-id {
@@ -1883,8 +1898,8 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
 }
 
 .order-item-supplier .order-item-foot {
-    margin-top: 0.2rem;
-    padding-top: 0.2rem;
+    margin-top: 0.15rem;
+    padding-top: 0.15rem;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 

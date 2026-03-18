@@ -1305,12 +1305,10 @@ function renderSupplierOrdersCards() {
                         <span class="supply-condition-badge ${supplyBadgeClass}">${supplyLabel}</span>
                         <span class="travel-time">${travelTimeText}</span>
                     </div>
-                    ${(shipmentDt || returnDt) ? `
                     <div class="order-shipment-return-row">
-                        ${shipmentDt ? `<span class="shipment-datetime">출하 ${shipmentDt}</span>` : ''}
-                        ${returnDt ? `<span class="return-datetime">회차 ${returnDt}</span>` : ''}
+                        ${shipmentDt ? `<span class="shipment-datetime">출하 ${shipmentDt}</span>` : '<span class="shipment-datetime shipment-datetime--empty"></span>'}
+                        ${returnDt ? `<span class="return-datetime">회차 ${returnDt}</span>` : '<span class="return-datetime return-datetime--empty"></span>'}
                     </div>
-                    ` : ''}
                 </div>
                 <div class="order-item-supplier-actions">
                     <span class="order-status ${status}">${supplierStatus}</span>

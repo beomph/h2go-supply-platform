@@ -45,17 +45,27 @@
     </nav>
 
     <main class="dashboard-main">
+        <div id="dashboardInsightStrip" class="dashboard-insight-strip" aria-label="현황 요약">
+            <div class="dashboard-insight-inner">
+                <div class="insight-clock-block">
+                    <span class="insight-clock-label">로컬 시각</span>
+                    <time id="dashboardClock" class="insight-clock" datetime=""></time>
+                </div>
+                <div id="dashboardStats" class="insight-stats" role="list" aria-live="polite"></div>
+            </div>
+        </div>
+
         <!-- ========== 수요자 화면 ========== -->
         <section id="consumerView" class="dashboard-view active">
-            <div class="view-header">
+            <div class="view-header view-header--hero">
                 <h1>구매 대시보드</h1>
-                <p>간편하게 주문하고 상태를 모니터링하세요. 다양한 기능이 업데이트될 예정입니다.</p>
+                <p>주문·납품 일정·재고를 한눈에 확인하고, 필요 시 AI 챗봇으로 빠르게 문의하세요.</p>
             </div>
 
             <div class="consumer-content">
                 <!-- 왼쪽: 새 주문 + 주문 현황 -->
-                <div class="consumer-left">
-                    <div class="order-form-card">
+                <div class="consumer-left consumer-order-stack--compact">
+                    <div class="order-form-card order-form-card--compact">
                         <div class="order-form-card-header">
                             <h3>새 주문</h3>
                             <button type="submit" form="orderForm" class="btn btn-primary">주문 요청</button>
@@ -148,6 +158,10 @@
                                     <button type="button" class="btn btn-tiny btn-secondary" id="ordersDateApplyBtn">조회</button>
                                 </div>
                             </div>
+                            <div class="orders-search-wrap">
+                                <label class="visually-hidden" for="consumerOrderSearch">주문 검색</label>
+                                <input type="search" id="consumerOrderSearch" class="orders-search-input" placeholder="주문번호·주소·공급자 검색" autocomplete="off" enterkeyhint="search">
+                            </div>
                         </div>
                         <div id="consumerOrdersList" class="orders-list"></div>
                     </div>
@@ -214,9 +228,9 @@
 
         <!-- ========== 공급자 화면 (생산+운송 통합) ========== -->
         <section id="supplierView" class="dashboard-view">
-            <div class="view-header">
+            <div class="view-header view-header--hero">
                 <h1>판매 대시보드</h1>
-                <p>주문 취합과 생산·운송 계획을 한 화면에서 관리하세요. 다양한 기능을 계속 업데이트 중이니 기대해주세요.</p>
+                <p>주문 취합, 생산 요약, AI 운송 제안까지 한 화면에서 운영하세요.</p>
             </div>
             
             <div class="supplier-content">
@@ -231,6 +245,10 @@
                                 <input type="date" id="supplierToDate" class="orders-date-input">
                                 <button type="button" class="btn btn-tiny btn-secondary" id="supplierDateApplyBtn">조회</button>
                             </div>
+                        </div>
+                        <div class="orders-search-wrap">
+                            <label class="visually-hidden" for="supplierOrderSearch">주문 검색</label>
+                            <input type="search" id="supplierOrderSearch" class="orders-search-input" placeholder="주문번호·주소·구매자 검색" autocomplete="off" enterkeyhint="search">
                         </div>
                     </div>
                     <div id="supplierOrdersList" class="orders-list"></div>
@@ -392,6 +410,8 @@
             <button type="button" class="btn btn-primary btn-full" id="supplierManualApplyBtn">적용</button>
         </div>
     </div>
+
+    <button type="button" id="scrollTopBtn" class="scroll-top-btn" aria-label="맨 위로">↑</button>
 
     <!-- AI 챗봇 -->
     <button id="chatbotFab" class="chatbot-fab" type="button" aria-label="AI 챗봇 열기">

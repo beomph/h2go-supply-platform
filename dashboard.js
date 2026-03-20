@@ -699,6 +699,69 @@ function showView(viewId) {
     document.querySelectorAll('.dashboard-view').forEach(v => v.classList.remove('active'));
     const el = document.getElementById((viewId || '') + 'View');
     if (el) el.classList.add('active');
+    const strip = document.getElementById('dashboardInsightStrip');
+    if (strip) strip.classList.toggle('dashboard-insight-strip--hidden', viewId === 'supplierRegistration');
+}
+
+function tickDashboardClock() {
+    const el = document.getElementById('dashboardClock');
+    if (!el) return;
+    const now = new Date();
+    try {
+        el.dateTime = now.toISOString();
+    } catch (_) {}
+    el.textContent = new Intl.DateTimeFormat('ko-KR', {
+        weekday: 'short',
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+    }).format(now);
+}
+
+function updateDashboardStats() {
+    const container = document.getElementById('dashboardStats');
+    if (!container) return;
+    const role = currentUser?.type === 'supplier' ? 'supplier' : 'consumer';
+    if (role === 'consumer') {
+        const hidden = new Set(readHiddenConsumerIds());
+        const mine = getConsumerOrders(currentUser.name).filter((o) => !hidden.has(o.id));
+        const active = mine.filter((o) => !['completed', 'cancelled'].includes(normalizeStatus(o.status)));
+        const pending = mine.filter((o) => {
+            const cr = o.changeRequest && o.changeRequest.status === 'pending';
+            const cc = o.cancelRequest && o.cancelRequest.status === 'pending';
+            return cr || cc;
+        });
+        container.innerHTML = [
+            { k: '내 주문', v: mine.length },
+            { k: '진행 중', v: active.length },
+            { k: '결재 대기', v: pending.length },
+        ]
+            .map(
+                ({ k, v }) =>
+                    `<div class="insight-stat" role="listitem"><span class="insight-stat-label">${k}</span><span class="insight-stat-value">${v}</span></div>`
+            )
+            .join('');
+    } else {
+        const hidden = new Set(readHiddenSupplierIds());
+        const mine = getAllOrders().filter((o) => !hidden.has(o.id));
+        const active = mine.filter((o) => normalizeStatus(o.status) !== 'cancelled');
+        const inTransit = mine.filter((o) =>
+            ['in_transit', 'arrived', 'collecting'].includes(normalizeStatus(o.status))
+        );
+        container.innerHTML = [
+            { k: '수주', v: mine.length },
+            { k: '진행', v: active.length },
+            { k: '운송·회수', v: inTransit.length },
+        ]
+            .map(
+                ({ k, v }) =>
+                    `<div class="insight-stat" role="listitem"><span class="insight-stat-label">${k}</span><span class="insight-stat-value">${v}</span></div>`
+            )
+            .join('');
+    }
 }
 
 function renderSupplierRegistration() {
@@ -1049,14 +1112,29 @@ function renderConsumerView() {
         return String(a.id || "").localeCompare(String(b.id || ""));
     });
 
+    const searchEl = document.getElementById('consumerOrderSearch');
+    const q = (searchEl?.value || '').trim().toLowerCase();
+    if (q) {
+        myOrders = myOrders.filter(
+            (o) =>
+                String(o.id || '').toLowerCase().includes(q) ||
+                String(o.address || '').toLowerCase().includes(q) ||
+                String(o.supplierName || '').toLowerCase().includes(q)
+        );
+    }
+
     if (myOrders.length === 0) {
         if (!allMyOrders.length) {
             list.innerHTML = '<div class="empty-state"><p>등록된 주문이 없습니다.</p><p>새 주문을 등록하세요.</p></div>';
+        } else if (q) {
+            list.innerHTML =
+                '<div class="empty-state"><p>검색 조건에 맞는 주문이 없습니다.</p><p>검색어를 바꿔 보세요.</p></div>';
         } else {
-            const label = (fromVal && toVal) ? `${fromVal} ~ ${toVal}` : '선택한 기간';
+            const label = fromVal && toVal ? `${fromVal} ~ ${toVal}` : '선택한 기간';
             list.innerHTML = `<div class="empty-state"><p>${label}에는 주문 이력이 없습니다.</p><p>다른 기간을 선택하거나 전체 보기를 이용해 보세요.</p></div>`;
         }
         renderInventoryPanel();
+        updateDashboardStats();
         return;
     }
 
@@ -1149,6 +1227,7 @@ function renderConsumerView() {
     });
 
     renderInventoryPanel();
+    updateDashboardStats();
 }
 
 function renderOrdersTable(tbodyId, showActions) {
@@ -1245,7 +1324,7 @@ function renderSupplierOrdersCards() {
     }
 
     // 납품일시 오름차순 정렬
-    const ordersForView = allOrders.slice().sort((a, b) => {
+    let ordersForView = allOrders.slice().sort((a, b) => {
         const ka = getOrderDateTimeSortKey(a);
         const kb = getOrderDateTimeSortKey(b);
         const byDateTime = ka.localeCompare(kb);
@@ -1253,8 +1332,21 @@ function renderSupplierOrdersCards() {
         return String(a.id || '').localeCompare(String(b.id || ''));
     });
 
+    const supSearchEl = document.getElementById('supplierOrderSearch');
+    const sq = (supSearchEl?.value || '').trim().toLowerCase();
+    if (sq) {
+        ordersForView = ordersForView.filter(
+            (o) =>
+                String(o.id || '').toLowerCase().includes(sq) ||
+                String(o.address || '').toLowerCase().includes(sq) ||
+                String(o.consumerName || '').toLowerCase().includes(sq)
+        );
+    }
+
     if (ordersForView.length === 0) {
-        listEl.innerHTML = '<div class="empty-state"><p>표시할 주문이 없습니다.</p><p>기간을 변경해 보세요.</p></div>';
+        listEl.innerHTML = sq
+            ? '<div class="empty-state"><p>검색 조건에 맞는 주문이 없습니다.</p><p>검색어를 바꿔 보세요.</p></div>'
+            : '<div class="empty-state"><p>표시할 주문이 없습니다.</p><p>기간을 변경해 보세요.</p></div>';
         return;
     }
 
@@ -1429,6 +1521,7 @@ function renderSupplierView() {
             `).join('');
         }
     }
+    updateDashboardStats();
 }
 
 // ========== 주문 지도 모달 ==========
@@ -2280,6 +2373,18 @@ document.getElementById('orderDateMobile')?.addEventListener('change', () => {
     document.getElementById(id)?.addEventListener('change', syncDateInputFromNumericFields);
 });
 
+let consumerSearchDebounce = null;
+document.getElementById('consumerOrderSearch')?.addEventListener('input', () => {
+    clearTimeout(consumerSearchDebounce);
+    consumerSearchDebounce = setTimeout(() => renderConsumerView(), 200);
+});
+
+let supplierSearchDebounce = null;
+document.getElementById('supplierOrderSearch')?.addEventListener('input', () => {
+    clearTimeout(supplierSearchDebounce);
+    supplierSearchDebounce = setTimeout(() => renderSupplierView(), 200);
+});
+
 // 주문 현황 - 일별 필터 이벤트(조회 버튼 클릭 시 적용)
 document.getElementById('ordersDateApplyBtn')?.addEventListener('click', () => {
     renderConsumerView();
@@ -2313,6 +2418,23 @@ toggleOrderAddressBySupplyCondition();
 renderAddressHistoryOptions();
 setSupplierName(currentUser.name);
 showView(initialRole);
+tickDashboardClock();
+setInterval(tickDashboardClock, 1000);
+
+const scrollTopBtn = document.getElementById('scrollTopBtn');
+if (scrollTopBtn) {
+    scrollTopBtn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    window.addEventListener(
+        'scroll',
+        () => {
+            scrollTopBtn.classList.toggle('is-visible', window.scrollY > 360);
+        },
+        { passive: true }
+    );
+}
+
 if (initialRole === 'consumer') renderConsumerView();
 if (initialRole === 'supplier') renderSupplierView();
 

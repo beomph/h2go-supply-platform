@@ -178,6 +178,207 @@
     margin: 0 auto;
 }
 
+/* ------------------------------------------------------------
+   상단 인사이트 스트립 (시각 + 주문 요약)
+------------------------------------------------------------ */
+.dashboard-insight-strip {
+    margin-bottom: 1.75rem;
+    padding: 1rem 1.15rem;
+    border-radius: 18px;
+    border: 1px solid var(--surface-soft-border);
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--bg-card) 88%, var(--h2-blue) 12%),
+        var(--bg-card)
+    );
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
+}
+
+.dashboard-insight-strip--hidden {
+    display: none !important;
+}
+
+.dashboard-insight-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem 1.25rem;
+}
+
+.insight-clock-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.insight-clock-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.insight-clock {
+    font-size: 1.15rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+}
+
+.insight-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    flex: 1;
+    min-width: 0;
+}
+
+.insight-stat {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 12px;
+    background: var(--surface-soft);
+    border: 1px solid var(--surface-soft-border);
+}
+
+.insight-stat-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.insight-stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--h2-blue-light);
+}
+
+.view-header--hero h1 {
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+}
+
+.view-header--hero p {
+    max-width: 42rem;
+    line-height: 1.55;
+}
+
+/* 주문 검색 (.my-orders-header 안에서는 한 줄 레이아웃용) */
+.orders-search-wrap {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    min-width: 0;
+}
+
+.orders-search-input {
+    width: 100%;
+    max-width: 100%;
+    min-height: 2.65rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-black);
+    color: var(--text-white);
+    font-family: inherit;
+    font-size: 0.88rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.orders-search-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.85;
+}
+
+.orders-search-input:focus {
+    outline: none;
+    border-color: var(--h2-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* 카드 미세 입체감 */
+.order-form-card,
+.my-orders-card,
+.inventory-card,
+.prediction-card,
+.supplier-orders-card,
+.production-plan-card,
+.transport-resources-card,
+.ai-plan-card,
+.transport-schedule-card {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+body.theme-dark .order-form-card,
+body.theme-dark .my-orders-card,
+body.theme-dark .inventory-card,
+body.theme-dark .prediction-card,
+body.theme-dark .supplier-orders-card,
+body.theme-dark .production-plan-card,
+body.theme-dark .transport-resources-card,
+body.theme-dark .ai-plan-card,
+body.theme-dark .transport-schedule-card {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* 맨 위로 */
+.scroll-top-btn {
+    position: fixed;
+    left: 1.1rem;
+    right: auto;
+    bottom: 5.5rem;
+    z-index: 1200;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--h2-blue-light);
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity 0.2s, transform 0.2s, background 0.15s;
+}
+
+.scroll-top-btn.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.scroll-top-btn:hover {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: var(--h2-blue);
+}
+
+@media (min-width: 1024px) {
+    .scroll-top-btn {
+        left: calc(var(--h2go-sidebar-w, 240px) + 1rem);
+    }
+}
+
+@media (max-width: 768px) {
+    .scroll-top-btn {
+        left: 0.85rem;
+        bottom: 5.25rem;
+        width: 42px;
+        height: 42px;
+    }
+}
+
 /* 모바일/태블릿에서는 상단 메뉴를 문서 흐름에 붙여서
    본문과 겹치지 않도록 분리 표시 (조작 영역 클릭성 개선) */
 @media (max-width: 1023px) {
@@ -794,6 +995,97 @@
     padding: 2rem;
 }
 
+/* 새 주문 카드: 공급자·납품조건 컨트롤 통일 높이 */
+.order-form-card {
+    --order-toolbar-h: 2.5rem;
+}
+
+/* 컴팩트 모드 — 여백·행 높이 축소 */
+.order-form-card--compact {
+    --order-toolbar-h: 2.3rem;
+    padding: 1.35rem 1.45rem;
+    border-radius: 14px;
+}
+
+.order-form-card--compact .order-form-card-header {
+    margin-bottom: 0.65rem;
+    padding-bottom: 0.55rem;
+    min-height: auto;
+}
+
+.order-form-card--compact .order-form-card-header .btn-primary {
+    min-height: 2.15rem;
+    height: auto;
+    padding: 0.48rem 0.95rem;
+    font-size: 0.88rem;
+}
+
+.order-form-card--compact .order-form .form-group {
+    margin-bottom: 0.85rem;
+}
+
+.order-form-card--compact .order-form .form-group label {
+    margin-bottom: 0.35rem;
+    font-size: 0.82rem;
+}
+
+.order-form-card--compact .order-datetime-main-row {
+    min-height: 2.65rem;
+    gap: 0.35rem;
+}
+
+.order-form-card--compact .order-date-block,
+.order-form-card--compact .order-time-block {
+    padding: 0.35rem 0.4rem;
+}
+
+.order-form-card--compact .order-datetime-inline-help {
+    font-size: 0.7rem;
+}
+
+@media (min-width: 901px) {
+    .order-form-card--compact .order-datetime-wrap .order-date-mobile {
+        min-height: 2.65rem;
+        padding: 0.4rem 0.65rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* 구매 영역: 새 주문 + 주문 현황 카드 동시 컴팩트 */
+.consumer-order-stack--compact .my-orders-card {
+    padding: 1.35rem 1.45rem;
+    border-radius: 14px;
+}
+
+.consumer-order-stack--compact .my-orders-card h3 {
+    margin-bottom: 1rem;
+    padding-bottom: 0.65rem;
+    font-size: 1.05rem;
+}
+
+.consumer-order-stack--compact .my-orders-header {
+    margin-bottom: 0.65rem;
+    padding-bottom: 0.55rem;
+}
+
+.consumer-order-stack--compact .orders-list {
+    max-height: min(520px, 52vh);
+}
+
+.consumer-order-stack--compact .order-item {
+    padding: 0.32rem 0.5rem;
+    margin-bottom: 0.22rem;
+    border-radius: 7px;
+}
+
+.consumer-order-stack--compact .order-item .order-datetime {
+    font-size: 1rem;
+}
+
+.consumer-order-stack--compact .order-item .order-detail {
+    font-size: 0.82rem;
+}
+
 .order-form-card-header {
     display: flex;
     justify-content: space-between;
@@ -860,7 +1152,7 @@
 .supplier-condition-row {
     display: flex;
     gap: 1rem;
-    align-items: flex-start;
+    align-items: stretch;
     flex-wrap: wrap;
 }
 
@@ -882,7 +1174,8 @@
 }
 
 .supplier-condition-col label {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.4rem;
+    flex-shrink: 0;
 }
 
 /* 새 주문: 공급자 입력 + 변경 버튼 ↔ 도착도/출하도 동일 높이(가로 정렬) */
@@ -891,23 +1184,25 @@
     display: flex;
     align-items: stretch;
     gap: 0.45rem;
-    min-height: var(--supplier-condition-control-h, 2.75rem);
+    min-height: var(--order-toolbar-h, var(--supplier-condition-control-h, 2.5rem));
 }
 
 .supplier-condition-col .supplier-select-row--order input {
     min-width: 0;
     flex: 1;
-    min-height: var(--supplier-condition-control-h, 2.75rem);
-    height: var(--supplier-condition-control-h, 2.75rem);
-    padding: 0 0.75rem;
+    min-height: var(--order-toolbar-h, var(--supplier-condition-control-h, 2.5rem));
+    height: var(--order-toolbar-h, var(--supplier-condition-control-h, 2.5rem));
+    max-height: var(--order-toolbar-h, var(--supplier-condition-control-h, 2.5rem));
+    padding: 0 0.65rem;
     box-sizing: border-box;
-    line-height: 1.25;
+    line-height: 1.2;
 }
 
 .supplier-condition-col .supplier-select-row--order #changeSupplierBtn {
     flex: 0 0 auto;
-    min-height: var(--supplier-condition-control-h, 2.75rem);
-    height: var(--supplier-condition-control-h, 2.75rem);
+    min-height: var(--order-toolbar-h, var(--supplier-condition-control-h, 2.5rem));
+    height: var(--order-toolbar-h, var(--supplier-condition-control-h, 2.5rem));
+    max-height: var(--order-toolbar-h, var(--supplier-condition-control-h, 2.5rem));
     min-width: 3.25rem;
     padding: 0 0.65rem;
     box-sizing: border-box;
@@ -915,23 +1210,30 @@
     align-items: center;
     justify-content: center;
     align-self: stretch;
+    margin-top: 0;
 }
 
 .supplier-condition-col .order-supply-row {
-    flex: 0 0 auto;
+    flex: 1;
     display: flex;
     align-items: stretch;
     gap: 0.35rem;
-    min-height: var(--supplier-condition-control-h, 2.75rem);
+    min-height: var(--order-toolbar-h, var(--supplier-condition-control-h, 2.5rem));
 }
 
 .supplier-condition-col .order-supply-row .supply-condition-toggle {
     flex: 1;
     min-width: 0;
-    min-height: var(--supplier-condition-control-h, 2.75rem);
-    height: var(--supplier-condition-control-h, 2.75rem);
+    min-height: var(--order-toolbar-h, var(--supplier-condition-control-h, 2.5rem));
+    height: var(--order-toolbar-h, var(--supplier-condition-control-h, 2.5rem));
+    max-height: var(--order-toolbar-h, var(--supplier-condition-control-h, 2.5rem));
     align-self: stretch;
     box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.15;
+    padding: 0 0.45rem;
 }
 
 .supplier-condition-col .supply-condition-toggle {
@@ -1006,12 +1308,21 @@
     box-sizing: border-box;
 }
 
+/* 새 주문 카드 밖에서는 기존 완화 규칙 유지 */
 .order-supply-row .supply-condition-toggle {
     flex: 1;
     min-width: 0;
     min-height: 2.5rem;
     height: auto;
     align-self: center;
+}
+
+/* 새 주문 폼 안: height:auto 제거 → 공급자 입력과 픽셀 단위로 맞춤 */
+.order-form-card .order-supply-row .supply-condition-toggle {
+    height: var(--order-toolbar-h, 2.5rem);
+    min-height: var(--order-toolbar-h, 2.5rem);
+    max-height: var(--order-toolbar-h, 2.5rem);
+    align-self: stretch;
 }
 
 /* 시·분 입력 셀 (숫자 시인성·조작성 확보) */
@@ -1256,22 +1567,24 @@
     }
 
     .supplier-condition-col .supplier-select-row--order {
-        min-height: 2.5rem;
+        min-height: var(--order-toolbar-h, 2.5rem);
     }
 
     .supplier-condition-col .supplier-select-row--order input,
     .supplier-condition-col .supplier-select-row--order #changeSupplierBtn {
-        min-height: 2.5rem;
-        height: 2.5rem;
+        min-height: var(--order-toolbar-h, 2.5rem);
+        height: var(--order-toolbar-h, 2.5rem);
+        max-height: var(--order-toolbar-h, 2.5rem);
     }
 
     .supplier-condition-col .order-supply-row {
-        min-height: 2.5rem;
+        min-height: var(--order-toolbar-h, 2.5rem);
     }
 
     .supplier-condition-col .order-supply-row .supply-condition-toggle {
-        min-height: 2.5rem;
-        height: 2.5rem;
+        min-height: var(--order-toolbar-h, 2.5rem);
+        height: var(--order-toolbar-h, 2.5rem);
+        max-height: var(--order-toolbar-h, 2.5rem);
     }
 
     .order-supply-row .supply-condition-toggle {
@@ -1279,6 +1592,12 @@
         padding: 0 0.4rem;
         min-height: 2.5rem;
         height: auto;
+    }
+
+    .order-form-card .order-supply-row .supply-condition-toggle {
+        height: var(--order-toolbar-h, 2.5rem);
+        min-height: var(--order-toolbar-h, 2.5rem);
+        max-height: var(--order-toolbar-h, 2.5rem);
     }
 
     .order-time-block .order-datetime-field {
@@ -1318,6 +1637,30 @@
 .order-form textarea:focus {
     outline: none;
     border-color: var(--h2-blue);
+}
+
+/* 공급자명·변경·도착도/출하도: .order-form input 패딩(0.75rem)보다 우선해 한 줄 높이 고정 */
+.order-form-card .order-form .supplier-condition-col .supplier-select-row--order input#orderSupplierName {
+    height: var(--order-toolbar-h);
+    min-height: var(--order-toolbar-h);
+    max-height: var(--order-toolbar-h);
+    padding: 0 0.65rem;
+    line-height: 1.2;
+}
+
+.order-form-card .order-form .supplier-condition-col .supplier-select-row--order #changeSupplierBtn {
+    height: var(--order-toolbar-h);
+    min-height: var(--order-toolbar-h);
+    max-height: var(--order-toolbar-h);
+    padding: 0 0.65rem;
+    margin-top: 0;
+}
+
+.order-form-card .order-form .supplier-condition-col .order-supply-row button.supply-condition-toggle {
+    height: var(--order-toolbar-h);
+    min-height: var(--order-toolbar-h);
+    max-height: var(--order-toolbar-h);
+    padding: 0 0.45rem;
 }
 
 /* 시각 입력 - 다른 입력과 동일한 디자인 */
@@ -1374,69 +1717,86 @@
     margin-top: 0.5rem;
 }
 
+/* 공급자·납품조건 행 버튼은 한 줄 정렬(상단 여백 제거) */
+.order-form .supplier-condition-row button {
+    margin-top: 0;
+}
+
 .orders-list {
     /* 한 화면에서 최소 6개 정도의 주문 카드가 보이도록 높이를 넉넉히 확보 */
     max-height: 560px;
     overflow-y: auto;
 }
 
-/* 주문 현황 헤더 + 일별 필터 */
+/* 주문 현황 헤더: 제목 | 조회기간 | 검색 한 줄(넓은 화면) */
 .my-orders-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: row;
     flex-wrap: wrap;
-    row-gap: 0.4rem;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.65rem 1rem;
     margin-bottom: 1rem;
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--border-color);
-    gap: 1rem;
 }
 
 .my-orders-header h3 {
-    flex-shrink: 0;
-}
-
-.my-orders-header h3 {
+    flex: 0 0 auto;
     margin: 0;
     padding: 0;
     border: none;
+    line-height: 1.2;
 }
 
 .orders-filter {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.45rem;
     font-size: 0.8rem;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .orders-filter label {
     color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
-/* 조회일 입력: 새 주문 날짜 선택과 동일 디자인 (화면 통일) */
+.my-orders-header .orders-search-wrap {
+    flex: 1 1 200px;
+    min-width: min(100%, 160px);
+    max-width: 340px;
+    margin-left: auto;
+}
+
+/* 조회일 입력: 검색란과 높이 맞춤 */
 .orders-filter-input-wrap {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    min-height: 3rem;
-    padding: 0.5rem;
-    border-radius: 14px;
+    gap: 0.4rem;
+    min-height: 2.65rem;
+    padding: 0.35rem 0.45rem;
+    border-radius: 12px;
     border: 1px solid var(--border-color);
     background: var(--surface-soft);
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .orders-filter-input-wrap .orders-date-input {
-    flex: 1;
+    flex: 1 1 0;
     min-width: 0;
-    min-height: 2.5rem;
-    padding: 0.5rem 0.75rem;
+    min-height: 2.05rem;
+    height: 2.05rem;
+    padding: 0.35rem 0.5rem;
     border: 1px solid var(--border-color);
     border-radius: 10px;
     background: var(--bg-card);
     color: var(--text-white);
     font-family: inherit;
-    font-size: 0.95rem;
+    font-size: 0.88rem;
     box-sizing: border-box;
 }
 
@@ -1447,34 +1807,53 @@
 
 #ordersDateApplyBtn,
 #supplierDateApplyBtn {
-    padding: 0.35rem 0.6rem;
+    padding: 0.32rem 0.55rem;
     flex-shrink: 0;
+    align-self: stretch;
+    min-height: 2.05rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (min-width: 768px) {
+    .my-orders-header {
+        flex-wrap: nowrap;
+    }
+}
+
+/* 좁은 화면: 한 줄 유지 + 가로 스크롤 */
+@media (max-width: 767px) {
+    .my-orders-header {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: visible;
+        -webkit-overflow-scrolling: touch;
+        gap: 0.5rem;
+        padding-bottom: 0.5rem;
+        scrollbar-width: thin;
+        align-items: center;
+    }
+
+    .my-orders-header .orders-filter {
+        flex: 0 0 auto;
+        min-width: min(100%, 320px);
+    }
+
+    .my-orders-header .orders-search-wrap {
+        flex: 0 0 min(220px, 72vw);
+        max-width: none;
+        margin-left: 0;
+    }
 }
 
 @media (max-width: 640px) {
-    .my-orders-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .orders-filter {
-        width: 100%;
-        max-width: 100%;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-    }
-
-    /* 모바일: 조회기간 칸이 다른 칸과 동일한 너비로 정렬되도록 */
     .orders-filter-input-wrap {
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
+        min-width: 260px;
     }
 
     .orders-filter-input-wrap .orders-date-input {
-        flex: 1 1 0;
         min-width: 0;
-        max-width: none;
     }
 }
 

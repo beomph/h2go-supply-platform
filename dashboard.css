@@ -975,7 +975,8 @@
 /* 공급 조건: 도착도·출하도 (시·분 선택란과 동일한 높이/형태) */
 .order-supply-row {
     display: flex;
-    align-items: stretch;
+    align-items: center;
+    justify-content: center;
     gap: 0.35rem;
     padding: 0.5rem;
     min-height: 3rem;
@@ -989,9 +990,9 @@
 .order-supply-row .supply-condition-toggle {
     flex: 1;
     min-width: 0;
-    min-height: 2rem;
-    height: 100%;
-    align-self: stretch;
+    min-height: 2.5rem;
+    height: auto;
+    align-self: center;
 }
 
 /* 시·분 입력 셀 (숫자 시인성·조작성 확보) */
@@ -1247,7 +1248,7 @@
         font-size: 0.68rem;
         padding: 0 0.4rem;
         min-height: 2.5rem;
-        height: 100%;
+        height: auto;
     }
 
     .order-time-block .order-datetime-field {

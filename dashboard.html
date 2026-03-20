@@ -109,13 +109,14 @@
                             </div>
                             <div class="form-group supplier-condition-row">
                                 <div class="supplier-condition-col supplier-condition-col--supplier">
-                                    <label>공급자</label>
-                                    <div class="supplier-select-row">
+                                    <label for="orderSupplierName">공급자</label>
+                                    <div class="supplier-select-row supplier-select-row--order">
                                         <input type="text" id="orderSupplierName" readonly>
                                         <button type="button" class="btn btn-secondary btn-tiny" id="changeSupplierBtn">변경</button>
                                     </div>
                                 </div>
-                                <div class="supplier-condition-col supplier-condition-col--condition" role="group" aria-label="공급조건: 도착도 또는 출하도 선택">
+                                <div class="supplier-condition-col supplier-condition-col--condition" role="group" aria-labelledby="orderSupplyConditionLabel">
+                                    <label id="orderSupplyConditionLabel">납품 조건</label>
                                     <div class="order-supply-row">
                                         <button type="button" class="supply-condition-toggle active" data-type="delivery" aria-pressed="true">도착도(하차도)</button>
                                         <button type="button" class="supply-condition-toggle" data-type="ex_factory" aria-pressed="false">출하도(상차도)</button>

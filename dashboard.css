@@ -856,11 +856,11 @@
     color: var(--text-muted);
 }
 
-/* 공급자 | 도착도·출하도 버튼 (라벨 없음, 세로는 내용 높이만) */
+/* 공급자 | 납품 조건(도착도·출하도): 한 줄 컨트롤 높이 통일 */
 .supplier-condition-row {
     display: flex;
     gap: 1rem;
-    align-items: center;
+    align-items: flex-start;
     flex-wrap: wrap;
 }
 
@@ -885,27 +885,53 @@
     margin-bottom: 0.5rem;
 }
 
-.supplier-condition-col .supplier-select-row {
+/* 새 주문: 공급자 입력 + 변경 버튼 ↔ 도착도/출하도 동일 높이(가로 정렬) */
+.supplier-condition-col .supplier-select-row--order {
     flex: 1;
     display: flex;
     align-items: stretch;
-    min-height: 3rem;
+    gap: 0.45rem;
+    min-height: var(--supplier-condition-control-h, 2.75rem);
 }
 
-.supplier-condition-col .supplier-select-row input {
+.supplier-condition-col .supplier-select-row--order input {
     min-width: 0;
+    flex: 1;
+    min-height: var(--supplier-condition-control-h, 2.75rem);
+    height: var(--supplier-condition-control-h, 2.75rem);
+    padding: 0 0.75rem;
+    box-sizing: border-box;
+    line-height: 1.25;
+}
+
+.supplier-condition-col .supplier-select-row--order #changeSupplierBtn {
+    flex: 0 0 auto;
+    min-height: var(--supplier-condition-control-h, 2.75rem);
+    height: var(--supplier-condition-control-h, 2.75rem);
+    min-width: 3.25rem;
+    padding: 0 0.65rem;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
 }
 
 .supplier-condition-col .order-supply-row {
     flex: 0 0 auto;
     display: flex;
-    align-items: center;
+    align-items: stretch;
     gap: 0.35rem;
+    min-height: var(--supplier-condition-control-h, 2.75rem);
 }
 
 .supplier-condition-col .order-supply-row .supply-condition-toggle {
-    align-self: center;
-    height: auto;
+    flex: 1;
+    min-width: 0;
+    min-height: var(--supplier-condition-control-h, 2.75rem);
+    height: var(--supplier-condition-control-h, 2.75rem);
+    align-self: stretch;
+    box-sizing: border-box;
 }
 
 .supplier-condition-col .supply-condition-toggle {
@@ -1229,8 +1255,23 @@
         min-width: 0;
     }
 
-    .supplier-condition-col .supplier-select-row {
+    .supplier-condition-col .supplier-select-row--order {
         min-height: 2.5rem;
+    }
+
+    .supplier-condition-col .supplier-select-row--order input,
+    .supplier-condition-col .supplier-select-row--order #changeSupplierBtn {
+        min-height: 2.5rem;
+        height: 2.5rem;
+    }
+
+    .supplier-condition-col .order-supply-row {
+        min-height: 2.5rem;
+    }
+
+    .supplier-condition-col .order-supply-row .supply-condition-toggle {
+        min-height: 2.5rem;
+        height: 2.5rem;
     }
 
     .order-supply-row .supply-condition-toggle {

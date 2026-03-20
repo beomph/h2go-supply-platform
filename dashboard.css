@@ -856,11 +856,11 @@
     color: var(--text-muted);
 }
 
-/* 공급자 + 공급 조건: 웹 좌우 배치(동일 높이), 모바일 위아래(동일 너비) */
+/* 공급자 | 도착도·출하도 버튼 (라벨 없음, 세로는 내용 높이만) */
 .supplier-condition-row {
     display: flex;
     gap: 1rem;
-    align-items: stretch;
+    align-items: center;
     flex-wrap: wrap;
 }
 
@@ -879,7 +879,6 @@
 .supplier-condition-col--condition {
     flex: 1 1 45%;
     min-width: 180px;
-    justify-content: center;
 }
 
 .supplier-condition-col label {
@@ -898,11 +897,10 @@
 }
 
 .supplier-condition-col .order-supply-row {
-    flex: 1;
-    min-height: 3rem;
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 0.35rem;
 }
 
 .supplier-condition-col .order-supply-row .supply-condition-toggle {
@@ -972,17 +970,12 @@
     min-width: 0;
 }
 
-/* 공급 조건: 도착도·출하도 (시·분 선택란과 동일한 높이/형태) */
+/* 도착도·출하도: 라벨·외곽 박스 없이 버튼만 가로 배치 */
 .order-supply-row {
     display: flex;
     align-items: center;
-    justify-content: center;
+    flex-wrap: wrap;
     gap: 0.35rem;
-    padding: 0.5rem;
-    min-height: 3rem;
-    border-radius: 14px;
-    border: 1px solid var(--border-color);
-    background: var(--surface-soft);
     width: 100%;
     box-sizing: border-box;
 }
@@ -1222,10 +1215,6 @@
 
     .order-date-steppers {
         display: none !important;
-    }
-
-    .order-supply-row {
-        min-height: 3rem;
     }
 
     .supplier-condition-row {

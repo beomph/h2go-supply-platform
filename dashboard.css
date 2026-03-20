@@ -879,6 +879,7 @@
 .supplier-condition-col--condition {
     flex: 1 1 45%;
     min-width: 180px;
+    justify-content: center;
 }
 
 .supplier-condition-col label {
@@ -901,6 +902,12 @@
     min-height: 3rem;
     display: flex;
     align-items: center;
+    justify-content: center;
+}
+
+.supplier-condition-col .order-supply-row .supply-condition-toggle {
+    align-self: center;
+    height: auto;
 }
 
 .supplier-condition-col .supply-condition-toggle {

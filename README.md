@@ -106,3 +106,18 @@ localStorage.setItem("h2go_supabase_anon_key", "여기에_supabase_anon_key");
 주의:
 - 비밀번호는 `auth.users`에만 저장되며, `member_profiles`에는 저장하지 않습니다.
 - 현재 대시보드 모드는 `consumer`/`supplier`만 지원합니다. `transporter` 단독 가입 시 로그인 후 `consumer` 모드로 진입합니다.
+
+### Supabase 주문 DB 연동
+
+구매자/공급자 주문 데이터는 `h2go_orders` 테이블에 저장됩니다.
+
+1. Supabase SQL Editor에서 `scripts/supabase_orders.sql` 실행
+2. 로그인 페이지에서 설정한 anon key를 그대로 사용
+3. 로그인 후 대시보드에서 주문 생성/변경/상태 변경
+
+`h2go_orders`에는 다음이 포함됩니다.
+- 수요자/공급자 사업자명 및 주소
+- 주문요청시각, 납품예정시각, 납품조건, 주문상태, 수요자 요청사항
+- 주문 변경 이력(`change_history`)
+- 공급자 운송 시작 시 T/T 번호/기사명(`inbound_tt_numbers`, `inbound_driver_name`)
+- 완료 시 직전 주문의 출고(회수) 정보 및 납품량/양측 확인자(`outbound_*`, `supplier_signer_name`, `consumer_signer_name`)

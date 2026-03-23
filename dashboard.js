@@ -6,6 +6,9 @@ const DEFAULT_ROLES = ["consumer", "supplier"];
 const USERS_KEY = "h2go_users";
 const THEME_KEY = "h2go_theme";
 const ORDER_ADDRESS_HISTORY_PREFIX = "h2go_order_address_history_v1";
+const SUPABASE_URL = "https://zbihunanzjgyceqfegka.supabase.co";
+const SUPABASE_ANON_KEY_STORAGE = "h2go_supabase_anon_key";
+const ORDERS_STORAGE_KEY = "h2go_orders";
 
 function safeJsonParse(raw, fallback) {
     try {
@@ -155,7 +158,15 @@ function getAuth() {
         (a.activeRole === "consumer" || a.activeRole === "supplier") ? a.activeRole :
         (a.role === "consumer" || a.role === "supplier") ? a.role : "consumer";
     if (!id || !name) return null;
-    return { id, name, roles: roles.length ? roles : [...DEFAULT_ROLES], activeRole, loggedInAt: a.loggedInAt || null };
+    return {
+        id,
+        name,
+        roles: roles.length ? roles : [...DEFAULT_ROLES],
+        activeRole,
+        authority: a.authority || "user",
+        supabaseUserId: a.supabaseUserId || null,
+        loggedInAt: a.loggedInAt || null,
+    };
 }
 
 function clearAuth() {
@@ -232,7 +243,7 @@ function deepClone(v) {
 }
 
 function readOrdersFromStorage() {
-    return safeJsonParse(localStorage.getItem('h2go_orders') || '[]', []);
+    return safeJsonParse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]', []);
 }
 
 let orders = readOrdersFromStorage();
@@ -240,10 +251,179 @@ let currentUser = { type: 'consumer', name: '수요자 A' };
 let pendingApprovalOrderId = null;
 let selectedSupplierName = null;
 let lastOrdersSnapshot = deepClone(orders);
+let supabaseClient = null;
+let isSupabaseOrdersEnabled = false;
+let syncOrdersTimer = null;
 const dashboardStatFilters = {
     consumer: 'all',
     supplier: 'all',
 };
+
+function getSupabaseAnonKey() {
+    const fromWindow = String(window.H2GO_SUPABASE_ANON_KEY || "").trim();
+    if (fromWindow) return fromWindow;
+    const fromStorage = String(localStorage.getItem(SUPABASE_ANON_KEY_STORAGE) || "").trim();
+    if (fromStorage) return fromStorage;
+    return "";
+}
+
+function getSupabaseClient() {
+    if (!window.supabase || typeof window.supabase.createClient !== "function") return null;
+    const anonKey = getSupabaseAnonKey();
+    if (!anonKey) return null;
+    return window.supabase.createClient(SUPABASE_URL, anonKey);
+}
+
+function toIsoDateTimeFromOrder(order) {
+    const key = getOrderDateTimeSortKey(order);
+    const t = new Date(String(key || "").replace(" ", "T"));
+    if (!Number.isFinite(t.getTime())) return null;
+    return t.toISOString();
+}
+
+function serializeOrderForSupabase(order) {
+    if (!order?.id) return null;
+    const changeHistory = Array.isArray(order.changeHistory) ? order.changeHistory : [];
+    const transportInfo = order.transportInfo && typeof order.transportInfo === "object" ? order.transportInfo : {};
+    const outboundInfo = order.outboundInfo && typeof order.outboundInfo === "object" ? order.outboundInfo : {};
+    const deliveryConfirmation = order.deliveryConfirmation && typeof order.deliveryConfirmation === "object"
+        ? order.deliveryConfirmation
+        : {};
+    const supplierAddress = getSupplierShippingAddress(order.supplierName);
+    return {
+        id: String(order.id),
+        consumer_name: String(order.consumerName || ""),
+        consumer_address: String(order.address || ""),
+        supplier_name: String(order.supplierName || ""),
+        supplier_address: String(supplierAddress || ""),
+        order_requested_at: order.createdAt || new Date().toISOString(),
+        delivery_due_at: toIsoDateTimeFromOrder(order),
+        supply_condition: order.supplyCondition === "ex_factory" ? "ex_factory" : "delivery",
+        order_status: normalizeStatus(order.status),
+        consumer_note: String(order.note || ""),
+        tube_trailers: Number(order.tubeTrailers || 1),
+        inbound_tt_numbers: Array.isArray(transportInfo.trailerNumbers) ? transportInfo.trailerNumbers : [],
+        inbound_driver_name: String(transportInfo.driverName || ""),
+        inbound_started_at: order.transportStartedAt || null,
+        outbound_tt_numbers: Array.isArray(outboundInfo.trailerNumbers) ? outboundInfo.trailerNumbers : [],
+        outbound_driver_name: String(outboundInfo.driverName || ""),
+        outbound_at: outboundInfo.outboundAt || null,
+        outbound_quantity_kg: outboundInfo.quantityKg ?? null,
+        supplier_signer_name: String(deliveryConfirmation.supplierSignerName || ""),
+        consumer_signer_name: String(deliveryConfirmation.consumerSignerName || ""),
+        change_history: changeHistory,
+        transport_info: transportInfo,
+        change_request: order.changeRequest || null,
+        cancel_request: order.cancelRequest || null,
+        last_change: order.lastChange || null,
+        last_cancel: order.lastCancel || null,
+        extra_payload: {
+            year: order.year,
+            month: order.month,
+            day: order.day,
+            time: order.time,
+            acceptedAt: order.acceptedAt || null,
+            arrivedAt: order.arrivedAt || null,
+            collectingAt: order.collectingAt || null,
+            completedAt: order.completedAt || null,
+            cancelledAt: order.cancelledAt || null,
+            returnAt: order.returnAt || null,
+            outboundInfo,
+            deliveryConfirmation,
+        },
+    };
+}
+
+function deserializeSupabaseOrder(row) {
+    const payload = (row.extra_payload && typeof row.extra_payload === "object") ? row.extra_payload : {};
+    const transportInfo = (row.transport_info && typeof row.transport_info === "object") ? row.transport_info : {};
+    const fallbackTime = String(payload.time || "00:00");
+    return {
+        id: String(row.id),
+        consumerName: String(row.consumer_name || ""),
+        supplierName: String(row.supplier_name || ""),
+        address: String(row.consumer_address || ""),
+        year: Number(payload.year || new Date(row.order_requested_at || Date.now()).getFullYear()),
+        month: Number(payload.month || (new Date(row.delivery_due_at || Date.now()).getMonth() + 1)),
+        day: Number(payload.day || new Date(row.delivery_due_at || Date.now()).getDate()),
+        time: fallbackTime,
+        tubeTrailers: Number(row.tube_trailers || 1),
+        supplyCondition: row.supply_condition === "ex_factory" ? "ex_factory" : "delivery",
+        note: String(row.consumer_note || ""),
+        status: normalizeStatus(row.order_status),
+        createdAt: row.order_requested_at || null,
+        acceptedAt: payload.acceptedAt || null,
+        arrivedAt: payload.arrivedAt || null,
+        collectingAt: payload.collectingAt || null,
+        completedAt: payload.completedAt || null,
+        cancelledAt: payload.cancelledAt || null,
+        returnAt: payload.returnAt || null,
+        changeRequest: row.change_request || null,
+        cancelRequest: row.cancel_request || null,
+        lastChange: row.last_change || null,
+        lastCancel: row.last_cancel || null,
+        transportInfo,
+        transportStartedAt: row.inbound_started_at || null,
+        changeHistory: Array.isArray(row.change_history) ? row.change_history : [],
+        outboundInfo: (payload.outboundInfo && typeof payload.outboundInfo === "object") ? payload.outboundInfo : null,
+        deliveryConfirmation: (payload.deliveryConfirmation && typeof payload.deliveryConfirmation === "object") ? payload.deliveryConfirmation : null,
+    };
+}
+
+function saveOrdersToStorage() {
+    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+    queueOrdersSyncToSupabase();
+}
+
+async function syncOrdersToSupabase() {
+    if (!isSupabaseOrdersEnabled || !supabaseClient) return;
+    const rows = orders.map(serializeOrderForSupabase).filter(Boolean);
+    if (!rows.length) return;
+    const authUserId = getAuth()?.supabaseUserId || null;
+    const payload = rows.map((r) => ({ ...r, updated_by: authUserId || r.updated_by || null, created_by: r.created_by || authUserId || null }));
+    const { error } = await supabaseClient.from("h2go_orders").upsert(payload, { onConflict: "id" });
+    if (error) {
+        console.error("[h2go] supabase order sync failed:", error.message || error);
+    }
+}
+
+function queueOrdersSyncToSupabase() {
+    if (!isSupabaseOrdersEnabled) return;
+    if (syncOrdersTimer) clearTimeout(syncOrdersTimer);
+    syncOrdersTimer = setTimeout(() => {
+        syncOrdersToSupabase().catch((err) => console.error("[h2go] sync error:", err));
+    }, 200);
+}
+
+async function loadOrdersFromSupabase() {
+    if (!supabaseClient) return;
+    const { data, error } = await supabaseClient
+        .from("h2go_orders")
+        .select("*")
+        .order("order_requested_at", { ascending: true });
+    if (error) {
+        console.warn("[h2go] failed to load orders from supabase:", error.message || error);
+        return;
+    }
+    if (!Array.isArray(data)) return;
+    orders = data.map(deserializeSupabaseOrder);
+    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+    lastOrdersSnapshot = deepClone(orders);
+}
+
+async function initializeSupabaseOrders() {
+    supabaseClient = getSupabaseClient();
+    if (!supabaseClient) return;
+    try {
+        const { data } = await supabaseClient.auth.getSession();
+        if (!data?.session) return;
+        isSupabaseOrdersEnabled = true;
+        await loadOrdersFromSupabase();
+    } catch (err) {
+        console.warn("[h2go] supabase orders initialization skipped:", err?.message || err);
+        isSupabaseOrdersEnabled = false;
+    }
+}
 
 // ========== 테마(라이트/다크) ==========
 function applyThemeClass(themeClass) {
@@ -373,7 +553,7 @@ try {
             const supplierMatch = !o?.supplierName || (o?.supplierName || "") === me;
             return !(consumerMatch || supplierMatch);
         });
-        localStorage.setItem('h2go_orders', JSON.stringify(orders));
+        saveOrdersToStorage();
         localStorage.setItem(KOGAS_PURGE_FLAG, "1");
     }
 } catch (_) {}
@@ -1822,19 +2002,103 @@ function applyChange(orderId, approved) {
 
         order.changeRequest = null;
         order.status = 'change_accepted';
+        appendOrderChangeHistory(order, "change_approved", decidedBy, {
+            requestedBy,
+            summary,
+            proposed: p,
+        });
     } else {
         order.lastChange = { result: 'rejected', summary, decidedAt, decidedBy, requestedBy };
         order.changeRequest.status = 'rejected';
         order.changeRequest.decidedAt = decidedAt;
         order.changeRequest.decidedBy = decidedBy;
         order.status = order.changeRequest.originalStatus || 'accepted';
+        appendOrderChangeHistory(order, "change_rejected", decidedBy, {
+            requestedBy,
+            summary,
+        });
     }
 
-    localStorage.setItem('h2go_orders', JSON.stringify(orders));
+    saveOrdersToStorage();
     pendingApprovalOrderId = null;
     document.getElementById('changeApprovalModal').classList.remove('active');
     renderConsumerView();
     renderSupplierView();
+}
+
+function appendOrderChangeHistory(order, eventType, actor, details = {}) {
+    if (!order) return;
+    if (!Array.isArray(order.changeHistory)) order.changeHistory = [];
+    order.changeHistory.push({
+        eventType,
+        actor,
+        details,
+        at: new Date().toISOString(),
+    });
+}
+
+function findPreviousInboundOrder(currentOrder) {
+    const currentKey = getOrderDateTimeSortKey(currentOrder);
+    return orders
+        .filter((o) => {
+            if (!o || o.id === currentOrder.id) return false;
+            if (o.consumerName !== currentOrder.consumerName) return false;
+            if (o.supplierName !== currentOrder.supplierName) return false;
+            if (!o.transportInfo?.trailerNumbers?.length) return false;
+            if (o.outboundInfo?.outboundAt) return false;
+            return getOrderDateTimeSortKey(o) < currentKey;
+        })
+        .sort((a, b) => getOrderDateTimeSortKey(b).localeCompare(getOrderDateTimeSortKey(a)))[0];
+}
+
+function handleTrailerOutboundOnCompleted(currentOrder) {
+    const previousOrder = findPreviousInboundOrder(currentOrder);
+    if (!previousOrder) return;
+    const outboundDriverName = String(currentOrder?.transportInfo?.driverName || "").trim();
+    const outboundAt = new Date().toISOString();
+    const quantityRaw = window.prompt(
+        `직전 주문(${previousOrder.id}) 출고 납품량(kg)을 입력해 주세요.`,
+        String(previousOrder.outboundInfo?.quantityKg || "")
+    );
+    if (quantityRaw === null) return;
+    const quantityKg = Number(String(quantityRaw).replace(/,/g, "").trim());
+    if (!Number.isFinite(quantityKg) || quantityKg < 0) {
+        alert("출고 납품량은 0 이상의 숫자로 입력해 주세요.");
+        return;
+    }
+    const supplierSignerName = String(
+        window.prompt("출고 확인 - 기사(공급자 측) 서명자명을 입력해 주세요.", outboundDriverName || "") || ""
+    ).trim();
+    const consumerSignerName = String(
+        window.prompt("출고 확인 - 수요자 담당자명을 입력해 주세요.", previousOrder.consumerName || "") || ""
+    ).trim();
+    if (!supplierSignerName || !consumerSignerName) {
+        alert("기사/수요자 담당자 서명자명은 모두 입력해야 합니다.");
+        return;
+    }
+
+    previousOrder.outboundInfo = {
+        trailerNumbers: Array.isArray(previousOrder.transportInfo?.trailerNumbers)
+            ? previousOrder.transportInfo.trailerNumbers
+            : [],
+        driverName: outboundDriverName,
+        quantityKg,
+        outboundAt,
+        outboundByOrderId: currentOrder.id,
+    };
+    previousOrder.deliveryConfirmation = {
+        supplierSignerName,
+        consumerSignerName,
+        confirmedAt: outboundAt,
+    };
+    appendOrderChangeHistory(previousOrder, "tt_outbound_confirmed", "system", {
+        outboundByOrderId: currentOrder.id,
+        trailerNumbers: previousOrder.outboundInfo.trailerNumbers,
+        driverName: outboundDriverName,
+        quantityKg,
+        supplierSignerName,
+        consumerSignerName,
+    });
 }
 
 // ========== 이벤트 ==========
@@ -2145,8 +2409,16 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
         status: 'requested',
         createdAt: new Date().toISOString()
     };
+    appendOrderChangeHistory(order, "created", "consumer", {
+        consumerName: order.consumerName,
+        supplierName: order.supplierName,
+        consumerAddress: order.address,
+        supplierAddress: getSupplierShippingAddress(order.supplierName),
+        supplyCondition: order.supplyCondition,
+        note: order.note || "",
+    });
     orders.push(order);
-    localStorage.setItem('h2go_orders', JSON.stringify(orders));
+    saveOrdersToStorage();
     if (supplyCondition === 'delivery') addAddressToHistory(addressValue);
     renderAddressHistoryOptions();
     document.getElementById('orderForm').reset();
@@ -2196,8 +2468,12 @@ document.getElementById('changeRequestForm')?.addEventListener('submit', (e) => 
         originalStatus: normalizeStatus(order.status),
     };
     order.status = 'change_requested';
+    appendOrderChangeHistory(order, "change_requested", requestedBy, {
+        proposed,
+        originalStatus: order.changeRequest.originalStatus,
+    });
 
-    localStorage.setItem('h2go_orders', JSON.stringify(orders));
+    saveOrdersToStorage();
     document.getElementById('changeRequestModal').classList.remove('active');
     renderConsumerView();
     renderSupplierView();
@@ -2219,7 +2495,11 @@ document.getElementById('transportStartForm').addEventListener('submit', (e) => 
     order.transportInfo = { trailerNumbers, driverName };
     order.status = 'in_transit';
     order.transportStartedAt = new Date().toISOString();
-    localStorage.setItem('h2go_orders', JSON.stringify(orders));
+    appendOrderChangeHistory(order, "transport_started", "supplier", {
+        trailerNumbers,
+        driverName,
+    });
+    saveOrdersToStorage();
     closeTransportStartModal();
     renderConsumerView();
     renderSupplierView();
@@ -2288,7 +2568,7 @@ document.addEventListener('click', (e) => {
     const order = orderId ? orders.find(o => o.id === orderId) : null;
 
     function persistAndRerender() {
-        localStorage.setItem('h2go_orders', JSON.stringify(orders));
+        saveOrdersToStorage();
         renderConsumerView();
         renderSupplierView();
         lastOrdersSnapshot = deepClone(orders);
@@ -2330,6 +2610,7 @@ document.addEventListener('click', (e) => {
         if (!confirm('변경 요청을 취소하시겠습니까?')) return;
         order.status = order.changeRequest.originalStatus || 'accepted';
         order.changeRequest = null;
+        appendOrderChangeHistory(order, "change_request_cancelled", actor, {});
         persistAndRerender();
         alert('변경 요청이 취소되었습니다.');
     } else if (action === 'request-change') {
@@ -2369,7 +2650,14 @@ document.addEventListener('click', (e) => {
         if (nextStatus === 'accepted') order.acceptedAt = nowIso;
         if (nextStatus === 'arrived') order.arrivedAt = nowIso;
         if (nextStatus === 'collecting') order.collectingAt = nowIso;
-        if (nextStatus === 'completed') order.completedAt = nowIso;
+        if (nextStatus === 'completed') {
+            order.completedAt = nowIso;
+            handleTrailerOutboundOnCompleted(order);
+        }
+        appendOrderChangeHistory(order, "status_changed", actor, {
+            to: nextStatus,
+            at: nowIso,
+        });
         persistAndRerender();
         alert(`주문 상태가 "${getStatusLabel(nextStatus)}"로 변경되었습니다.`);
     } else if (action === 'request-cancel') {
@@ -2387,18 +2675,21 @@ document.addEventListener('click', (e) => {
             order.cancelledAt = new Date().toISOString();
             order.cancelRequest = { requestedBy: 'consumer', status: 'approved', requestedAt: order.cancelledAt, decidedAt: order.cancelledAt, decidedBy: 'consumer' };
             order.lastCancel = { result: 'approved', decidedAt: order.cancelledAt, decidedBy: 'consumer' };
+            appendOrderChangeHistory(order, "cancelled_immediately", actor, {});
             persistAndRerender();
             alert('주문이 즉시 취소되었습니다.');
             return;
         }
         if (!confirm('이 주문에 대해 취소(삭제) 요청을 보내시겠습니까? 상대방 승인 후 삭제됩니다.')) return;
         requestCancel(order, actor);
+        appendOrderChangeHistory(order, "cancel_requested", actor, {});
         persistAndRerender();
         alert('취소 요청을 보냈습니다. 상대방 승인을 기다립니다.');
     } else if (action === 'approve-cancel') {
         if (!order || !order.cancelRequest || order.cancelRequest.status !== 'pending') return;
         if (!confirm('취소 요청을 승인하시겠습니까? 승인하면 주문이 취소 상태로 표시됩니다.')) return;
         decideCancel(order, true);
+        appendOrderChangeHistory(order, "cancel_approved", getActorForOrder(order), {});
         persistAndRerender();
         alert('취소 요청을 승인했습니다. 주문이 취소 상태로 표시됩니다.');
     } else if (action === 'reject-cancel') {
@@ -2407,6 +2698,7 @@ document.addEventListener('click', (e) => {
         if (reason === null) return;
         order.cancelRequest.reason = String(reason || "").trim();
         decideCancel(order, false);
+        appendOrderChangeHistory(order, "cancel_rejected", getActorForOrder(order), { reason: order.cancelRequest.reason });
         persistAndRerender();
         alert('취소 요청을 거절했습니다. 사유가 요청자에게 전달됩니다.');
     } else if (action === 'remove-cancelled-consumer') {
@@ -2510,13 +2802,17 @@ if (scrollTopBtn) {
     );
 }
 
-if (initialRole === 'consumer') renderConsumerView();
-if (initialRole === 'supplier') renderSupplierView();
+async function bootstrapOrderViews() {
+    await initializeSupabaseOrders();
+    if (initialRole === 'consumer') renderConsumerView();
+    if (initialRole === 'supplier') renderSupplierView();
+}
+bootstrapOrderViews();
 
 // 다른 탭/창에서 주문이 갱신되면 현재 화면도 즉시 반영 + 결정 알림(거절/승인)
 window.addEventListener('storage', (e) => {
     if (!e) return;
-    if (e.key !== 'h2go_orders') return;
+    if (e.key !== ORDERS_STORAGE_KEY) return;
     const prev = lastOrdersSnapshot;
     try {
         orders = readOrdersFromStorage();
@@ -2532,6 +2828,9 @@ window.addEventListener('storage', (e) => {
 // 로그아웃
 document.getElementById('logoutBtn')?.addEventListener('click', () => {
     if (!confirm("로그아웃하시겠습니까?")) return;
+    if (supabaseClient) {
+        supabaseClient.auth.signOut().catch(() => {});
+    }
     clearAuth();
     redirectToLogin();
 });
@@ -2550,7 +2849,7 @@ if (needsMigration) {
         return o;
     });
     try {
-        localStorage.setItem('h2go_orders', JSON.stringify(orders));
+        saveOrdersToStorage();
     } catch (_) {}
 }
 

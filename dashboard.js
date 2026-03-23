@@ -732,6 +732,16 @@ function setDashboardStatFilter(filterKey) {
     dashboardStatFilters[role] = current === filterKey ? 'all' : filterKey;
 }
 
+function isConsumerInProgressStatus(status) {
+    // 주문 요청부터 회수 중까지를 "진행 중"으로 간주 (완료/취소 제외)
+    return ['requested', 'accepted', 'change_requested', 'change_accepted', 'in_transit', 'arrived', 'collecting'].includes(status);
+}
+
+function isConsumerPendingApprovalStatus(status) {
+    // 결재 대기: 변경 요청/변경 접수 상태
+    return ['change_requested', 'change_accepted'].includes(status);
+}
+
 function updateDashboardStats() {
     const container = document.getElementById('dashboardStats');
     if (!container) return;
@@ -739,12 +749,8 @@ function updateDashboardStats() {
     if (role === 'consumer') {
         const hidden = new Set(readHiddenConsumerIds());
         const mine = getConsumerOrders(currentUser.name).filter((o) => !hidden.has(o.id));
-        const active = mine.filter((o) => !['completed', 'cancelled'].includes(normalizeStatus(o.status)));
-        const pending = mine.filter((o) => {
-            const cr = o.changeRequest && o.changeRequest.status === 'pending';
-            const cc = o.cancelRequest && o.cancelRequest.status === 'pending';
-            return cr || cc;
-        });
+        const active = mine.filter((o) => isConsumerInProgressStatus(normalizeStatus(o.status)));
+        const pending = mine.filter((o) => isConsumerPendingApprovalStatus(normalizeStatus(o.status)));
         const selected = dashboardStatFilters.consumer || 'all';
         const stats = [
             { key: 'all', k: '내 주문', v: mine.length },
@@ -793,17 +799,21 @@ function updateDashboardStats() {
 
 function applyConsumerDashboardStatFilter(list) {
     const selected = dashboardStatFilters.consumer || 'all';
+    const now = new Date();
     if (selected === 'active') {
-        return list.filter((o) => !['completed', 'cancelled'].includes(normalizeStatus(o.status)));
+        return list.filter((o) => isConsumerInProgressStatus(normalizeStatus(o.status)));
     }
     if (selected === 'pending') {
-        return list.filter((o) => {
-            const cr = o.changeRequest && o.changeRequest.status === 'pending';
-            const cc = o.cancelRequest && o.cancelRequest.status === 'pending';
-            return cr || cc;
-        });
+        return list.filter((o) => isConsumerPendingApprovalStatus(normalizeStatus(o.status)));
     }
-    return list;
+    // "내 주문": 현재 월에 속하는 주문 전체
+    return list.filter((o) => {
+        const key = getOrderDateTimeSortKey(o);
+        const t = new Date(key.replace(' ', 'T')).getTime();
+        if (!Number.isFinite(t)) return false;
+        const d = new Date(t);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    });
 }
 
 function applySupplierDashboardStatFilter(list) {

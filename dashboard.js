@@ -240,6 +240,10 @@ let currentUser = { type: 'consumer', name: '수요자 A' };
 let pendingApprovalOrderId = null;
 let selectedSupplierName = null;
 let lastOrdersSnapshot = deepClone(orders);
+const dashboardStatFilters = {
+    consumer: 'all',
+    supplier: 'all',
+};
 
 // ========== 테마(라이트/다크) ==========
 function applyThemeClass(themeClass) {
@@ -721,6 +725,13 @@ function tickDashboardClock() {
     }).format(now);
 }
 
+function setDashboardStatFilter(filterKey) {
+    const role = currentUser?.type === 'supplier' ? 'supplier' : 'consumer';
+    const current = dashboardStatFilters[role] || 'all';
+    // 같은 배너를 다시 누르면 전체 보기로 복귀
+    dashboardStatFilters[role] = current === filterKey ? 'all' : filterKey;
+}
+
 function updateDashboardStats() {
     const container = document.getElementById('dashboardStats');
     if (!container) return;
@@ -734,16 +745,24 @@ function updateDashboardStats() {
             const cc = o.cancelRequest && o.cancelRequest.status === 'pending';
             return cr || cc;
         });
-        container.innerHTML = [
-            { k: '내 주문', v: mine.length },
-            { k: '진행 중', v: active.length },
-            { k: '결재 대기', v: pending.length },
-        ]
+        const selected = dashboardStatFilters.consumer || 'all';
+        const stats = [
+            { key: 'all', k: '내 주문', v: mine.length },
+            { key: 'active', k: '진행 중', v: active.length },
+            { key: 'pending', k: '결재 대기', v: pending.length },
+        ];
+        container.innerHTML = stats
             .map(
-                ({ k, v }) =>
-                    `<div class="insight-stat" role="listitem"><span class="insight-stat-label">${k}</span><span class="insight-stat-value">${v}</span></div>`
+                ({ key, k, v }) =>
+                    `<button type="button" class="insight-stat insight-stat--btn ${selected === key ? 'is-active' : ''}" data-stat-filter="${key}" role="listitem"><span class="insight-stat-label">${k}</span><span class="insight-stat-value">${v}</span></button>`
             )
             .join('');
+        container.querySelectorAll('[data-stat-filter]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                setDashboardStatFilter(btn.dataset.statFilter || 'all');
+                renderConsumerView();
+            });
+        });
     } else {
         const hidden = new Set(readHiddenSupplierIds());
         const mine = getAllOrders().filter((o) => !hidden.has(o.id));
@@ -751,17 +770,51 @@ function updateDashboardStats() {
         const inTransit = mine.filter((o) =>
             ['in_transit', 'arrived', 'collecting'].includes(normalizeStatus(o.status))
         );
-        container.innerHTML = [
-            { k: '수주', v: mine.length },
-            { k: '진행', v: active.length },
-            { k: '운송·회수', v: inTransit.length },
-        ]
+        const selected = dashboardStatFilters.supplier || 'all';
+        const stats = [
+            { key: 'all', k: '수주', v: mine.length },
+            { key: 'active', k: '진행', v: active.length },
+            { key: 'transport', k: '운송·회수', v: inTransit.length },
+        ];
+        container.innerHTML = stats
             .map(
-                ({ k, v }) =>
-                    `<div class="insight-stat" role="listitem"><span class="insight-stat-label">${k}</span><span class="insight-stat-value">${v}</span></div>`
+                ({ key, k, v }) =>
+                    `<button type="button" class="insight-stat insight-stat--btn ${selected === key ? 'is-active' : ''}" data-stat-filter="${key}" role="listitem"><span class="insight-stat-label">${k}</span><span class="insight-stat-value">${v}</span></button>`
             )
             .join('');
+        container.querySelectorAll('[data-stat-filter]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                setDashboardStatFilter(btn.dataset.statFilter || 'all');
+                renderSupplierView();
+            });
+        });
     }
+}
+
+function applyConsumerDashboardStatFilter(list) {
+    const selected = dashboardStatFilters.consumer || 'all';
+    if (selected === 'active') {
+        return list.filter((o) => !['completed', 'cancelled'].includes(normalizeStatus(o.status)));
+    }
+    if (selected === 'pending') {
+        return list.filter((o) => {
+            const cr = o.changeRequest && o.changeRequest.status === 'pending';
+            const cc = o.cancelRequest && o.cancelRequest.status === 'pending';
+            return cr || cc;
+        });
+    }
+    return list;
+}
+
+function applySupplierDashboardStatFilter(list) {
+    const selected = dashboardStatFilters.supplier || 'all';
+    if (selected === 'active') {
+        return list.filter((o) => normalizeStatus(o.status) !== 'cancelled');
+    }
+    if (selected === 'transport') {
+        return list.filter((o) => ['in_transit', 'arrived', 'collecting'].includes(normalizeStatus(o.status)));
+    }
+    return list;
 }
 
 function renderSupplierRegistration() {
@@ -1122,6 +1175,7 @@ function renderConsumerView() {
                 String(o.supplierName || '').toLowerCase().includes(q)
         );
     }
+    myOrders = applyConsumerDashboardStatFilter(myOrders);
 
     if (myOrders.length === 0) {
         if (!allMyOrders.length) {
@@ -1130,8 +1184,13 @@ function renderConsumerView() {
             list.innerHTML =
                 '<div class="empty-state"><p>검색 조건에 맞는 주문이 없습니다.</p><p>검색어를 바꿔 보세요.</p></div>';
         } else {
-            const label = fromVal && toVal ? `${fromVal} ~ ${toVal}` : '선택한 기간';
-            list.innerHTML = `<div class="empty-state"><p>${label}에는 주문 이력이 없습니다.</p><p>다른 기간을 선택하거나 전체 보기를 이용해 보세요.</p></div>`;
+            const selected = dashboardStatFilters.consumer || 'all';
+            if (selected !== 'all') {
+                list.innerHTML = '<div class="empty-state"><p>선택한 상태 배너에 해당하는 주문이 없습니다.</p><p>상단 배너를 다시 눌러 전체 보기를 이용해 보세요.</p></div>';
+            } else {
+                const label = fromVal && toVal ? `${fromVal} ~ ${toVal}` : '선택한 기간';
+                list.innerHTML = `<div class="empty-state"><p>${label}에는 주문 이력이 없습니다.</p><p>다른 기간을 선택하거나 전체 보기를 이용해 보세요.</p></div>`;
+            }
         }
         renderInventoryPanel();
         updateDashboardStats();
@@ -1342,11 +1401,17 @@ function renderSupplierOrdersCards() {
                 String(o.consumerName || '').toLowerCase().includes(sq)
         );
     }
+    ordersForView = applySupplierDashboardStatFilter(ordersForView);
 
     if (ordersForView.length === 0) {
-        listEl.innerHTML = sq
-            ? '<div class="empty-state"><p>검색 조건에 맞는 주문이 없습니다.</p><p>검색어를 바꿔 보세요.</p></div>'
-            : '<div class="empty-state"><p>표시할 주문이 없습니다.</p><p>기간을 변경해 보세요.</p></div>';
+        const selected = dashboardStatFilters.supplier || 'all';
+        if (sq) {
+            listEl.innerHTML = '<div class="empty-state"><p>검색 조건에 맞는 주문이 없습니다.</p><p>검색어를 바꿔 보세요.</p></div>';
+        } else if (selected !== 'all') {
+            listEl.innerHTML = '<div class="empty-state"><p>선택한 상태 배너에 해당하는 주문이 없습니다.</p><p>상단 배너를 다시 눌러 전체 보기를 이용해 보세요.</p></div>';
+        } else {
+            listEl.innerHTML = '<div class="empty-state"><p>표시할 주문이 없습니다.</p><p>기간을 변경해 보세요.</p></div>';
+        }
         return;
     }
 

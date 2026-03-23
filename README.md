@@ -88,3 +88,21 @@ python scripts/parse_prd_openai.py --backup --num-tasks 12
 5. **배포 후**
    - Render가 `pip install -r requirements.txt`로 `openai` 패키지를 설치하고, `python openai_test_server.py`로 서버를 실행합니다.
    - 발급된 URL(예: `https://h2go-supply-platform.onrender.com`)로 접속하면 랜딩·대시보드·AI 챗봇이 같은 도메인에서 동작합니다.
+
+### Supabase 회원가입 DB 연동
+
+회원가입은 Supabase Auth + `member_profiles` 테이블로 분리 저장됩니다.
+
+1. Supabase SQL Editor에서 `scripts/supabase_member_profiles.sql` 실행
+2. Supabase 프로젝트의 **anon key** 준비
+3. 브라우저 콘솔에서 1회 설정
+
+```js
+localStorage.setItem("h2go_supabase_anon_key", "여기에_supabase_anon_key");
+```
+
+4. 로그인 페이지 새로고침 후 회원가입/로그인
+
+주의:
+- 비밀번호는 `auth.users`에만 저장되며, `member_profiles`에는 저장하지 않습니다.
+- 현재 대시보드 모드는 `consumer`/`supplier`만 지원합니다. `transporter` 단독 가입 시 로그인 후 `consumer` 모드로 진입합니다.

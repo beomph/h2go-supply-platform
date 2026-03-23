@@ -1,10 +1,11 @@
 // H2GO - 수소거래 플랫폼 스크립트
+// Auth는 Supabase를 사용하고, 앱 세션 정보는 기존 대시보드 호환을 위해 localStorage에 보관한다.
 
-// 간단 데모용 로그인/회원가입 (브라우저 localStorage 기반)
-const USERS_KEY = "h2go_users";
 const AUTH_KEY = "h2go_auth";
 const DEFAULT_ROLES = ["consumer", "supplier"];
 const THEME_KEY = "h2go_theme";
+const SUPABASE_URL = "https://zbihunanzjgyceqfegka.supabase.co";
+const SUPABASE_ANON_KEY_STORAGE = "h2go_supabase_anon_key";
 
 function safeJsonParse(raw, fallback) {
     try {
@@ -14,38 +15,12 @@ function safeJsonParse(raw, fallback) {
     }
 }
 
-function readUsers() {
-    const users = safeJsonParse(localStorage.getItem(USERS_KEY) || "[]", []);
-    return Array.isArray(users) ? users : [];
+function normalizeId(id) {
+    return String(id || "").trim().toLowerCase();
 }
 
-function normalizeUser(raw) {
-    if (!raw || typeof raw !== "object") return null;
-    const id = normalizeId(raw.id);
-    const name = String(raw.name || "").trim();
-    const password = String(raw.password || "");
-
-    // 이전 버전 호환 (role 단일 → roles 배열)
-    const roles = Array.isArray(raw.roles)
-        ? raw.roles.filter(r => r === "consumer" || r === "supplier")
-        : (raw.role === "consumer" || raw.role === "supplier") ? [raw.role] : [];
-
-    return {
-        id,
-        name,
-        password,
-        roles: roles.length ? roles : [...DEFAULT_ROLES],
-        createdAt: raw.createdAt || null,
-    };
-}
-
-function migrateUsersInPlace() {
-    const users = readUsers().map(normalizeUser).filter(Boolean);
-    writeUsers(users);
-}
-
-function writeUsers(users) {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users || []));
+function setAuth(auth) {
+    localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
 }
 
 function getAuth() {
@@ -53,27 +28,10 @@ function getAuth() {
     if (!a || typeof a !== "object") return null;
     const id = normalizeId(a.id);
     const name = String(a.name || "").trim();
-
-    const roles = Array.isArray(a.roles)
-        ? a.roles.filter(r => r === "consumer" || r === "supplier")
-        : (a.role === "consumer" || a.role === "supplier") ? [...DEFAULT_ROLES] : [...DEFAULT_ROLES];
-
-    const activeRole = (a.activeRole === "consumer" || a.activeRole === "supplier")
-        ? a.activeRole
-        : (a.role === "consumer" || a.role === "supplier") ? a.role : "consumer";
-
+    const roles = Array.isArray(a.roles) ? a.roles.filter((r) => r === "consumer" || r === "supplier") : [];
+    const activeRole = a.activeRole === "supplier" ? "supplier" : "consumer";
     if (!id || !name) return null;
-    return { id, name, roles, activeRole, loggedInAt: a.loggedInAt || null };
-}
-
-function setAuth(auth) {
-    localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
-}
-
-function clearAuth() {
-    try {
-        localStorage.removeItem(AUTH_KEY);
-    } catch (_) {}
+    return { id, name, roles: roles.length ? roles : [...DEFAULT_ROLES], activeRole, loggedInAt: a.loggedInAt || null };
 }
 
 function updateThemeToggleUI(themeClass) {
@@ -105,7 +63,6 @@ function initTheme() {
     } catch (_) {}
     const initial = stored === "theme-light" || stored === "theme-dark" ? stored : "theme-dark";
     applyThemeClass(initial);
-
     const btn = document.getElementById("themeToggle");
     if (btn) {
         btn.addEventListener("click", () => {
@@ -115,130 +72,220 @@ function initTheme() {
     }
 }
 
-function normalizeId(id) {
-    return String(id || "").trim().toLowerCase();
+function toAuthEmail(loginId) {
+    return `${normalizeId(loginId)}@h2go.local`;
 }
 
-function ensureDemoUsers() {
-    const users = readUsers().map(normalizeUser).filter(Boolean);
-
-    // 이전 데모 계정(supplier/consumer)은 완전히 제거
-    // (과거 버전에서 자동 생성되던 값 정리 목적)
-    const cleaned = users.filter(u => u.id !== "supplier" && u.id !== "consumer");
-
-    const hasKogas = cleaned.some(u => u.id === "kogas");
-    if (!hasKogas) {
-        cleaned.push({
-            id: "kogas",
-            password: "kogas123?",
-            name: "KOGAS(데모)",
-            roles: [...DEFAULT_ROLES],
-            createdAt: new Date().toISOString(),
-        });
-    }
-
-    writeUsers(cleaned);
+function getSupabaseAnonKey() {
+    const fromWindow = String(window.H2GO_SUPABASE_ANON_KEY || "").trim();
+    if (fromWindow) return fromWindow;
+    const fromStorage = String(localStorage.getItem(SUPABASE_ANON_KEY_STORAGE) || "").trim();
+    if (fromStorage) return fromStorage;
+    return "";
 }
 
-// 구버전 데이터가 있어도 roles 구조로 정리
-migrateUsersInPlace();
-ensureDemoUsers();
-initTheme();
+function getSupabaseClient() {
+    if (!window.supabase || typeof window.supabase.createClient !== "function") return null;
+    const anonKey = getSupabaseAnonKey();
+    if (!anonKey) return null;
+    return window.supabase.createClient(SUPABASE_URL, anonKey);
+}
 
-// 로그인 상태면 로그인 페이지 대신 대시보드로
-try {
-    if (getAuth()) {
-        window.location.href = "dashboard.html";
+function normalizeParticipantTypes(values) {
+    const allowed = new Set(["supplier", "transporter", "consumer"]);
+    const out = [];
+    for (const v of values || []) {
+        const s = String(v || "").trim();
+        if (!allowed.has(s)) continue;
+        if (!out.includes(s)) out.push(s);
     }
-} catch (_) {}
+    return out;
+}
 
-// 로그인/회원가입 폼 요소 (index.html 전용)
-const loginForm = document.getElementById('loginForm');
-const registerForm = document.getElementById('registerForm');
+function mapParticipantTypesToAppRoles(participantTypes) {
+    const roles = [];
+    if (participantTypes.includes("consumer")) roles.push("consumer");
+    if (participantTypes.includes("supplier")) roles.push("supplier");
+    // 현재 대시보드는 consumer/supplier 모드만 제공하므로 운송자 단독 가입 시 consumer 기본 부여
+    if (roles.length === 0) roles.push("consumer");
+    return roles;
+}
 
-const showRegisterBtn = document.getElementById("showRegisterBtn");
-const showLoginBtn = document.getElementById("showLoginBtn");
+async function loadProfileByUserId(client, userId) {
+    const { data, error } = await client
+        .from("member_profiles")
+        .select("id, business_name, participant_types, login_id, authority, username")
+        .eq("id", userId)
+        .single();
+    if (error) throw error;
+    return data;
+}
 
-// 폼 제출
 function showRegister(open) {
+    const loginForm = document.getElementById("loginForm");
+    const registerForm = document.getElementById("registerForm");
+    const showRegisterBtn = document.getElementById("showRegisterBtn");
     if (!loginForm || !registerForm) return;
     loginForm.classList.toggle("is-hidden", !!open);
     showRegisterBtn?.classList.toggle("is-hidden", !!open);
     registerForm.classList.toggle("is-hidden", !open);
 }
 
-showRegisterBtn?.addEventListener("click", () => showRegister(true));
-showLoginBtn?.addEventListener("click", () => showRegister(false));
+function normalizeBusinessNumber(input) {
+    return String(input || "").replace(/\D/g, "");
+}
 
-loginForm?.addEventListener('submit', (e) => {
+async function handleLoginSubmit(e) {
     e.preventDefault();
-    const id = normalizeId(document.getElementById('loginId')?.value);
-    const password = String(document.getElementById('loginPassword')?.value || "");
-
-    if (!id) {
-        alert("아이디를 입력해 주세요.");
-        return;
-    }
-    if (!password) {
-        alert("비밀번호를 입력해 주세요.");
+    const client = getSupabaseClient();
+    if (!client) {
+        alert("Supabase ANON KEY가 설정되지 않았습니다. localStorage의 h2go_supabase_anon_key 또는 window.H2GO_SUPABASE_ANON_KEY를 설정해 주세요.");
         return;
     }
 
-    const users = readUsers();
-    const user = users.map(normalizeUser).find(u => u && u.id === id);
-    if (!user) {
+    const loginId = normalizeId(document.getElementById("loginId")?.value);
+    const password = String(document.getElementById("loginPassword")?.value || "");
+    if (!loginId) return alert("아이디를 입력해 주세요.");
+    if (!password) return alert("비밀번호를 입력해 주세요.");
+
+    const { data: signInData, error: signInError } = await client.auth.signInWithPassword({
+        email: toAuthEmail(loginId),
+        password,
+    });
+    if (signInError || !signInData.user?.id) {
         alert("아이디 또는 비밀번호가 올바르지 않습니다.");
         return;
     }
-    if (String(user.password || "") !== password) {
-        alert("아이디 또는 비밀번호가 올바르지 않습니다.");
+
+    let profile = null;
+    try {
+        profile = await loadProfileByUserId(client, signInData.user.id);
+    } catch (_) {
+        alert("회원 프로필 정보를 불러오지 못했습니다. 관리자에게 문의해 주세요.");
         return;
     }
 
-    setAuth({ id: user.id, name: user.name, roles: user.roles, activeRole: "consumer", loggedInAt: new Date().toISOString() });
-    window.location.href = `dashboard.html`;
-});
+    const participantTypes = normalizeParticipantTypes(profile.participant_types || []);
+    const roles = mapParticipantTypesToAppRoles(participantTypes);
+    const activeRole = roles.includes("consumer") ? "consumer" : "supplier";
+    setAuth({
+        id: profile.login_id || loginId,
+        name: profile.business_name || profile.username || loginId,
+        roles,
+        activeRole,
+        authority: profile.authority || "user",
+        supabaseUserId: signInData.user.id,
+        loggedInAt: new Date().toISOString(),
+    });
+    window.location.href = "dashboard.html";
+}
 
-registerForm?.addEventListener('submit', (e) => {
+async function handleRegisterSubmit(e) {
     e.preventDefault();
-
-    const name = String(document.getElementById('registerName')?.value || "").trim();
-    const id = normalizeId(document.getElementById('registerId')?.value);
-    const password = String(document.getElementById('registerPassword')?.value || "");
-    const passwordConfirm = String(document.getElementById('registerPasswordConfirm')?.value || "");
-
-    if (!name) {
-        alert("이름/회사명을 입력해 주세요.");
-        return;
-    }
-    if (!id) {
-        alert("아이디를 입력해 주세요.");
-        return;
-    }
-    if (/\s/.test(id)) {
-        alert("아이디에는 공백을 사용할 수 없습니다.");
-        return;
-    }
-    if (!password) {
-        alert("비밀번호를 입력해 주세요.");
-        return;
-    }
-    if (password !== passwordConfirm) {
-        alert("비밀번호가 일치하지 않습니다.");
+    const client = getSupabaseClient();
+    if (!client) {
+        alert("Supabase ANON KEY가 설정되지 않았습니다. localStorage의 h2go_supabase_anon_key 또는 window.H2GO_SUPABASE_ANON_KEY를 설정해 주세요.");
         return;
     }
 
-    const users = readUsers();
-    const existing = users.map(normalizeUser).find(u => u && u.id === id);
-    if (existing) {
-        alert("이미 사용 중인 아이디입니다. 다른 아이디를 입력해 주세요.");
+    const businessName = String(document.getElementById("registerBusinessName")?.value || "").trim();
+    const businessNumber = normalizeBusinessNumber(document.getElementById("registerBusinessNumber")?.value || "");
+    const representativeName = String(document.getElementById("registerRepresentativeName")?.value || "").trim();
+    const participantTypes = normalizeParticipantTypes(
+        Array.from(document.querySelectorAll('input[name="participantTypes"]:checked')).map((el) => el.value)
+    );
+    const username = String(document.getElementById("registerUsername")?.value || "").trim();
+    const loginId = normalizeId(document.getElementById("registerId")?.value);
+    const authority = String(document.getElementById("registerAuthority")?.value || "user").trim() === "admin" ? "admin" : "user";
+    const password = String(document.getElementById("registerPassword")?.value || "");
+    const passwordConfirm = String(document.getElementById("registerPasswordConfirm")?.value || "");
+
+    if (!businessName) return alert("사업자명을 입력해 주세요.");
+    if (!businessNumber || !/^[0-9]{10}$/.test(businessNumber)) return alert("사업자번호는 숫자 10자리로 입력해 주세요.");
+    if (!representativeName) return alert("대표자명을 입력해 주세요.");
+    if (participantTypes.length === 0) return alert("공급자/운송자/수요자 중 최소 1개를 선택해 주세요.");
+    if (!username) return alert("사용자명을 입력해 주세요.");
+    if (!loginId) return alert("아이디를 입력해 주세요.");
+    if (/\s/.test(loginId)) return alert("아이디에는 공백을 사용할 수 없습니다.");
+    if (!password) return alert("비밀번호를 입력해 주세요.");
+    if (password !== passwordConfirm) return alert("비밀번호가 일치하지 않습니다.");
+
+    const email = toAuthEmail(loginId);
+    const { data: signUpData, error: signUpError } = await client.auth.signUp({ email, password });
+    if (signUpError || !signUpData.user?.id) {
+        const msg = String(signUpError?.message || "");
+        if (msg.toLowerCase().includes("already")) {
+            alert("이미 사용 중인 아이디입니다. 다른 아이디를 입력해 주세요.");
+            return;
+        }
+        alert(`회원가입에 실패했습니다: ${msg || "알 수 없는 오류"}`);
         return;
     }
 
-    const nextUsers = users.map(normalizeUser).filter(Boolean);
-    nextUsers.push({ id, password, name, roles: [...DEFAULT_ROLES], createdAt: new Date().toISOString() });
-    writeUsers(nextUsers);
-    setAuth({ id, name, roles: [...DEFAULT_ROLES], activeRole: "consumer", loggedInAt: new Date().toISOString() });
-    window.location.href = `dashboard.html`;
-});
+    const userId = signUpData.user.id;
+    const { error: profileError } = await client.from("member_profiles").insert({
+        id: userId,
+        business_name: businessName,
+        business_number: businessNumber,
+        representative_name: representativeName,
+        participant_types: participantTypes,
+        username,
+        login_id: loginId,
+        authority,
+    });
 
+    if (profileError) {
+        alert(`회원 프로필 저장에 실패했습니다: ${profileError.message || "알 수 없는 오류"}`);
+        return;
+    }
+
+    // 이메일 인증 설정 여부와 무관하게 즉시 로그인 시도
+    const { data: signInData, error: signInError } = await client.auth.signInWithPassword({ email, password });
+    if (signInError || !signInData.user?.id) {
+        alert("회원가입이 완료되었습니다. 로그인 화면에서 다시 로그인해 주세요.");
+        showRegister(false);
+        return;
+    }
+
+    const roles = mapParticipantTypesToAppRoles(participantTypes);
+    const activeRole = roles.includes("consumer") ? "consumer" : "supplier";
+    setAuth({
+        id: loginId,
+        name: businessName,
+        roles,
+        activeRole,
+        authority,
+        supabaseUserId: signInData.user.id,
+        loggedInAt: new Date().toISOString(),
+    });
+    window.location.href = "dashboard.html";
+}
+
+function wireEvents() {
+    document.getElementById("showRegisterBtn")?.addEventListener("click", () => showRegister(true));
+    document.getElementById("showLoginBtn")?.addEventListener("click", () => showRegister(false));
+    document.getElementById("loginForm")?.addEventListener("submit", (e) => {
+        handleLoginSubmit(e).catch((err) => {
+            alert(`로그인 중 오류가 발생했습니다: ${err?.message || "알 수 없는 오류"}`);
+        });
+    });
+    document.getElementById("registerForm")?.addEventListener("submit", (e) => {
+        handleRegisterSubmit(e).catch((err) => {
+            alert(`회원가입 중 오류가 발생했습니다: ${err?.message || "알 수 없는 오류"}`);
+        });
+    });
+}
+
+function init() {
+    initTheme();
+    // 로그인 상태면 로그인 페이지 대신 대시보드로 이동
+    try {
+        if (getAuth()) {
+            window.location.href = "dashboard.html";
+            return;
+        }
+    } catch (_) {}
+    wireEvents();
+}
+
+init();

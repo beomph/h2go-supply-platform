@@ -842,7 +842,48 @@ body::after {
     font-family: inherit;
 }
 
+.auth-form select {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background: var(--bg-black);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-white);
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.auth-checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+}
+
+.auth-checkbox-group label {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-black);
+    color: var(--text-white);
+    font-size: 0.86rem;
+    cursor: pointer;
+}
+
+.auth-checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
 .auth-form input:focus {
+    outline: none;
+    border-color: var(--h2-blue);
+}
+
+.auth-form select:focus {
     outline: none;
     border-color: var(--h2-blue);
 }
@@ -859,6 +900,10 @@ body::after {
 
 /* 반응형 */
 @media (max-width: 768px) {
+    .auth-checkbox-group {
+        grid-template-columns: 1fr;
+    }
+
     .nav-links {
         display: none;
         width: 100%;

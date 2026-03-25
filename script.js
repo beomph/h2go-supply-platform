@@ -2,7 +2,6 @@
 // Auth는 Supabase를 사용하고, 앱 세션 정보는 기존 대시보드 호환을 위해 localStorage에 보관한다.
 
 const AUTH_KEY = "h2go_auth";
-const DEFAULT_ROLES = ["consumer", "supplier"];
 const THEME_KEY = "h2go_theme";
 const SUPABASE_URL = "https://zbihunanzjgyceqfegka.supabase.co";
 const SUPABASE_ANON_KEY_STORAGE = "h2go_supabase_anon_key";
@@ -34,12 +33,40 @@ function normalizeBusinessParty(raw) {
     return BUSINESS_PARTIES.has(s) ? s : "consumer";
 }
 
-function rolesFromBusinessParty(party) {
-    const p = normalizeBusinessParty(party);
-    if (p === "supplier") return { roles: [...DEFAULT_ROLES], activeRole: "supplier" };
-    if (p === "consumer") return { roles: [...DEFAULT_ROLES], activeRole: "consumer" };
-    // 운송자: 대시보드는 수요/공급 화면만 제공 → 기본 수요자 화면
-    return { roles: [...DEFAULT_ROLES], activeRole: "consumer" };
+/** DB·히든필드·세션에서 사업자분류 배열 */
+function parseBusinessPartiesList(raw, legacySingle) {
+    if (Array.isArray(raw)) {
+        const out = [...new Set(raw.map((p) => normalizeBusinessParty(p)))];
+        if (out.length) return out;
+    } else if (raw != null && raw !== "") {
+        const s = String(raw).trim();
+        if (s.startsWith("[")) {
+            try {
+                return parseBusinessPartiesList(JSON.parse(s), legacySingle);
+            } catch (_) {}
+        }
+    }
+    if (legacySingle != null && legacySingle !== "") return [normalizeBusinessParty(legacySingle)];
+    return ["consumer"];
+}
+
+/**
+ * 공급자 → 판매(공급) 대시보드, 수요자 → 구매 대시보드. 둘 다 선택 시 전환 가능.
+ * 운송자만 선택 → 구매 화면만(기존과 동일).
+ */
+function rolesFromBusinessParties(parties, preferredActive) {
+    const set = new Set(parties.map((p) => normalizeBusinessParty(p)));
+    const roles = [];
+    if (set.has("supplier")) roles.push("supplier");
+    if (set.has("consumer")) roles.push("consumer");
+    if (!roles.length) {
+        if (set.has("transporter")) roles.push("consumer");
+        else roles.push("consumer");
+    }
+    let active =
+        preferredActive === "supplier" || preferredActive === "consumer" ? preferredActive : roles[0];
+    if (!roles.includes(active)) active = roles[0];
+    return { roles, activeRole: active };
 }
 
 function setAuth(auth) {
@@ -51,16 +78,17 @@ function getAuth() {
     if (!a || typeof a !== "object") return null;
     const id = normalizeId(a.id);
     const name = String(a.name || "").trim();
-    const roles = Array.isArray(a.roles) ? a.roles.filter((r) => r === "consumer" || r === "supplier") : [];
-    const activeRole = a.activeRole === "supplier" ? "supplier" : "consumer";
+    const businessParties = parseBusinessPartiesList(a.businessParties, a.businessParty);
+    const { roles, activeRole } = rolesFromBusinessParties(businessParties, a.activeRole);
     if (!id || !name) return null;
     return {
         id,
         name,
-        roles: roles.length ? roles : [...DEFAULT_ROLES],
+        roles,
         activeRole,
         authority: normalizeMemberAuthority(a.authority),
-        businessParty: normalizeBusinessParty(a.businessParty),
+        businessParties,
+        businessParty: businessParties[0] || "consumer",
         supabaseUserId: a.supabaseUserId || null,
         loggedInAt: a.loggedInAt || null,
     };
@@ -126,7 +154,7 @@ function getSupabaseClient() {
 async function loadProfileByUserId(client, userId) {
     const { data, error } = await client
         .from("member_profiles")
-        .select("id, business_name, business_number, representative_name, business_party, login_id, authority, username")
+        .select("id, business_parties, login_id, authority, username")
         .eq("id", userId)
         .single();
     if (error) throw error;
@@ -143,13 +171,9 @@ function showRegister(open) {
     registerForm.classList.toggle("is-hidden", !open);
 }
 
-function normalizeBusinessNumber(input) {
-    return String(input || "").replace(/\D/g, "");
-}
-
-function readRegisterBusinessParty() {
-    const v = String(document.getElementById("registerBusinessPartyValue")?.value || "").trim();
-    return normalizeBusinessParty(v);
+function readRegisterBusinessParties() {
+    const hidden = document.getElementById("registerBusinessPartyValue");
+    return parseBusinessPartiesList(hidden?.value || "[]", null);
 }
 
 function wireAuthorityButtons() {
@@ -173,12 +197,19 @@ function wireBusinessPartyButtons() {
     const hidden = document.getElementById("registerBusinessPartyValue");
     const buttons = document.querySelectorAll("#registerForm .business-party-btn");
     if (!hidden || !buttons.length) return;
+    if (!hidden.value || hidden.value === "") hidden.value = "[]";
     buttons.forEach((btn) => {
         btn.addEventListener("click", () => {
             const v = String(btn.getAttribute("data-party") || "").trim();
-            hidden.value = v;
+            if (!BUSINESS_PARTIES.has(v)) return;
+            const cur = new Set(readRegisterBusinessParties());
+            if (cur.has(v)) cur.delete(v);
+            else cur.add(v);
+            const arr = [...cur];
+            hidden.value = JSON.stringify(arr);
             buttons.forEach((b) => {
-                const on = b === btn;
+                const pv = String(b.getAttribute("data-party") || "").trim();
+                const on = cur.has(pv);
                 b.classList.toggle("is-selected", on);
                 b.setAttribute("aria-pressed", on ? "true" : "false");
             });
@@ -229,16 +260,17 @@ async function handleLoginSubmit(e) {
     }
 
     const authority = normalizeMemberAuthority(profile.authority);
-    const businessParty = normalizeBusinessParty(profile.business_party);
-    const { roles, activeRole } = rolesFromBusinessParty(businessParty);
+    const businessParties = parseBusinessPartiesList(profile.business_parties, null);
+    const { roles, activeRole } = rolesFromBusinessParties(businessParties, null);
 
     setAuth({
         id: profile.login_id || loginId,
-        name: profile.business_name || profile.username || loginId,
+        name: String(profile.username || loginId).trim() || loginId,
         roles,
         activeRole,
         authority,
-        businessParty,
+        businessParties,
+        businessParty: businessParties[0] || "consumer",
         supabaseUserId: signInData.user.id,
         loggedInAt: new Date().toISOString(),
     });
@@ -253,20 +285,14 @@ async function handleRegisterSubmit(e) {
         return;
     }
 
-    const businessName = String(document.getElementById("registerBusinessName")?.value || "").trim();
-    const businessNumber = normalizeBusinessNumber(document.getElementById("registerBusinessNumber")?.value || "");
-    const representativeName = String(document.getElementById("registerRepresentativeName")?.value || "").trim();
-    const businessParty = readRegisterBusinessParty();
+    const businessParties = readRegisterBusinessParties();
     const username = String(document.getElementById("registerUsername")?.value || "").trim();
     const loginId = normalizeId(document.getElementById("registerId")?.value);
     const authority = normalizeMemberAuthority(document.getElementById("registerAuthorityValue")?.value);
     const password = String(document.getElementById("registerPassword")?.value || "");
     const passwordConfirm = String(document.getElementById("registerPasswordConfirm")?.value || "");
 
-    if (!businessName) return alert("사업자명을 입력해 주세요.");
-    if (!businessNumber || !/^[0-9]{10}$/.test(businessNumber)) return alert("사업자번호는 숫자 10자리로 입력해 주세요.");
-    if (!representativeName) return alert("대표자명을 입력해 주세요.");
-    if (!businessParty) return alert("사업자분류를 선택해 주세요.");
+    if (!businessParties.length) return alert("사업자분류를 한 가지 이상 선택해 주세요.");
     if (!username) return alert("사용자명을 입력해 주세요.");
     if (!loginId) return alert("아이디를 입력해 주세요.");
     if (/\s/.test(loginId)) return alert("아이디에는 공백을 사용할 수 없습니다.");
@@ -305,10 +331,7 @@ async function handleRegisterSubmit(e) {
     const userId = signUpData.user.id;
     const { error: profileError } = await client.from("member_profiles").insert({
         id: userId,
-        business_name: businessName,
-        business_number: businessNumber,
-        representative_name: representativeName,
-        business_party: businessParty,
+        business_parties: businessParties,
         username,
         login_id: loginId,
         authority,
@@ -326,16 +349,16 @@ async function handleRegisterSubmit(e) {
         return;
     }
 
-    const { roles, activeRole } = rolesFromBusinessParty(businessParty);
+    const { roles, activeRole } = rolesFromBusinessParties(businessParties, null);
 
     setAuth({
         id: loginId,
-        name: businessName,
+        name: username,
         roles,
         activeRole,
-        representativeName,
         authority,
-        businessParty,
+        businessParties,
+        businessParty: businessParties[0] || "consumer",
         supabaseUserId: signInData.user.id,
         loggedInAt: new Date().toISOString(),
     });

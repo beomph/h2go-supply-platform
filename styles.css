@@ -831,6 +831,15 @@ body::after {
     color: var(--text-muted);
 }
 
+.auth-form .form-hint-inline {
+    display: inline;
+    margin-left: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    opacity: 0.9;
+}
+
 .auth-form input {
     width: 100%;
     padding: 0.875rem 1rem;

@@ -94,7 +94,9 @@ python scripts/parse_prd_openai.py --backup --num-tasks 12
 
 회원가입은 Supabase Auth + `member_profiles` 테이블로 분리 저장됩니다.
 
-1. Supabase SQL Editor에서 `scripts/supabase_member_profiles.sql` 실행  
+1. Supabase SQL Editor에서 스키마 적용  
+   - **신규 프로젝트:** `scripts/supabase_member_profiles.sql`  
+   - **이미 예전 테이블이 있는 경우:** `scripts/supabase_member_profiles_migrate_simplify.sql` 을 먼저 실행한 뒤, 앞으로는 갱신된 `supabase_member_profiles.sql` 내용과 동일한 구조가 됩니다.  
    (로그인 시 가입 여부 RPC가 필요하면 `scripts/supabase_login_check_rpc.sql` 도 실행)
 2. **Authentication → Providers → Email** 에서 **Confirm email(이메일 확인)** 을 **끄세요.**  
    H2GO는 `아이디@h2go.local`만 쓰므로 확인 메일이 사실상 필요 없고, 켜 두면 Supabase 기본 SMTP **시간당 발송 한도**에 걸려 `email rate limit exceeded` 가 자주 납니다. ([Auth rate limits](https://supabase.com/docs/guides/deployment/going-into-prod#auth-rate-limits))
@@ -108,8 +110,8 @@ localStorage.setItem("h2go_supabase_anon_key", "여기에_supabase_anon_key");
 5. 로그인 페이지 새로고침 후 회원가입/로그인
 
 주의:
-- 비밀번호는 `auth.users`에만 저장됩니다. `member_profiles`에는 사업자명·사업자번호·**대표자명**·**사업자분류**(공급자/운송자/수요자)·사용자명·**회원권한**(관리자/담당자/모니터링)·로그인 아이디(`login_id`)가 저장됩니다.
-- 대시보드는 사업자분류와 수요/공급 화면 전환에 맞춰 `consumer`/`supplier` 모드를 씁니다(운송자는 기본 수요자 화면).
+- 비밀번호는 `auth.users`에만 저장됩니다. `member_profiles`에는 **사업자분류** `business_parties`(공급자·운송자·수요자, **복수 선택**)·사용자명·**회원권한**·로그인 아이디(`login_id`)가 저장됩니다. (사업자명·번호·대표자명 컬럼은 제거됨—나중에 다시 추가 시 이름 충돌 없음.)
+- 대시보드: **공급자**를 포함하면 판매(공급) 화면, **수요자**를 포함하면 구매 화면을 쓸 수 있고, 둘 다 선택하면 상단에서 모드 전환. **운송자만** 선택한 경우에는 구매 화면만 사용합니다.
 
 ### Supabase 주문 DB 연동
 

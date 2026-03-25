@@ -51,21 +51,9 @@
 
             <form class="auth-form is-hidden" id="registerForm" autocomplete="off" aria-label="회원가입">
                 <div class="form-group">
-                    <label for="registerBusinessName">사업자명</label>
-                    <input type="text" id="registerBusinessName" placeholder="사업자명을 입력하세요" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerBusinessNumber">사업자번호</label>
-                    <input type="text" id="registerBusinessNumber" placeholder="숫자 10자리 (예: 1234567890)" inputmode="numeric" maxlength="12" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerRepresentativeName">대표자명</label>
-                    <input type="text" id="registerRepresentativeName" placeholder="대표자명을 입력하세요" required>
-                </div>
-                <div class="form-group">
-                    <label>사업자분류</label>
-                    <input type="hidden" id="registerBusinessPartyValue" value="" autocomplete="off">
-                    <div class="business-party-group" role="radiogroup" aria-label="사업자분류">
+                    <label>사업자분류 <span class="form-hint-inline">복수 선택 가능 · 공급자=판매, 수요자=구매</span></label>
+                    <input type="hidden" id="registerBusinessPartyValue" value="[]" autocomplete="off">
+                    <div class="business-party-group" role="group" aria-label="사업자분류">
                         <button type="button" class="business-party-btn" data-party="supplier" aria-pressed="false">공급자</button>
                         <button type="button" class="business-party-btn" data-party="transporter" aria-pressed="false">운송자</button>
                         <button type="button" class="business-party-btn" data-party="consumer" aria-pressed="false">수요자</button>

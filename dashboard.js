@@ -2,7 +2,6 @@
 
 // ========== 로그인 상태 확인 ==========
 const AUTH_KEY = "h2go_auth";
-const DEFAULT_ROLES = ["consumer", "supplier"];
 
 function normalizeMemberAuthorityDash(raw) {
     const s = String(raw || "").trim();
@@ -15,6 +14,37 @@ function normalizeBusinessPartyDash(raw) {
     const s = String(raw || "").trim();
     if (s === "supplier" || s === "transporter" || s === "consumer") return s;
     return "consumer";
+}
+
+function parseBusinessPartiesDash(raw, legacySingle) {
+    if (Array.isArray(raw) && raw.length) {
+        return [...new Set(raw.map(normalizeBusinessPartyDash))];
+    }
+    if (raw != null && raw !== "") {
+        const s = String(raw).trim();
+        if (s.startsWith("[")) {
+            try {
+                return parseBusinessPartiesDash(JSON.parse(s), legacySingle);
+            } catch (_) {}
+        }
+    }
+    if (legacySingle != null && legacySingle !== "") return [normalizeBusinessPartyDash(legacySingle)];
+    return ["consumer"];
+}
+
+function rolesFromBusinessPartiesDash(parties, preferredActive) {
+    const set = new Set(parties.map(normalizeBusinessPartyDash));
+    const roles = [];
+    if (set.has("supplier")) roles.push("supplier");
+    if (set.has("consumer")) roles.push("consumer");
+    if (!roles.length) {
+        if (set.has("transporter")) roles.push("consumer");
+        else roles.push("consumer");
+    }
+    let active =
+        preferredActive === "supplier" || preferredActive === "consumer" ? preferredActive : roles[0];
+    if (!roles.includes(active)) active = roles[0];
+    return { roles, activeRole: active };
 }
 const USERS_KEY = "h2go_users";
 const THEME_KEY = "h2go_theme";
@@ -164,20 +194,17 @@ function getAuth() {
     if (!a || typeof a !== "object") return null;
     const id = String(a.id || "").trim().toLowerCase();
     const name = String(a.name || "").trim();
-    const roles = Array.isArray(a.roles)
-        ? a.roles.filter(r => r === "consumer" || r === "supplier")
-        : (a.role === "consumer" || a.role === "supplier") ? [...DEFAULT_ROLES] : [...DEFAULT_ROLES];
-    const activeRole =
-        (a.activeRole === "consumer" || a.activeRole === "supplier") ? a.activeRole :
-        (a.role === "consumer" || a.role === "supplier") ? a.role : "consumer";
+    const businessParties = parseBusinessPartiesDash(a.businessParties, a.businessParty);
+    const { roles, activeRole } = rolesFromBusinessPartiesDash(businessParties, a.activeRole);
     if (!id || !name) return null;
     return {
         id,
         name,
-        roles: roles.length ? roles : [...DEFAULT_ROLES],
+        roles,
         activeRole,
         authority: normalizeMemberAuthorityDash(a.authority),
-        businessParty: normalizeBusinessPartyDash(a.businessParty),
+        businessParties,
+        businessParty: businessParties[0] || "consumer",
         supabaseUserId: a.supabaseUserId || null,
         loggedInAt: a.loggedInAt || null,
     };
@@ -553,7 +580,8 @@ if (!auth) {
     redirectToLogin();
 }
 if (auth) {
-    const initialRole = hintedRole || auth.activeRole || "consumer";
+    let initialRole = hintedRole || auth.activeRole || "consumer";
+    if (!auth.roles.includes(initialRole)) initialRole = auth.roles[0] || "consumer";
     currentUser = { type: initialRole, name: auth.name };
 }
 
@@ -2339,14 +2367,19 @@ document.getElementById("supplierManualApplyBtn")?.addEventListener("click", () 
 });
 
 document.getElementById('roleSelect').addEventListener('change', (e) => {
-    if (e.target.disabled) return;
-    const role = e.target.value;
+    const sel = e.target;
+    const role = sel.value;
+    const allowed = auth?.roles || ["consumer", "supplier"];
+    if (!allowed.includes(role)) {
+        sel.value = allowed[0] || "consumer";
+        return;
+    }
     currentUser.type = role;
     if (auth?.name) currentUser.name = auth.name;
     const bizEl = document.getElementById('bizName');
     if (bizEl) bizEl.textContent = currentUser.name;
     try {
-        const nextAuth = { ...auth, activeRole: role };
+        const nextAuth = { ...auth, activeRole: role, businessParties: auth.businessParties };
         localStorage.setItem(AUTH_KEY, JSON.stringify(nextAuth));
     } catch (_) {}
     showView(role);
@@ -2781,10 +2814,22 @@ const initialRole = (currentUser.type === 'supplier' || currentUser.type === 'co
 const bizEl = document.getElementById('bizName');
 if (bizEl) bizEl.textContent = currentUser.name;
 const roleSelectEl = document.getElementById('roleSelect');
-if (roleSelectEl) {
-    roleSelectEl.value = initialRole;
+if (roleSelectEl && auth) {
+    const allowed = auth.roles;
+    const consumerOpt = roleSelectEl.querySelector('option[value="consumer"]');
+    const supplierOpt = roleSelectEl.querySelector('option[value="supplier"]');
+    if (consumerOpt) consumerOpt.disabled = !allowed.includes('consumer');
+    if (supplierOpt) supplierOpt.disabled = !allowed.includes('supplier');
+    roleSelectEl.value = allowed.includes(initialRole) ? initialRole : (allowed[0] || 'consumer');
+    currentUser.type = roleSelectEl.value;
     roleSelectEl.disabled = false;
-    roleSelectEl.title = "구매/판매 모드를 전환할 수 있습니다.";
+    if (allowed.length === 1) {
+        roleSelectEl.title = allowed.includes('supplier')
+            ? '사업자분류에 따라 판매 대시보드만 이용할 수 있습니다.'
+            : '사업자분류에 따라 구매 대시보드만 이용할 수 있습니다.';
+    } else {
+        roleSelectEl.title = '구매·판매 대시보드를 전환할 수 있습니다.';
+    }
 }
 
 initTheme();
@@ -2798,7 +2843,7 @@ initSupplyConditionToggles();
 toggleOrderAddressBySupplyCondition();
 renderAddressHistoryOptions();
 setSupplierName(currentUser.name);
-showView(initialRole);
+showView(currentUser.type);
 tickDashboardClock();
 setInterval(tickDashboardClock, 1000);
 
@@ -2818,8 +2863,9 @@ if (scrollTopBtn) {
 
 async function bootstrapOrderViews() {
     await initializeSupabaseOrders();
-    if (initialRole === 'consumer') renderConsumerView();
-    if (initialRole === 'supplier') renderSupplierView();
+    const r = currentUser.type;
+    if (r === 'consumer') renderConsumerView();
+    if (r === 'supplier') renderSupplierView();
 }
 bootstrapOrderViews();
 

@@ -1,5 +1,6 @@
 -- H2GO 회원가입 DB 스키마 (Supabase SQL Editor에서 실행)
--- 비밀번호는 auth.users 에만 저장. 프로필: 사업자정보, 대표자명, 사업자분류, 사용자명, 회원권한, 로그인 아이디.
+-- 비밀번호는 auth.users 에만 저장. 프로필: 사업자분류(복수), 사용자명, 회원권한, 로그인 아이디.
+-- 기존 DB가 이미 있는 경우: 먼저 supabase_member_profiles_migrate_simplify.sql 실행.
 
 do $$
 begin
@@ -31,16 +32,13 @@ $$;
 
 create table if not exists public.member_profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  business_name text not null,
-  business_number varchar(10) not null unique,
-  representative_name text not null,
-  business_party public.business_party not null,
+  business_parties public.business_party[] not null default array['consumer']::public.business_party[],
   username text not null,
   login_id text not null unique,
   authority public.member_authority not null default 'manager',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint business_number_format check (business_number ~ '^[0-9]{10}$')
+  constraint member_profiles_business_parties_nonempty check (cardinality(business_parties) >= 1)
 );
 
 drop trigger if exists trg_member_profiles_updated_at on public.member_profiles;

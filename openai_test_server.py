@@ -145,10 +145,19 @@ def _h2go_supabase_anon_key() -> str:
     return (os.getenv("H2GO_SUPABASE_ANON_KEY") or os.getenv("SUPABASE_ANON_KEY") or "").strip()
 
 
+def _h2go_supabase_project_url() -> str:
+    """Supabase 프로젝트 URL (https://xxxx.supabase.co). 비우면 클라이언트가 내장 기본값 사용."""
+    return (os.getenv("H2GO_SUPABASE_URL") or os.getenv("SUPABASE_URL") or "").strip()
+
+
 def _h2go_config_js_bytes() -> bytes:
     key = _h2go_supabase_anon_key()
-    line = "window.H2GO_SUPABASE_ANON_KEY = " + json.dumps(key) + ";\n"
-    return line.encode("utf-8")
+    url = _h2go_supabase_project_url()
+    lines = [
+        "window.H2GO_SUPABASE_ANON_KEY = " + json.dumps(key) + ";\n",
+        "window.H2GO_SUPABASE_URL = " + json.dumps(url) + ";\n",
+    ]
+    return "".join(lines).encode("utf-8")
 
 
 def _send_h2go_config_js(handler: BaseHTTPRequestHandler) -> None:

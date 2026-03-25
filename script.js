@@ -1,10 +1,18 @@
 // H2GO - 수소거래 플랫폼 스크립트
 // Auth는 Supabase를 사용하고, 앱 세션 정보는 기존 대시보드 호환을 위해 localStorage에 보관한다.
+// 회원가입 경로는 이 파일의 signUp 한 곳뿐이며, 별도 이메일 가입 서버는 없습니다. (URL·키는 /h2go-config.js 가 우선)
 
 const AUTH_KEY = "h2go_auth";
 const THEME_KEY = "h2go_theme";
-const SUPABASE_URL = "https://zbihunanzjgyceqfegka.supabase.co";
+/** /h2go-config.js 에 H2GO_SUPABASE_URL 이 없을 때만 사용 */
+const DEFAULT_SUPABASE_URL = "https://zbihunanzjgyceqfegka.supabase.co";
 const SUPABASE_ANON_KEY_STORAGE = "h2go_supabase_anon_key";
+
+function getSupabaseUrl() {
+    const fromWindow = String(window.H2GO_SUPABASE_URL || "").trim();
+    if (fromWindow) return fromWindow;
+    return DEFAULT_SUPABASE_URL;
+}
 
 const MEMBER_AUTHORITIES = new Set(["admin", "manager", "monitoring"]);
 const BUSINESS_PARTIES = new Set(["supplier", "transporter", "consumer"]);
@@ -148,13 +156,13 @@ function getSupabaseClient() {
     if (!window.supabase || typeof window.supabase.createClient !== "function") return null;
     const anonKey = getSupabaseAnonKey();
     if (!anonKey) return null;
-    return window.supabase.createClient(SUPABASE_URL, anonKey);
+    return window.supabase.createClient(getSupabaseUrl(), anonKey);
 }
 
 /** Supabase URL에서 project ref로 Providers(Email) 설정 페이지 링크 */
 function getSupabaseAuthProvidersDashboardUrl() {
     try {
-        const host = new URL(SUPABASE_URL).hostname;
+        const host = new URL(getSupabaseUrl()).hostname;
         const ref = host.replace(/\.supabase\.co$/i, "");
         if (!ref || ref === host) return "https://supabase.com/dashboard";
         return `https://supabase.com/dashboard/project/${ref}/auth/providers`;
@@ -345,13 +353,27 @@ async function handleRegisterSubmit(e) {
         if (lc.includes("signups are disabled") || lc.includes("signup disabled")) {
             const dash = getSupabaseAuthProvidersDashboardUrl();
             alert(
-                "Supabase에서 이메일 회원가입이 꺼져 있습니다.\n\n" +
-                    "① 브라우저에서 아래 주소로 이동해 로그인한 뒤,\n" +
-                    "   Sign In / Providers → Email(펼침) → Allow new users to sign up 을 켜 주세요.\n" +
+                "H2GO는 Supabase「이메일+비밀번호」가입 한 가지뿐입니다. 다른 이메일 가입 서버와 겹치지 않습니다.\n\n" +
+                    "지금 오류는 보통 **새 사용자 가입 전체**를 끈 상태입니다.\n" +
+                    "(**이메일 확인(Confirm email)만** 끈 것과 다릅니다 — 가입 자체는 **켜 두어야** 합니다.)\n\n" +
+                    "① " +
                     dash +
-                    "\n\n" +
-                    "② 또는 PC에서 SUPABASE_ACCESS_TOKEN 을 설정한 뒤\n" +
-                    "   scripts/supabase_mailer_autoconfirm.ps1 를 실행해 disable_signup 해제를 적용할 수 있습니다."
+                    "\n   → Email(펼침) → **Allow new users to sign up** 켜기, Email 제공자도 켜져 있는지 확인\n\n" +
+                    "② PAT로 scripts/supabase_mailer_autoconfirm.ps1 실행 시\n" +
+                    "   external_email + 가입 허용 + 자동확인을 한 번에 맞출 수 있습니다."
+            );
+            return;
+        }
+        if (
+            lc.includes("email provider") ||
+            lc.includes("email signups not allowed") ||
+            (lc.includes("signup") && lc.includes("not allowed"))
+        ) {
+            alert(
+                "Supabase Email 인증이 꺼져 있거나 가입 정책과 맞지 않습니다.\n\n" +
+                    "Sign In / Providers → Email 에서 제공자를 켜고,\n" +
+                    "Allow new users to sign up 이 켜져 있는지 확인해 주세요.\n\n" +
+                    getSupabaseAuthProvidersDashboardUrl()
             );
             return;
         }

@@ -94,6 +94,10 @@ python scripts/parse_prd_openai.py --backup --num-tasks 12
 
 회원가입은 Supabase Auth + `member_profiles` 테이블로 분리 저장됩니다.
 
+**인증 경로·충돌:** 외부 네이버 메일 등 **별도 이메일 가입 API는 없고**, 프론트는 `auth.signUp(email, password)` **한 종류**만 호출합니다.  
+Supabase에서 **이메일 확인(Confirm email)만** 끄는 것과, **새 사용자 가입(Allow new users) / Email 제공자**까지 끄는 것은 다릅니다. 후자를 끄면 앱과 충돌해 가입이 실패합니다.  
+프로젝트 URL·anon key는 **`/h2go-config.js`**(Render 환경 변수 `H2GO_SUPABASE_URL`, `H2GO_SUPABASE_ANON_KEY`)로 맞추고, 코드 내 기본 URL과 **같은 프로젝트**여야 합니다.
+
 1. Supabase SQL Editor에서 스키마 적용  
    - **신규 프로젝트:** `scripts/supabase_member_profiles.sql`  
    - **이미 예전 테이블이 있는 경우:** `scripts/supabase_member_profiles_migrate_simplify.sql` 을 먼저 실행한 뒤, 앞으로는 갱신된 `supabase_member_profiles.sql` 내용과 동일한 구조가 됩니다.  
@@ -104,8 +108,8 @@ python scripts/parse_prd_openai.py --backup --num-tasks 12
    - **Confirm email** / **Enable email confirmations** 는 H2GO용으로 **끄는 것**을 권장합니다(가상 메일·SMTP 한도).  
    - **API 한 번에 적용:** [Access Token](https://supabase.com/dashboard/account/tokens) 후  
      `.\scripts\supabase_mailer_autoconfirm.ps1 -ProjectRef "본인프로젝트ref"`  
-     → `disable_signup: false` + `mailer_autoconfirm: true` ([Auth rate limits](https://supabase.com/docs/guides/deployment/going-into-prod#auth-rate-limits) 참고)
-3. Supabase 프로젝트의 **anon key** 준비
+     → `external_email_enabled: true` + `disable_signup: false` + `mailer_autoconfirm: true` ([Auth rate limits](https://supabase.com/docs/guides/deployment/going-into-prod#auth-rate-limits) 참고)
+3. Supabase 프로젝트 **URL**(`https://xxxx.supabase.co`)과 **anon key** 준비 → Render에 `H2GO_SUPABASE_URL`, `H2GO_SUPABASE_ANON_KEY`(로컬은 `.env` → `openai_test_server`가 `/h2go-config.js`에 주입)
 4. 브라우저 콘솔에서 1회 설정
 
 ```js

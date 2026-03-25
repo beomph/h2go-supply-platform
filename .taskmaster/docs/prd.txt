@@ -26,7 +26,7 @@
 - 로그인 시 `check_login_id_registered` RPC로 `member_profiles.login_id` 가입 여부를 먼저 확인한다.
 - 미가입 아이디면 Supabase Auth를 호출하지 않고 “가입되지 않은 아이디” 안내 후 종료한다.
 - 가입된 아이디만 `signInWithPassword`로 비밀번호를 검증하며, 실패 시 비밀번호 오류만 안내한다.
-- Supabase Auth: **Email 가입 허용**(Allow new users to sign up) 켜기. 꺼 있으면 `Email signups are disabled`. Confirm email은 끄고, `scripts/supabase_mailer_autoconfirm.ps1` 로 `disable_signup`+`mailer_autoconfirm` 동시 설정 가능.
+- Supabase Auth: 앱은 `signUp` 한 경로만 사용. Email 제공자+Allow new users 켜기(끄면 충돌). Confirm email은 끄기 권장. `supabase_mailer_autoconfirm.ps1`는 external_email+disable_signup+mailer_autoconfirm 정렬. URL/anon은 `/h2go-config.js`(H2GO_SUPABASE_*).
 - `member_profiles`: `business_parties[]`(공급자·운송자·수요자 복수), `username`, `authority`, `login_id`. 공급자→판매 대시보드, 수요자→구매, 둘 다면 전환 가능. 운송자만→구매만.
 
 ================================================================================

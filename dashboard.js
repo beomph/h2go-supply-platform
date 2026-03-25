@@ -49,9 +49,15 @@ function rolesFromBusinessPartiesDash(parties, preferredActive) {
 const USERS_KEY = "h2go_users";
 const THEME_KEY = "h2go_theme";
 const ORDER_ADDRESS_HISTORY_PREFIX = "h2go_order_address_history_v1";
-const SUPABASE_URL = "https://zbihunanzjgyceqfegka.supabase.co";
+const DEFAULT_SUPABASE_URL = "https://zbihunanzjgyceqfegka.supabase.co";
 const SUPABASE_ANON_KEY_STORAGE = "h2go_supabase_anon_key";
 const ORDERS_STORAGE_KEY = "h2go_orders";
+
+function getSupabaseUrl() {
+    const fromWindow = String(window.H2GO_SUPABASE_URL || "").trim();
+    if (fromWindow) return fromWindow;
+    return DEFAULT_SUPABASE_URL;
+}
 
 function safeJsonParse(raw, fallback) {
     try {
@@ -312,7 +318,7 @@ function getSupabaseClient() {
     if (!window.supabase || typeof window.supabase.createClient !== "function") return null;
     const anonKey = getSupabaseAnonKey();
     if (!anonKey) return null;
-    return window.supabase.createClient(SUPABASE_URL, anonKey);
+    return window.supabase.createClient(getSupabaseUrl(), anonKey);
 }
 
 function toIsoDateTimeFromOrder(order) {

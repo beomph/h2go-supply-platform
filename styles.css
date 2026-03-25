@@ -878,6 +878,46 @@ body::after {
     margin: 0;
 }
 
+/* 회원가입 — 사업자분류 (라디오 없이 텍스트만, 중앙 정렬) */
+.business-party-group {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+}
+
+.business-party-btn {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 2.75rem;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-black);
+    color: var(--text-white);
+    font-size: 0.86rem;
+    font-family: inherit;
+    cursor: pointer;
+    line-height: 1.35;
+}
+
+.business-party-btn:hover {
+    border-color: var(--h2-blue);
+}
+
+.business-party-btn.is-selected {
+    border-color: var(--h2-blue);
+    background: rgba(26, 118, 210, 0.12);
+    box-shadow: 0 0 0 1px var(--h2-blue);
+}
+
+.business-party-btn:focus-visible {
+    outline: 2px solid var(--h2-blue);
+    outline-offset: 2px;
+}
+
 .auth-form input:focus {
     outline: none;
     border-color: var(--h2-blue);
@@ -901,6 +941,10 @@ body::after {
 /* 반응형 */
 @media (max-width: 768px) {
     .auth-checkbox-group {
+        grid-template-columns: 1fr;
+    }
+
+    .business-party-group {
         grid-template-columns: 1fr;
     }
 

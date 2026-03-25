@@ -148,8 +148,25 @@ function normalizeBusinessNumber(input) {
 }
 
 function readRegisterBusinessParty() {
-    const el = document.querySelector('input[name="registerBusinessParty"]:checked');
-    return el ? normalizeBusinessParty(el.value) : "";
+    const v = String(document.getElementById("registerBusinessPartyValue")?.value || "").trim();
+    return normalizeBusinessParty(v);
+}
+
+function wireBusinessPartyButtons() {
+    const hidden = document.getElementById("registerBusinessPartyValue");
+    const buttons = document.querySelectorAll("#registerForm .business-party-btn");
+    if (!hidden || !buttons.length) return;
+    buttons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const v = String(btn.getAttribute("data-party") || "").trim();
+            hidden.value = v;
+            buttons.forEach((b) => {
+                const on = b === btn;
+                b.classList.toggle("is-selected", on);
+                b.setAttribute("aria-pressed", on ? "true" : "false");
+            });
+        });
+    });
 }
 
 async function handleLoginSubmit(e) {
@@ -304,6 +321,7 @@ function wireEvents() {
             alert(`회원가입 중 오류가 발생했습니다: ${err?.message || "알 수 없는 오류"}`);
         });
     });
+    wireBusinessPartyButtons();
 }
 
 function init() {

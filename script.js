@@ -41,6 +41,26 @@ function normalizeBusinessParty(raw) {
     return BUSINESS_PARTIES.has(s) ? s : "consumer";
 }
 
+/** 회원가입 폼 히든 JSON 전용: 빈 배열은 그대로 둠(수요자 자동 추가 없음) */
+function parseRegisterBusinessPartiesOnly(raw) {
+    const norm = (p) => {
+        const s = String(p ?? "").trim();
+        return BUSINESS_PARTIES.has(s) ? s : null;
+    };
+    if (Array.isArray(raw)) {
+        return [...new Set(raw.map(norm).filter(Boolean))];
+    }
+    if (raw != null && raw !== "") {
+        const s = String(raw).trim();
+        if (s.startsWith("[")) {
+            try {
+                return parseRegisterBusinessPartiesOnly(JSON.parse(s));
+            } catch (_) {}
+        }
+    }
+    return [];
+}
+
 /** DB·히든필드·세션에서 사업자분류 배열 */
 function parseBusinessPartiesList(raw, legacySingle) {
     if (Array.isArray(raw)) {
@@ -174,7 +194,7 @@ function getSupabaseAuthProvidersDashboardUrl() {
 async function loadProfileByUserId(client, userId) {
     const { data, error } = await client
         .from("member_profiles")
-        .select("id, business_parties, login_id, authority, username")
+        .select("id, business_parties, login_id, authority, username, approval_status, contact_email, contact_phone")
         .eq("id", userId)
         .single();
     if (error) throw error;
@@ -198,6 +218,10 @@ function showRegister(open) {
             loginSection.setAttribute("aria-hidden", "true");
             registerSection.setAttribute("aria-hidden", "false");
             window.setTimeout(() => document.getElementById("registerUsername")?.focus(), AUTH_VIEW_TRANSITION_MS);
+            const partyHidden = document.getElementById("registerBusinessPartyValue");
+            if (partyHidden) partyHidden.value = "[]";
+            syncRegisterBusinessPartyButtonUI();
+            resetRegisterVerificationUi();
         } else {
             registerSection.classList.remove("auth-section--active");
             loginSection.classList.add("auth-section--active");
@@ -215,7 +239,178 @@ function showRegister(open) {
 
 function readRegisterBusinessParties() {
     const hidden = document.getElementById("registerBusinessPartyValue");
-    return parseBusinessPartiesList(hidden?.value || "[]", null);
+    return parseRegisterBusinessPartiesOnly(hidden?.value || "[]");
+}
+
+function syncRegisterBusinessPartyButtonUI() {
+    const hidden = document.getElementById("registerBusinessPartyValue");
+    const buttons = document.querySelectorAll("#registerForm .business-party-btn");
+    if (!hidden || !buttons.length) return;
+    const cur = new Set(readRegisterBusinessParties());
+    buttons.forEach((b) => {
+        const pv = String(b.getAttribute("data-party") || "").trim();
+        const on = cur.has(pv);
+        b.classList.toggle("is-selected", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+}
+
+function getEdgeFunctionUrl(slug) {
+    const base = getSupabaseUrl().replace(/\/+$/, "");
+    return `${base}/functions/v1/${slug}`;
+}
+
+function normalizeRegisterPhoneDigits(v) {
+    return String(v || "").replace(/\D/g, "");
+}
+
+function getRegisterVerificationChannel() {
+    const h = document.getElementById("registerVerificationChannel");
+    const v = String(h?.value || "email").toLowerCase();
+    return v === "phone" ? "phone" : "email";
+}
+
+function resetRegisterVerificationUi() {
+    window.__h2goRegVerified = { channel: null, destination: "" };
+    const code = document.getElementById("registerOtpCode");
+    const status = document.getElementById("registerOtpStatus");
+    if (code) code.value = "";
+    if (status) status.textContent = "";
+}
+
+function wireRegisterVerificationChannel() {
+    const hidden = document.getElementById("registerVerificationChannel");
+    const buttons = document.querySelectorAll("#registerForm .verify-channel-btn");
+    const emailGroup = document.getElementById("registerEmailOtpGroup");
+    const phoneGroup = document.getElementById("registerPhoneOtpGroup");
+    if (!hidden || !buttons.length) return;
+
+    const applyChannel = (ch) => {
+        hidden.value = ch;
+        buttons.forEach((b) => {
+            const on = String(b.getAttribute("data-channel") || "") === ch;
+            b.classList.toggle("is-selected", on);
+            b.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+        if (emailGroup) emailGroup.classList.toggle("is-hidden", ch !== "email");
+        if (phoneGroup) phoneGroup.classList.toggle("is-hidden", ch !== "phone");
+        resetRegisterVerificationUi();
+    };
+
+    buttons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const ch = String(btn.getAttribute("data-channel") || "email");
+            applyChannel(ch === "phone" ? "phone" : "email");
+        });
+    });
+    applyChannel(getRegisterVerificationChannel());
+}
+
+async function invokeSignupContactAction(payload) {
+    const client = getSupabaseClient();
+    if (!client) throw new Error("Supabase 클라이언트 없음");
+    const anonKey = getSupabaseAnonKey();
+    const res = await fetch(getEdgeFunctionUrl("h2go-signup-contact"), {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+        },
+        body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || res.statusText || "요청 실패");
+    return json;
+}
+
+function wireRegisterOtpButtons() {
+    document.getElementById("registerSendOtpBtn")?.addEventListener("click", async () => {
+        const ch = getRegisterVerificationChannel();
+        const status = document.getElementById("registerOtpStatus");
+        try {
+            if (ch === "email") {
+                const email = String(document.getElementById("registerContactEmail")?.value || "").trim().toLowerCase();
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    alert("유효한 이메일을 입력해 주세요.");
+                    return;
+                }
+                const json = await invokeSignupContactAction({
+                    action: "send_otp",
+                    channel: "email",
+                    destination: email,
+                });
+                if (status) {
+                    status.textContent = json.dev_code
+                        ? `개발: 인증번호 ${json.dev_code} (Resend 미설정 시에만 표시)`
+                        : "인증번호를 이메일로 보냈습니다.";
+                }
+                if (json.dev_code) console.info("[h2go] OTP dev_code:", json.dev_code);
+            } else {
+                const phoneRaw = String(document.getElementById("registerContactPhone")?.value || "");
+                const digits = normalizeRegisterPhoneDigits(phoneRaw);
+                if (digits.length < 10) {
+                    alert("휴대폰 번호를 올바르게 입력해 주세요.");
+                    return;
+                }
+                await invokeSignupContactAction({
+                    action: "send_otp",
+                    channel: "phone",
+                    destination: digits,
+                });
+                if (status) status.textContent = "인증번호를 문자로 보냈습니다.";
+            }
+        } catch (err) {
+            const msg = String(err?.message || err);
+            if (msg.includes("sms_not_configured")) {
+                alert("문자(SMS) 발송이 아직 설정되지 않았습니다. 관리자에게 문의하거나 이메일 인증을 이용해 주세요.");
+            } else alert(`인증번호 발송 실패: ${msg}`);
+        }
+    });
+
+    document.getElementById("registerVerifyOtpBtn")?.addEventListener("click", async () => {
+        const ch = getRegisterVerificationChannel();
+        const status = document.getElementById("registerOtpStatus");
+        const code = String(document.getElementById("registerOtpCode")?.value || "").trim();
+        if (!/^\d{6}$/.test(code)) {
+            alert("6자리 인증번호를 입력해 주세요.");
+            return;
+        }
+        try {
+            if (ch === "email") {
+                const email = String(document.getElementById("registerContactEmail")?.value || "").trim().toLowerCase();
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    alert("이메일을 입력해 주세요.");
+                    return;
+                }
+                await invokeSignupContactAction({
+                    action: "verify_otp",
+                    channel: "email",
+                    destination: email,
+                    code,
+                });
+                window.__h2goRegVerified = { channel: "email", destination: email };
+                if (status) status.textContent = "이메일 인증이 완료되었습니다.";
+            } else {
+                const phoneRaw = String(document.getElementById("registerContactPhone")?.value || "");
+                const digits = normalizeRegisterPhoneDigits(phoneRaw);
+                if (digits.length < 10) {
+                    alert("휴대폰 번호를 입력해 주세요.");
+                    return;
+                }
+                await invokeSignupContactAction({
+                    action: "verify_otp",
+                    channel: "phone",
+                    destination: digits,
+                    code,
+                });
+                window.__h2goRegVerified = { channel: "phone", destination: digits };
+                if (status) status.textContent = "휴대폰 인증이 완료되었습니다.";
+            }
+        } catch (err) {
+            alert(`인증 확인 실패: ${err?.message || err}`);
+        }
+    });
 }
 
 function wireAuthorityButtons() {
@@ -249,14 +444,10 @@ function wireBusinessPartyButtons() {
             else cur.add(v);
             const arr = [...cur];
             hidden.value = JSON.stringify(arr);
-            buttons.forEach((b) => {
-                const pv = String(b.getAttribute("data-party") || "").trim();
-                const on = cur.has(pv);
-                b.classList.toggle("is-selected", on);
-                b.setAttribute("aria-pressed", on ? "true" : "false");
-            });
+            syncRegisterBusinessPartyButtonUI();
         });
     });
+    syncRegisterBusinessPartyButtonUI();
 }
 
 async function handleLoginSubmit(e) {
@@ -301,6 +492,18 @@ async function handleLoginSubmit(e) {
         return;
     }
 
+    const approval = String(profile.approval_status || "approved").toLowerCase();
+    if (approval === "pending") {
+        await client.auth.signOut();
+        alert("관리자 승인 대기 중입니다. 승인 완료 후 다시 로그인해 주세요.");
+        return;
+    }
+    if (approval === "rejected") {
+        await client.auth.signOut();
+        alert("가입 신청이 거절되었습니다. 관리자에게 문의해 주세요.");
+        return;
+    }
+
     const authority = normalizeMemberAuthority(profile.authority);
     const businessParties = parseBusinessPartiesList(profile.business_parties, null);
     const { roles, activeRole } = rolesFromBusinessParties(businessParties, null);
@@ -340,6 +543,32 @@ async function handleRegisterSubmit(e) {
     if (/\s/.test(loginId)) return alert("아이디에는 공백을 사용할 수 없습니다.");
     if (!password) return alert("비밀번호를 입력해 주세요.");
     if (password !== passwordConfirm) return alert("비밀번호가 일치하지 않습니다.");
+
+    const verCh = getRegisterVerificationChannel();
+    const contactEmail =
+        verCh === "email"
+            ? String(document.getElementById("registerContactEmail")?.value || "").trim().toLowerCase()
+            : "";
+    const contactPhone =
+        verCh === "phone"
+            ? normalizeRegisterPhoneDigits(document.getElementById("registerContactPhone")?.value || "")
+            : "";
+    const v = window.__h2goRegVerified || { channel: null, destination: "" };
+    if (verCh === "email") {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+            return alert("연락·인증 이메일을 입력해 주세요.");
+        }
+        if (v.channel !== "email" || v.destination !== contactEmail) {
+            return alert("이메일 인증(인증번호 받기 → 인증 확인)을 완료해 주세요.");
+        }
+    } else {
+        if (contactPhone.length < 10) {
+            return alert("휴대폰 번호를 입력해 주세요.");
+        }
+        if (v.channel !== "phone" || v.destination !== contactPhone) {
+            return alert("휴대폰 인증(인증번호 받기 → 인증 확인)을 완료해 주세요.");
+        }
+    }
 
     const email = toAuthEmail(loginId);
     const { data: signUpData, error: signUpError } = await client.auth.signUp({ email, password });
@@ -401,13 +630,18 @@ async function handleRegisterSubmit(e) {
     }
 
     const userId = signUpData.user.id;
-    const { error: profileError } = await client.from("member_profiles").insert({
+    const profilePayload = {
         id: userId,
         business_parties: businessParties,
         username,
         login_id: loginId,
         authority,
-    });
+        approval_status: "pending",
+        verification_channel: verCh,
+        contact_email: verCh === "email" ? contactEmail : null,
+        contact_phone: verCh === "phone" ? contactPhone : null,
+    };
+    const { error: profileError } = await client.from("member_profiles").insert(profilePayload);
 
     if (profileError) {
         alert(`회원 프로필 저장에 실패했습니다: ${profileError.message || "알 수 없는 오류"}`);
@@ -415,26 +649,41 @@ async function handleRegisterSubmit(e) {
     }
 
     const { data: signInData, error: signInError } = await client.auth.signInWithPassword({ email, password });
-    if (signInError || !signInData.user?.id) {
-        alert("회원가입이 완료되었습니다. 로그인 화면에서 다시 로그인해 주세요.");
+    if (signInError || !signInData.session?.access_token) {
+        alert(
+            "가입 신청은 저장되었으나 로그인에 실패했습니다. 승인 후 로그인 화면에서 다시 시도해 주세요.",
+        );
         showRegister(false);
         return;
     }
 
-    const { roles, activeRole } = rolesFromBusinessParties(businessParties, null);
+    try {
+        const notifyRes = await fetch(getEdgeFunctionUrl("h2go-notify-admin-signup"), {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                apikey: getSupabaseAnonKey(),
+                Authorization: `Bearer ${signInData.session.access_token}`,
+            },
+            body: "{}",
+        });
+        const notifyJson = await notifyRes.json().catch(() => ({}));
+        if (!notifyRes.ok) {
+            console.warn("[h2go] notify admin:", notifyJson);
+        } else if (notifyJson.approveUrl) {
+            console.info("[h2go] admin mail 미설정 — 승인 URL:", notifyJson.approveUrl);
+        }
+    } catch (err) {
+        console.warn("[h2go] notify admin failed:", err);
+    }
 
-    setAuth({
-        id: loginId,
-        name: username,
-        roles,
-        activeRole,
-        authority,
-        businessParties,
-        businessParty: businessParties[0] || "consumer",
-        supabaseUserId: signInData.user.id,
-        loggedInAt: new Date().toISOString(),
-    });
-    window.location.href = "dashboard.html";
+    await client.auth.signOut();
+    alert(
+        "가입 신청이 접수되었습니다.\n\n" +
+            "• 관리자 승인 후 로그인할 수 있습니다.\n" +
+            "• 관리자에게 승인 요청 메일이 발송되었습니다(메일·Edge 설정이 된 경우).",
+    );
+    showRegister(false);
 }
 
 function wireEvents() {
@@ -452,9 +701,12 @@ function wireEvents() {
     });
     wireBusinessPartyButtons();
     wireAuthorityButtons();
+    wireRegisterVerificationChannel();
+    wireRegisterOtpButtons();
 }
 
 function init() {
+    window.__h2goRegVerified = { channel: null, destination: "" };
     initTheme();
     try {
         if (getAuth()) {

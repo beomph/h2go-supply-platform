@@ -456,15 +456,48 @@ async function loadOrdersFromSupabase() {
 
 async function initializeSupabaseOrders() {
     supabaseClient = getSupabaseClient();
-    if (!supabaseClient) return;
+    if (!supabaseClient) return true;
     try {
         const { data } = await supabaseClient.auth.getSession();
-        if (!data?.session) return;
+        if (!data?.session) return true;
+
+        const uid = data.session.user.id;
+        const { data: prof, error: profErr } = await supabaseClient
+            .from("member_profiles")
+            .select("approval_status")
+            .eq("id", uid)
+            .maybeSingle();
+        if (profErr || !prof) {
+            console.warn("[h2go] member_profiles lookup failed:", profErr?.message || profErr);
+            await supabaseClient.auth.signOut();
+            clearAuth();
+            alert("회원 정보를 확인할 수 없습니다. 다시 로그인해 주세요.");
+            redirectToLogin();
+            return false;
+        }
+        const st = String(prof.approval_status ?? "approved").toLowerCase();
+        if (st === "pending") {
+            await supabaseClient.auth.signOut();
+            clearAuth();
+            alert("관리자 승인 대기 중입니다. 승인 완료 후 다시 로그인해 주세요.");
+            redirectToLogin();
+            return false;
+        }
+        if (st === "rejected") {
+            await supabaseClient.auth.signOut();
+            clearAuth();
+            alert("가입 신청이 거절되었습니다. 관리자에게 문의해 주세요.");
+            redirectToLogin();
+            return false;
+        }
+
         isSupabaseOrdersEnabled = true;
         await loadOrdersFromSupabase();
+        return true;
     } catch (err) {
         console.warn("[h2go] supabase orders initialization skipped:", err?.message || err);
         isSupabaseOrdersEnabled = false;
+        return true;
     }
 }
 
@@ -1688,6 +1721,7 @@ function renderSupplierOrdersCards() {
                 </div>
                 <div class="order-item-supplier-actions">
                     <span class="order-status ${status}">${supplierStatus}</span>
+                    ${isCancelled ? `<button type="button" class="order-remove-cancelled-btn" data-action="remove-cancelled-supplier" data-id="${o.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
                     ${actionButtons ? `<div class="order-actions order-actions--supplier">${actionButtons}</div>` : ''}
                 </div>
             </div>
@@ -2849,7 +2883,8 @@ if (scrollTopBtn) {
 }
 
 async function bootstrapOrderViews() {
-    await initializeSupabaseOrders();
+    const proceed = await initializeSupabaseOrders();
+    if (proceed === false) return;
     const r = currentUser.type;
     if (r === 'consumer') renderConsumerView();
     if (r === 'supplier') renderSupplierView();

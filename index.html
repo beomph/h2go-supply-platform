@@ -62,6 +62,38 @@
                     </div>
                 </div>
                 <div class="form-group">
+                    <label>가입 인증 <span class="form-hint-inline">이메일 또는 문자로 인증번호를 받습니다</span></label>
+                    <input type="hidden" id="registerVerificationChannel" value="email" autocomplete="off">
+                    <div class="authority-group" role="radiogroup" aria-label="가입 인증 수단">
+                        <button type="button" class="authority-btn verify-channel-btn is-selected" data-channel="email" aria-pressed="true">
+                            <span class="authority-btn-title">이메일 인증</span>
+                            <span class="authority-btn-desc">연락 이메일로 6자리 인증</span>
+                        </button>
+                        <button type="button" class="authority-btn verify-channel-btn" data-channel="phone" aria-pressed="false">
+                            <span class="authority-btn-title">휴대폰 문자</span>
+                            <span class="authority-btn-desc">SMS(Twilio 설정 시)</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group" id="registerEmailOtpGroup">
+                    <label for="registerContactEmail">연락·인증 이메일</label>
+                    <input type="email" id="registerContactEmail" placeholder="example@company.com" autocomplete="off">
+                </div>
+                <div class="form-group is-hidden" id="registerPhoneOtpGroup">
+                    <label for="registerContactPhone">휴대폰 번호</label>
+                    <input type="tel" id="registerContactPhone" placeholder="01012345678" autocomplete="off">
+                    <p class="form-hint-inline">숫자만 입력 · SMS는 Edge Function에 Twilio 연동 시 발송</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-hint-inline">인증번호</label>
+                    <div class="auth-only-links" style="margin-top:0.35rem;display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center">
+                        <button type="button" class="btn btn-card-outline" id="registerSendOtpBtn">인증번호 받기</button>
+                        <input type="text" id="registerOtpCode" class="form-otp-input" placeholder="6자리" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="max-width:7rem">
+                        <button type="button" class="btn btn-secondary" id="registerVerifyOtpBtn">인증 확인</button>
+                    </div>
+                    <p class="form-hint-inline" id="registerOtpStatus" aria-live="polite"></p>
+                </div>
+                <div class="form-group">
                     <label for="registerUsername">사용자명</label>
                     <input type="text" id="registerUsername" placeholder="구매처/고객에게 보여질 사용자명을 입력해주세요" required>
                 </div>
@@ -95,7 +127,7 @@
                     <label for="registerPasswordConfirm">비밀번호 확인</label>
                     <input type="password" id="registerPasswordConfirm" placeholder="비밀번호를 다시 입력" required>
                 </div>
-                <button type="submit" class="btn btn-primary btn-full">회원가입 후 로그인</button>
+                <button type="submit" class="btn btn-primary btn-full">가입 신청 (관리자 승인 후 로그인)</button>
                 <button id="showLoginBtn" type="button" class="btn btn-secondary btn-full">로그인으로 돌아가기</button>
             </form>
                 </div>

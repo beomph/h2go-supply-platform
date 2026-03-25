@@ -165,12 +165,24 @@ async function handleLoginSubmit(e) {
     if (!loginId) return alert("아이디를 입력해 주세요.");
     if (!password) return alert("비밀번호를 입력해 주세요.");
 
+    const { data: isRegistered, error: checkError } = await client.rpc("check_login_id_registered", {
+        p_login_id: loginId,
+    });
+    if (checkError) {
+        alert(`로그인 확인 중 오류가 발생했습니다: ${checkError.message || "알 수 없는 오류"}`);
+        return;
+    }
+    if (!isRegistered) {
+        alert("가입되지 않은 아이디입니다.\n회원가입 후 이용해 주세요.");
+        return;
+    }
+
     const { data: signInData, error: signInError } = await client.auth.signInWithPassword({
         email: toAuthEmail(loginId),
         password,
     });
     if (signInError || !signInData.user?.id) {
-        alert("아이디 또는 비밀번호가 올바르지 않습니다.");
+        alert("비밀번호가 올바르지 않습니다.");
         return;
     }
 

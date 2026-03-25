@@ -94,7 +94,8 @@ python scripts/parse_prd_openai.py --backup --num-tasks 12
 
 회원가입은 Supabase Auth + `member_profiles` 테이블로 분리 저장됩니다.
 
-1. Supabase SQL Editor에서 `scripts/supabase_member_profiles.sql` 실행
+1. Supabase SQL Editor에서 `scripts/supabase_member_profiles.sql` 실행  
+   (로그인 시 가입 여부 RPC가 필요하면 `scripts/supabase_login_check_rpc.sql` 도 실행)
 2. Supabase 프로젝트의 **anon key** 준비
 3. 브라우저 콘솔에서 1회 설정
 

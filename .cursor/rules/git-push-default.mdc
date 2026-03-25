@@ -1,0 +1,10 @@
+---
+description: 코드 변경 후 기본으로 GitHub에 푸시한다
+alwaysApply: true
+---
+
+# Git 푸시 기본 동작
+
+- 사용자가 **별도로 푸시하지 말라고 하지 않는 한**, 이 저장소(`h2go-supply-platform`)에서 코드/설정을 수정한 뒤 **커밋하고 `origin`(GitHub)의 기본 브랜치(보통 `main`)에 푸시**할 것.
+- 커밋 전 `git status`로 변경 범위를 확인하고, 메시지는 변경 요지를 한글 또는 영문으로 짧게 명확히 쓸 것.
+- `user.name` / `user.email`이 없어 커밋이 막히면, **이 저장소에만** `git config user.name` / `user.email`을 설정한 뒤 진행할 것(전역 설정은 사용자 확인 없이 바꾸지 말 것).

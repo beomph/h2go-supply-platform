@@ -151,6 +151,18 @@ function getSupabaseClient() {
     return window.supabase.createClient(SUPABASE_URL, anonKey);
 }
 
+/** Supabase URL에서 project ref로 Providers(Email) 설정 페이지 링크 */
+function getSupabaseAuthProvidersDashboardUrl() {
+    try {
+        const host = new URL(SUPABASE_URL).hostname;
+        const ref = host.replace(/\.supabase\.co$/i, "");
+        if (!ref || ref === host) return "https://supabase.com/dashboard";
+        return `https://supabase.com/dashboard/project/${ref}/auth/providers`;
+    } catch (_) {
+        return "https://supabase.com/dashboard";
+    }
+}
+
 async function loadProfileByUserId(client, userId) {
     const { data, error } = await client
         .from("member_profiles")
@@ -161,11 +173,33 @@ async function loadProfileByUserId(client, userId) {
     return data;
 }
 
+const AUTH_VIEW_TRANSITION_MS = 400;
+
 function showRegister(open) {
+    const loginSection = document.getElementById("loginSection");
+    const registerSection = document.getElementById("registerSection");
     const loginForm = document.getElementById("loginForm");
     const registerForm = document.getElementById("registerForm");
     const showRegisterBtn = document.getElementById("showRegisterBtn");
     if (!loginForm || !registerForm) return;
+
+    if (loginSection && registerSection) {
+        if (open) {
+            loginSection.classList.remove("auth-section--active");
+            registerSection.classList.add("auth-section--active");
+            loginSection.setAttribute("aria-hidden", "true");
+            registerSection.setAttribute("aria-hidden", "false");
+            window.setTimeout(() => document.getElementById("registerUsername")?.focus(), AUTH_VIEW_TRANSITION_MS);
+        } else {
+            registerSection.classList.remove("auth-section--active");
+            loginSection.classList.add("auth-section--active");
+            registerSection.setAttribute("aria-hidden", "true");
+            loginSection.setAttribute("aria-hidden", "false");
+            window.setTimeout(() => document.getElementById("loginId")?.focus(), AUTH_VIEW_TRANSITION_MS);
+        }
+        return;
+    }
+
     loginForm.classList.toggle("is-hidden", !!open);
     showRegisterBtn?.classList.toggle("is-hidden", !!open);
     registerForm.classList.toggle("is-hidden", !open);
@@ -309,13 +343,15 @@ async function handleRegisterSubmit(e) {
             return;
         }
         if (lc.includes("signups are disabled") || lc.includes("signup disabled")) {
+            const dash = getSupabaseAuthProvidersDashboardUrl();
             alert(
                 "Supabase에서 이메일 회원가입이 꺼져 있습니다.\n\n" +
-                    "대시보드 → Authentication → Sign In / Providers → 하단 Email 블록에서\n" +
-                    "「Allow new users to sign up」(새 사용자 가입 허용) 을 켜 주세요.\n\n" +
-                    "또는 저장소 scripts/supabase_mailer_autoconfirm.ps1 을 실행하면\n" +
-                    "disable_signup 해제 + 이메일 자동확인이 한 번에 적용됩니다.\n" +
-                    "(SUPABASE_ACCESS_TOKEN 필요)"
+                    "① 브라우저에서 아래 주소로 이동해 로그인한 뒤,\n" +
+                    "   Sign In / Providers → Email(펼침) → Allow new users to sign up 을 켜 주세요.\n" +
+                    dash +
+                    "\n\n" +
+                    "② 또는 PC에서 SUPABASE_ACCESS_TOKEN 을 설정한 뒤\n" +
+                    "   scripts/supabase_mailer_autoconfirm.ps1 를 실행해 disable_signup 해제를 적용할 수 있습니다."
             );
             return;
         }

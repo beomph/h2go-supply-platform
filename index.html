@@ -33,23 +33,25 @@
                 <span role="listitem">운송·스케줄</span>
             </div>
 
-            <form class="auth-form" id="loginForm" autocomplete="off">
-                <div class="form-group">
-                    <label for="loginId">아이디</label>
-                    <input type="text" id="loginId" placeholder="아이디를 입력하세요" required autocomplete="username" autofocus>
+            <div class="auth-sections-stack" id="authSectionsStack">
+                <div id="loginSection" class="auth-section auth-section--active" aria-live="polite" aria-hidden="false">
+                    <form class="auth-form" id="loginForm" autocomplete="off">
+                        <div class="form-group">
+                            <label for="loginId">아이디</label>
+                            <input type="text" id="loginId" placeholder="아이디를 입력하세요" required autocomplete="username" autofocus>
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPassword">비밀번호</label>
+                            <input type="password" id="loginPassword" placeholder="예: h2go123?" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">로그인</button>
+                    </form>
+                    <div class="auth-only-links">
+                        <button id="showRegisterBtn" type="button" class="btn btn-card-outline btn-full">회원가입</button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="loginPassword">비밀번호</label>
-                    <input type="password" id="loginPassword" placeholder="예: h2go123?" required>
-                </div>
-                <button type="submit" class="btn btn-primary btn-full">로그인</button>
-            </form>
-
-            <div class="auth-only-links">
-                <button id="showRegisterBtn" type="button" class="btn btn-card-outline btn-full">회원가입</button>
-            </div>
-
-            <form class="auth-form is-hidden" id="registerForm" autocomplete="off" aria-label="회원가입">
+                <div id="registerSection" class="auth-section" aria-live="polite" aria-hidden="true">
+            <form class="auth-form" id="registerForm" autocomplete="off" aria-label="회원가입">
                 <div class="form-group">
                     <label>사업자분류 <span class="form-hint-inline">복수 선택 가능 · 공급자=판매, 수요자=구매</span></label>
                     <input type="hidden" id="registerBusinessPartyValue" value="[]" autocomplete="off">
@@ -96,6 +98,8 @@
                 <button type="submit" class="btn btn-primary btn-full">회원가입 후 로그인</button>
                 <button id="showLoginBtn" type="button" class="btn btn-secondary btn-full">로그인으로 돌아가기</button>
             </form>
+                </div>
+            </div>
         </section>
     </main>
 

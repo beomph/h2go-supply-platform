@@ -259,6 +259,48 @@ body::after {
     margin-top: 1rem;
 }
 
+/* 로그인 ↔ 회원가입 화면 전환 */
+.auth-sections-stack {
+    position: relative;
+    margin-top: 0.25rem;
+}
+
+.auth-section {
+    transition:
+        opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+        visibility 0.38s;
+}
+
+.auth-section:not(.auth-section--active) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.auth-section--active {
+    position: relative;
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .auth-section {
+        transition: opacity 0.12s ease, visibility 0.12s ease;
+    }
+
+    .auth-section:not(.auth-section--active) {
+        transform: none;
+    }
+}
+
 .is-hidden {
     display: none !important;
 }

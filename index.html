@@ -80,12 +80,22 @@
                     <input type="text" id="registerId" placeholder="아이디를 입력하세요" required>
                 </div>
                 <div class="form-group">
-                    <label for="registerAuthority">회원권한</label>
-                    <select id="registerAuthority" required>
-                        <option value="manager" selected>담당자</option>
-                        <option value="admin">관리자</option>
-                        <option value="monitoring">모니터링</option>
-                    </select>
+                    <label>회원권한</label>
+                    <input type="hidden" id="registerAuthorityValue" value="manager" autocomplete="off">
+                    <div class="authority-group" role="radiogroup" aria-label="회원권한">
+                        <button type="button" class="authority-btn" data-authority="admin" aria-pressed="false">
+                            <span class="authority-btn-title">관리자</span>
+                            <span class="authority-btn-desc">모든 담당자 권한과 주문 결재 권한</span>
+                        </button>
+                        <button type="button" class="authority-btn is-selected" data-authority="manager" aria-pressed="true">
+                            <span class="authority-btn-title">담당자</span>
+                            <span class="authority-btn-desc">주문 송·수신, 변경 및 확정, 물량 입력 권한</span>
+                        </button>
+                        <button type="button" class="authority-btn" data-authority="monitoring" aria-pressed="false">
+                            <span class="authority-btn-title">모니터링</span>
+                            <span class="authority-btn-desc">주문 조회·단순 모니터링</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="registerPassword">비밀번호</label>

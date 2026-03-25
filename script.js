@@ -152,6 +152,23 @@ function readRegisterBusinessParty() {
     return normalizeBusinessParty(v);
 }
 
+function wireAuthorityButtons() {
+    const hidden = document.getElementById("registerAuthorityValue");
+    const buttons = document.querySelectorAll("#registerForm .authority-btn");
+    if (!hidden || !buttons.length) return;
+    buttons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const v = String(btn.getAttribute("data-authority") || "").trim();
+            hidden.value = normalizeMemberAuthority(v);
+            buttons.forEach((b) => {
+                const on = b === btn;
+                b.classList.toggle("is-selected", on);
+                b.setAttribute("aria-pressed", on ? "true" : "false");
+            });
+        });
+    });
+}
+
 function wireBusinessPartyButtons() {
     const hidden = document.getElementById("registerBusinessPartyValue");
     const buttons = document.querySelectorAll("#registerForm .business-party-btn");
@@ -242,7 +259,7 @@ async function handleRegisterSubmit(e) {
     const businessParty = readRegisterBusinessParty();
     const username = String(document.getElementById("registerUsername")?.value || "").trim();
     const loginId = normalizeId(document.getElementById("registerId")?.value);
-    const authority = normalizeMemberAuthority(document.getElementById("registerAuthority")?.value);
+    const authority = normalizeMemberAuthority(document.getElementById("registerAuthorityValue")?.value);
     const password = String(document.getElementById("registerPassword")?.value || "");
     const passwordConfirm = String(document.getElementById("registerPasswordConfirm")?.value || "");
 
@@ -322,6 +339,7 @@ function wireEvents() {
         });
     });
     wireBusinessPartyButtons();
+    wireAuthorityButtons();
 }
 
 function init() {

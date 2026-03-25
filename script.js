@@ -308,6 +308,17 @@ async function handleRegisterSubmit(e) {
             alert("이미 사용 중인 아이디입니다. 다른 아이디를 입력해 주세요.");
             return;
         }
+        if (lc.includes("signups are disabled") || lc.includes("signup disabled")) {
+            alert(
+                "Supabase에서 이메일 회원가입이 꺼져 있습니다.\n\n" +
+                    "대시보드 → Authentication → Sign In / Providers → 하단 Email 블록에서\n" +
+                    "「Allow new users to sign up」(새 사용자 가입 허용) 을 켜 주세요.\n\n" +
+                    "또는 저장소 scripts/supabase_mailer_autoconfirm.ps1 을 실행하면\n" +
+                    "disable_signup 해제 + 이메일 자동확인이 한 번에 적용됩니다.\n" +
+                    "(SUPABASE_ACCESS_TOKEN 필요)"
+            );
+            return;
+        }
         if (
             signUpError?.status === 429 ||
             lc.includes("rate limit") ||
@@ -320,7 +331,7 @@ async function handleRegisterSubmit(e) {
                     "【대시보드】 왼쪽 Authentication → Sign In / Providers 로 이동한 뒤,\n" +
                     "아래쪽 「Email」 블록을 펼치면 Confirm email(또는 Enable email confirmations) 스위치가 있습니다. 끄세요.\n" +
                     "(상단 General 탭만 보면 스위치가 안 보일 수 있습니다.)\n\n" +
-                    "【API】 저장소 scripts/supabase_mailer_autoconfirm.ps1 로 mailer_autoconfirm 을 켤 수 있습니다.\n" +
+                    "【API】 scripts/supabase_mailer_autoconfirm.ps1 (가입 허용 + 이메일 자동확인)\n" +
                     "(Dashboard → Account → Access Tokens, SUPABASE_ACCESS_TOKEN)\n\n" +
                     "설명: https://supabase.com/docs/guides/auth/general-configuration\n" +
                     "한도: https://supabase.com/docs/guides/deployment/going-into-prod#auth-rate-limits"

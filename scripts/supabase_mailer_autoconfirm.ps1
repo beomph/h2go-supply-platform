@@ -1,12 +1,15 @@
-# Supabase 호스트 프로젝트: 이메일 확인 없이 가입·로그인 (mailer_autoconfirm = true)
-# 준비: https://supabase.com/dashboard/account/tokens 에서 Personal Access Token 발급
-# 권한: Fine-grained 토큰이면 auth_config_write 또는 project_admin_write 포함
+# Supabase 호스트 프로젝트: H2GO 회원가입에 필요한 Auth 플래그
+# - disable_signup = false  → "Email signups are disabled" 오류 방지
+# - mailer_autoconfirm = true → 이메일 확인 없이 가입·로그인 (@h2go.local 등)
 #
-# 사용 (PowerShell):
+# 준비: https://supabase.com/dashboard/account/tokens (PAT)
+# 권한: Fine-grained 토큰은 auth_config_write 또는 project_admin_write 포함
+#
 #   $env:SUPABASE_ACCESS_TOKEN = "sbp_...."
 #   .\scripts\supabase_mailer_autoconfirm.ps1 -ProjectRef "zbihunanzjgyceqfegka"
 #
 # 참고: https://supabase.com/docs/reference/api/v1-update-auth-service-config
+
 
 param(
     [Parameter(Mandatory = $false)]
@@ -25,12 +28,11 @@ $headers = @{
     Authorization  = "Bearer $Token"
     "Content-Type" = "application/json"
 }
-# true: 가입 시 이메일 확인 생략·암시적 확인 (대시보드의 Confirm email 끄기와 동등)
-$body = '{"mailer_autoconfirm": true}'
+$body = '{"disable_signup": false, "mailer_autoconfirm": true}'
 
 try {
     $resp = Invoke-RestMethod -Method Patch -Uri $uri -Headers $headers -Body $body
-    Write-Host "OK: auth 설정이 갱신되었습니다. mailer_autoconfirm =" $resp.mailer_autoconfirm
+    Write-Host "OK: disable_signup =" $resp.disable_signup "; mailer_autoconfirm =" $resp.mailer_autoconfirm
 }
 catch {
     Write-Error $_

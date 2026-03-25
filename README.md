@@ -98,13 +98,13 @@ python scripts/parse_prd_openai.py --backup --num-tasks 12
    - **신규 프로젝트:** `scripts/supabase_member_profiles.sql`  
    - **이미 예전 테이블이 있는 경우:** `scripts/supabase_member_profiles_migrate_simplify.sql` 을 먼저 실행한 뒤, 앞으로는 갱신된 `supabase_member_profiles.sql` 내용과 동일한 구조가 됩니다.  
    (로그인 시 가입 여부 RPC가 필요하면 `scripts/supabase_login_check_rpc.sql` 도 실행)
-2. **이메일 확인 끄기** (가입·로그인에 확인 메일 불필요, 한도 오류 방지)  
-   - **대시보드:** 왼쪽 **Authentication** → **Sign In / Providers** → 페이지 아래 **Email** 섹션을 **펼친 뒤** **Confirm email** / **Enable email confirmations** 를 끕니다.  
-     (문서: [General configuration](https://supabase.com/docs/guides/auth/general-configuration) — 스위치는 *email provider* 쪽에 있으며, 상단 General 화면만 보면 안 보일 수 있습니다.)  
-   - **API (대안):** [Access Token](https://supabase.com/dashboard/account/tokens) 발급 후 PowerShell에서  
+2. **Auth → 이메일 가입 허용 + 확인 메일 끄기**  
+   - **Sign In / Providers** → **Email** 을 펼칩니다.  
+   - **Allow new users to sign up**(새 사용자 가입 허용)이 **꺼져 있으면** 가입 API가 `Email signups are disabled` 로 실패합니다. **켜 두세요.**  
+   - **Confirm email** / **Enable email confirmations** 는 H2GO용으로 **끄는 것**을 권장합니다(가상 메일·SMTP 한도).  
+   - **API 한 번에 적용:** [Access Token](https://supabase.com/dashboard/account/tokens) 후  
      `.\scripts\supabase_mailer_autoconfirm.ps1 -ProjectRef "본인프로젝트ref"`  
-     (`SUPABASE_ACCESS_TOKEN` 환경 변수 설정, `mailer_autoconfirm: true` 로 서버 설정과 동일 효과)  
-   - H2GO는 `아이디@h2go.local`만 쓰므로 확인 메일이 사실상 필요 없고, 켜 두면 기본 SMTP **시간당 한도**에 걸릴 수 있습니다. ([Auth rate limits](https://supabase.com/docs/guides/deployment/going-into-prod#auth-rate-limits))
+     → `disable_signup: false` + `mailer_autoconfirm: true` ([Auth rate limits](https://supabase.com/docs/guides/deployment/going-into-prod#auth-rate-limits) 참고)
 3. Supabase 프로젝트의 **anon key** 준비
 4. 브라우저 콘솔에서 1회 설정
 

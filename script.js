@@ -316,11 +316,14 @@ async function handleRegisterSubmit(e) {
         ) {
             alert(
                 "회원가입 확인 메일 발송 한도에 걸렸습니다. (Supabase 이메일 제한)\n\n" +
-                    "H2GO는 로그인용 이메일을 '아이디@h2go.local'로만 쓰므로 확인 메일이 필요하지 않습니다.\n" +
-                    "Supabase 대시보드 → Authentication → Providers → Email 에서\n" +
-                    "「Confirm email(이메일 확인 필요)」 옵션을 끄면 대부분 해결됩니다.\n\n" +
-                    "문서: https://supabase.com/docs/guides/auth/auth-smtp\n" +
-                    "한도 설명: https://supabase.com/docs/guides/deployment/going-into-prod#auth-rate-limits"
+                    "H2GO는 '아이디@h2go.local'만 쓰므로 이메일 확인이 필요 없습니다.\n\n" +
+                    "【대시보드】 왼쪽 Authentication → Sign In / Providers 로 이동한 뒤,\n" +
+                    "아래쪽 「Email」 블록을 펼치면 Confirm email(또는 Enable email confirmations) 스위치가 있습니다. 끄세요.\n" +
+                    "(상단 General 탭만 보면 스위치가 안 보일 수 있습니다.)\n\n" +
+                    "【API】 저장소 scripts/supabase_mailer_autoconfirm.ps1 로 mailer_autoconfirm 을 켤 수 있습니다.\n" +
+                    "(Dashboard → Account → Access Tokens, SUPABASE_ACCESS_TOKEN)\n\n" +
+                    "설명: https://supabase.com/docs/guides/auth/general-configuration\n" +
+                    "한도: https://supabase.com/docs/guides/deployment/going-into-prod#auth-rate-limits"
             );
             return;
         }

@@ -26,7 +26,7 @@
 - 로그인 시 `check_login_id_registered` RPC로 `member_profiles.login_id` 가입 여부를 먼저 확인한다.
 - 미가입 아이디면 Supabase Auth를 호출하지 않고 “가입되지 않은 아이디” 안내 후 종료한다.
 - 가입된 아이디만 `signInWithPassword`로 비밀번호를 검증하며, 실패 시 비밀번호 오류만 안내한다.
-- Supabase에서 **Email Confirm** 을 끈다(`@h2go.local` 가상 이메일). 켜 두면 확인 메일 발송 한도로 `email rate limit exceeded` 가 발생할 수 있다.
+- Supabase에서 이메일 확인을 끈다: 대시보드 **Authentication → Sign In / Providers → Email(펼침)** 의 Confirm email, 또는 Management API `mailer_autoconfirm: true`(저장소 `scripts/supabase_mailer_autoconfirm.ps1`). `@h2go.local` 가상 이메일 한도 오류 방지.
 - `member_profiles`: `business_parties[]`(공급자·운송자·수요자 복수), `username`, `authority`, `login_id`. 공급자→판매 대시보드, 수요자→구매, 둘 다면 전환 가능. 운송자만→구매만.
 
 ================================================================================

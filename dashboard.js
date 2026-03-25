@@ -239,11 +239,7 @@ function getSupplierShippingAddress(supplierName) {
         return String(n || "").trim().toLowerCase() === name.toLowerCase();
     });
     if (found && typeof found === 'object' && found.address) return found.address;
-    const map = {
-        "KOGAS(데모)": "인천시 남동구 논현고잔로 123 (인천 수소생산공장)",
-        "KOGAS": "인천시 남동구 논현고잔로 123 (인천 수소생산공장)"
-    };
-    return map[name] || PRODUCTION_SITE.address;
+    return PRODUCTION_SITE.address;
 }
 
 // 주소별 운송시간 (분)
@@ -590,21 +586,6 @@ if (auth) {
     if (!auth.roles.includes(initialRole)) initialRole = auth.roles[0] || "consumer";
     currentUser = { type: initialRole, name: auth.name };
 }
-
-// KOGAS 데모 계정: 남아있는 주문 전체 1회 정리
-try {
-    const KOGAS_PURGE_FLAG = "h2go_purged_kogas_orders_v1";
-    if (auth?.id === "kogas" && !localStorage.getItem(KOGAS_PURGE_FLAG)) {
-        const me = auth.name;
-        orders = (orders || []).filter(o => {
-            const consumerMatch = (o?.consumerName || "") === me;
-            const supplierMatch = !o?.supplierName || (o?.supplierName || "") === me;
-            return !(consumerMatch || supplierMatch);
-        });
-        saveOrdersToStorage();
-        localStorage.setItem(KOGAS_PURGE_FLAG, "1");
-    }
-} catch (_) {}
 
 // 수요모드 주문 시 기본 공급자(초기값): 현재 사업자
 selectedSupplierName = currentUser.name;

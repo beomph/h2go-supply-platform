@@ -443,8 +443,7 @@
                 return String(sn || '').trim().toLowerCase() === n.toLowerCase();
             });
             if (found && typeof found === 'object' && found.address) return found.address;
-            var map = { 'KOGAS(데모)': '인천시 남동구 논현고잔로 123 (인천 수소생산공장)', 'KOGAS': '인천시 남동구 논현고잔로 123 (인천 수소생산공장)' };
-            return map[n] || '인천시 남동구 논현고잔로 123 (인천 수소생산공장)';
+            return '인천시 남동구 논현고잔로 123 (인천 수소생산공장)';
         }
 
         setText('qty-order-id', order.id || '');

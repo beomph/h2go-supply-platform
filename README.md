@@ -96,14 +96,16 @@ python scripts/parse_prd_openai.py --backup --num-tasks 12
 
 1. Supabase SQL Editor에서 `scripts/supabase_member_profiles.sql` 실행  
    (로그인 시 가입 여부 RPC가 필요하면 `scripts/supabase_login_check_rpc.sql` 도 실행)
-2. Supabase 프로젝트의 **anon key** 준비
-3. 브라우저 콘솔에서 1회 설정
+2. **Authentication → Providers → Email** 에서 **Confirm email(이메일 확인)** 을 **끄세요.**  
+   H2GO는 `아이디@h2go.local`만 쓰므로 확인 메일이 사실상 필요 없고, 켜 두면 Supabase 기본 SMTP **시간당 발송 한도**에 걸려 `email rate limit exceeded` 가 자주 납니다. ([Auth rate limits](https://supabase.com/docs/guides/deployment/going-into-prod#auth-rate-limits))
+3. Supabase 프로젝트의 **anon key** 준비
+4. 브라우저 콘솔에서 1회 설정
 
 ```js
 localStorage.setItem("h2go_supabase_anon_key", "여기에_supabase_anon_key");
 ```
 
-4. 로그인 페이지 새로고침 후 회원가입/로그인
+5. 로그인 페이지 새로고침 후 회원가입/로그인
 
 주의:
 - 비밀번호는 `auth.users`에만 저장됩니다. `member_profiles`에는 사업자명·사업자번호·**대표자명**·**사업자분류**(공급자/운송자/수요자)·사용자명·**회원권한**(관리자/담당자/모니터링)·로그인 아이디(`login_id`)가 저장됩니다.

@@ -277,8 +277,25 @@ async function handleRegisterSubmit(e) {
     const { data: signUpData, error: signUpError } = await client.auth.signUp({ email, password });
     if (signUpError || !signUpData.user?.id) {
         const msg = String(signUpError?.message || "");
-        if (msg.toLowerCase().includes("already")) {
+        const lc = msg.toLowerCase();
+        if (lc.includes("already")) {
             alert("이미 사용 중인 아이디입니다. 다른 아이디를 입력해 주세요.");
+            return;
+        }
+        if (
+            signUpError?.status === 429 ||
+            lc.includes("rate limit") ||
+            lc.includes("too many requests") ||
+            lc.includes("email rate")
+        ) {
+            alert(
+                "회원가입 확인 메일 발송 한도에 걸렸습니다. (Supabase 이메일 제한)\n\n" +
+                    "H2GO는 로그인용 이메일을 '아이디@h2go.local'로만 쓰므로 확인 메일이 필요하지 않습니다.\n" +
+                    "Supabase 대시보드 → Authentication → Providers → Email 에서\n" +
+                    "「Confirm email(이메일 확인 필요)」 옵션을 끄면 대부분 해결됩니다.\n\n" +
+                    "문서: https://supabase.com/docs/guides/auth/auth-smtp\n" +
+                    "한도 설명: https://supabase.com/docs/guides/deployment/going-into-prod#auth-rate-limits"
+            );
             return;
         }
         alert(`회원가입에 실패했습니다: ${msg || "알 수 없는 오류"}`);

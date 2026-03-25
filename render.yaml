@@ -11,3 +11,5 @@ services:
         sync: false
       - key: H2GO_CHAT_ACCESS_CODE
         sync: false
+      - key: H2GO_SUPABASE_ANON_KEY
+        sync: false

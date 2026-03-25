@@ -3,6 +3,19 @@
 // ========== 로그인 상태 확인 ==========
 const AUTH_KEY = "h2go_auth";
 const DEFAULT_ROLES = ["consumer", "supplier"];
+
+function normalizeMemberAuthorityDash(raw) {
+    const s = String(raw || "").trim();
+    if (s === "admin" || s === "manager" || s === "monitoring") return s;
+    if (s === "user") return "manager";
+    return "manager";
+}
+
+function normalizeBusinessPartyDash(raw) {
+    const s = String(raw || "").trim();
+    if (s === "supplier" || s === "transporter" || s === "consumer") return s;
+    return "consumer";
+}
 const USERS_KEY = "h2go_users";
 const THEME_KEY = "h2go_theme";
 const ORDER_ADDRESS_HISTORY_PREFIX = "h2go_order_address_history_v1";
@@ -163,7 +176,8 @@ function getAuth() {
         name,
         roles: roles.length ? roles : [...DEFAULT_ROLES],
         activeRole,
-        authority: a.authority || "user",
+        authority: normalizeMemberAuthorityDash(a.authority),
+        businessParty: normalizeBusinessPartyDash(a.businessParty),
         supabaseUserId: a.supabaseUserId || null,
         loggedInAt: a.loggedInAt || null,
     };

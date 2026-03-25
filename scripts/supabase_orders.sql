@@ -44,6 +44,8 @@ create index if not exists idx_h2go_orders_status on public.h2go_orders (order_s
 create or replace function public.h2go_set_updated_at()
 returns trigger
 language plpgsql
+security invoker
+set search_path = public, pg_temp
 as $$
 begin
   new.updated_at = now();

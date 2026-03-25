@@ -83,6 +83,7 @@ python scripts/parse_prd_openai.py --backup --num-tasks 12
 
 4. **필수 환경 변수**
    - `OPENAI_API_KEY` — OpenAI 플랫폼에서 발급한 API 키 (Secret로 저장)
+   - `H2GO_SUPABASE_ANON_KEY` — Supabase **anon** 또는 **publishable** 키 (`sb_publishable_...` 포함). 설정 시 `/h2go-config.js`로 브라우저에 주입되어 **회원가입·로그인·주문 동기화**가 동작합니다. (service_role 금지)
    - `H2GO_CHAT_ACCESS_CODE` — (선택) 챗봇 접속 코드. 설정하면 사용자가 채팅창에 `/access` 입력 후 이 코드를 넣어야 챗봇 사용 가능.
 
 5. **배포 후**
@@ -104,8 +105,8 @@ localStorage.setItem("h2go_supabase_anon_key", "여기에_supabase_anon_key");
 4. 로그인 페이지 새로고침 후 회원가입/로그인
 
 주의:
-- 비밀번호는 `auth.users`에만 저장되며, `member_profiles`에는 저장하지 않습니다.
-- 현재 대시보드 모드는 `consumer`/`supplier`만 지원합니다. `transporter` 단독 가입 시 로그인 후 `consumer` 모드로 진입합니다.
+- 비밀번호는 `auth.users`에만 저장됩니다. `member_profiles`에는 사업자명·사업자번호·**대표자명**·**사업자분류**(공급자/운송자/수요자)·사용자명·**회원권한**(관리자/담당자/모니터링)·로그인 아이디(`login_id`)가 저장됩니다.
+- 대시보드는 사업자분류와 수요/공급 화면 전환에 맞춰 `consumer`/`supplier` 모드를 씁니다(운송자는 기본 수요자 화면).
 
 ### Supabase 주문 DB 연동
 

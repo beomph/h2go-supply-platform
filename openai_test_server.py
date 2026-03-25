@@ -140,6 +140,38 @@ def _guess_content_type(path: Path) -> str:
     return "application/octet-stream"
 
 
+def _h2go_supabase_anon_key() -> str:
+    """브라우저용 Supabase anon 또는 publishable 키 (공개되어도 되는 키만)."""
+    return (os.getenv("H2GO_SUPABASE_ANON_KEY") or os.getenv("SUPABASE_ANON_KEY") or "").strip()
+
+
+def _h2go_config_js_bytes() -> bytes:
+    key = _h2go_supabase_anon_key()
+    line = "window.H2GO_SUPABASE_ANON_KEY = " + json.dumps(key) + ";\n"
+    return line.encode("utf-8")
+
+
+def _send_h2go_config_js(handler: BaseHTTPRequestHandler) -> None:
+    body = _h2go_config_js_bytes()
+    handler.send_response(200)
+    _add_cors(handler)
+    handler.send_header("Content-Type", "application/javascript; charset=utf-8")
+    handler.send_header("Cache-Control", "no-store")
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
+
+
+def _head_h2go_config_js(handler: BaseHTTPRequestHandler) -> None:
+    body = _h2go_config_js_bytes()
+    handler.send_response(200)
+    _add_cors(handler)
+    handler.send_header("Content-Type", "application/javascript; charset=utf-8")
+    handler.send_header("Cache-Control", "no-store")
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+
+
 def _send_file(handler: BaseHTTPRequestHandler, path: Path, content_type: str) -> None:
     try:
         data = path.read_bytes()
@@ -201,6 +233,9 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
 
+        if parsed.path == "/h2go-config.js":
+            return _head_h2go_config_js(self)
+
         target = _safe_resolve_under_base(BASE_DIR, parsed.path)
         if not target or not target.exists() or not target.is_file():
             self.send_error(404)
@@ -245,6 +280,9 @@ class Handler(BaseHTTPRequestHandler):
                         {"error": "access_code_required", "detail": "올바른 접속 코드가 아닙니다."},
                     )
             return _json(self, 200, {"ok": True})
+
+        if parsed.path == "/h2go-config.js":
+            return _send_h2go_config_js(self)
 
         if parsed.path == "/whoami":
             body = (

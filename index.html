@@ -63,11 +63,11 @@
                     <input type="text" id="registerRepresentativeName" placeholder="대표자명을 입력하세요" required>
                 </div>
                 <div class="form-group">
-                    <label>사업 참여 유형</label>
-                    <div class="auth-checkbox-group" role="group" aria-label="사업 참여 유형">
-                        <label><input type="checkbox" name="participantTypes" value="supplier"> 공급자</label>
-                        <label><input type="checkbox" name="participantTypes" value="transporter"> 운송자</label>
-                        <label><input type="checkbox" name="participantTypes" value="consumer"> 수요자</label>
+                    <label>사업자분류</label>
+                    <div class="auth-checkbox-group" role="radiogroup" aria-label="사업자분류">
+                        <label><input type="radio" name="registerBusinessParty" value="supplier" required> 공급자</label>
+                        <label><input type="radio" name="registerBusinessParty" value="transporter"> 운송자</label>
+                        <label><input type="radio" name="registerBusinessParty" value="consumer"> 수요자</label>
                     </div>
                 </div>
                 <div class="form-group">
@@ -79,10 +79,11 @@
                     <input type="text" id="registerId" placeholder="아이디를 입력하세요" required>
                 </div>
                 <div class="form-group">
-                    <label for="registerAuthority">권한</label>
+                    <label for="registerAuthority">회원권한</label>
                     <select id="registerAuthority" required>
-                        <option value="user" selected>user</option>
-                        <option value="admin">admin</option>
+                        <option value="manager" selected>담당자</option>
+                        <option value="admin">관리자</option>
+                        <option value="monitoring">모니터링</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -99,6 +100,7 @@
         </section>
     </main>
 
+    <script src="/h2go-config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
 </body>

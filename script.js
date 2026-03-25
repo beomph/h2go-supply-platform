@@ -7,6 +7,9 @@ const THEME_KEY = "h2go_theme";
 const SUPABASE_URL = "https://zbihunanzjgyceqfegka.supabase.co";
 const SUPABASE_ANON_KEY_STORAGE = "h2go_supabase_anon_key";
 
+const MEMBER_AUTHORITIES = new Set(["admin", "manager", "monitoring"]);
+const BUSINESS_PARTIES = new Set(["supplier", "transporter", "consumer"]);
+
 function safeJsonParse(raw, fallback) {
     try {
         return JSON.parse(raw);
@@ -17,6 +20,26 @@ function safeJsonParse(raw, fallback) {
 
 function normalizeId(id) {
     return String(id || "").trim().toLowerCase();
+}
+
+function normalizeMemberAuthority(raw) {
+    const s = String(raw || "").trim();
+    if (MEMBER_AUTHORITIES.has(s)) return s;
+    if (s === "user") return "manager";
+    return "manager";
+}
+
+function normalizeBusinessParty(raw) {
+    const s = String(raw || "").trim();
+    return BUSINESS_PARTIES.has(s) ? s : "consumer";
+}
+
+function rolesFromBusinessParty(party) {
+    const p = normalizeBusinessParty(party);
+    if (p === "supplier") return { roles: [...DEFAULT_ROLES], activeRole: "supplier" };
+    if (p === "consumer") return { roles: [...DEFAULT_ROLES], activeRole: "consumer" };
+    // 운송자: 대시보드는 수요/공급 화면만 제공 → 기본 수요자 화면
+    return { roles: [...DEFAULT_ROLES], activeRole: "consumer" };
 }
 
 function setAuth(auth) {
@@ -31,7 +54,16 @@ function getAuth() {
     const roles = Array.isArray(a.roles) ? a.roles.filter((r) => r === "consumer" || r === "supplier") : [];
     const activeRole = a.activeRole === "supplier" ? "supplier" : "consumer";
     if (!id || !name) return null;
-    return { id, name, roles: roles.length ? roles : [...DEFAULT_ROLES], activeRole, loggedInAt: a.loggedInAt || null };
+    return {
+        id,
+        name,
+        roles: roles.length ? roles : [...DEFAULT_ROLES],
+        activeRole,
+        authority: normalizeMemberAuthority(a.authority),
+        businessParty: normalizeBusinessParty(a.businessParty),
+        supabaseUserId: a.supabaseUserId || null,
+        loggedInAt: a.loggedInAt || null,
+    };
 }
 
 function updateThemeToggleUI(themeClass) {
@@ -91,30 +123,10 @@ function getSupabaseClient() {
     return window.supabase.createClient(SUPABASE_URL, anonKey);
 }
 
-function normalizeParticipantTypes(values) {
-    const allowed = new Set(["supplier", "transporter", "consumer"]);
-    const out = [];
-    for (const v of values || []) {
-        const s = String(v || "").trim();
-        if (!allowed.has(s)) continue;
-        if (!out.includes(s)) out.push(s);
-    }
-    return out;
-}
-
-function mapParticipantTypesToAppRoles(participantTypes) {
-    const roles = [];
-    if (participantTypes.includes("consumer")) roles.push("consumer");
-    if (participantTypes.includes("supplier")) roles.push("supplier");
-    // 현재 대시보드는 consumer/supplier 모드만 제공하므로 운송자 단독 가입 시 consumer 기본 부여
-    if (roles.length === 0) roles.push("consumer");
-    return roles;
-}
-
 async function loadProfileByUserId(client, userId) {
     const { data, error } = await client
         .from("member_profiles")
-        .select("id, business_name, participant_types, login_id, authority, username")
+        .select("id, business_name, business_number, representative_name, business_party, login_id, authority, username")
         .eq("id", userId)
         .single();
     if (error) throw error;
@@ -133,6 +145,11 @@ function showRegister(open) {
 
 function normalizeBusinessNumber(input) {
     return String(input || "").replace(/\D/g, "");
+}
+
+function readRegisterBusinessParty() {
+    const el = document.querySelector('input[name="registerBusinessParty"]:checked');
+    return el ? normalizeBusinessParty(el.value) : "";
 }
 
 async function handleLoginSubmit(e) {
@@ -165,15 +182,17 @@ async function handleLoginSubmit(e) {
         return;
     }
 
-    const participantTypes = normalizeParticipantTypes(profile.participant_types || []);
-    const roles = mapParticipantTypesToAppRoles(participantTypes);
-    const activeRole = roles.includes("consumer") ? "consumer" : "supplier";
+    const authority = normalizeMemberAuthority(profile.authority);
+    const businessParty = normalizeBusinessParty(profile.business_party);
+    const { roles, activeRole } = rolesFromBusinessParty(businessParty);
+
     setAuth({
         id: profile.login_id || loginId,
         name: profile.business_name || profile.username || loginId,
         roles,
         activeRole,
-        authority: profile.authority || "user",
+        authority,
+        businessParty,
         supabaseUserId: signInData.user.id,
         loggedInAt: new Date().toISOString(),
     });
@@ -191,19 +210,17 @@ async function handleRegisterSubmit(e) {
     const businessName = String(document.getElementById("registerBusinessName")?.value || "").trim();
     const businessNumber = normalizeBusinessNumber(document.getElementById("registerBusinessNumber")?.value || "");
     const representativeName = String(document.getElementById("registerRepresentativeName")?.value || "").trim();
-    const participantTypes = normalizeParticipantTypes(
-        Array.from(document.querySelectorAll('input[name="participantTypes"]:checked')).map((el) => el.value)
-    );
+    const businessParty = readRegisterBusinessParty();
     const username = String(document.getElementById("registerUsername")?.value || "").trim();
     const loginId = normalizeId(document.getElementById("registerId")?.value);
-    const authority = String(document.getElementById("registerAuthority")?.value || "user").trim() === "admin" ? "admin" : "user";
+    const authority = normalizeMemberAuthority(document.getElementById("registerAuthority")?.value);
     const password = String(document.getElementById("registerPassword")?.value || "");
     const passwordConfirm = String(document.getElementById("registerPasswordConfirm")?.value || "");
 
     if (!businessName) return alert("사업자명을 입력해 주세요.");
     if (!businessNumber || !/^[0-9]{10}$/.test(businessNumber)) return alert("사업자번호는 숫자 10자리로 입력해 주세요.");
     if (!representativeName) return alert("대표자명을 입력해 주세요.");
-    if (participantTypes.length === 0) return alert("공급자/운송자/수요자 중 최소 1개를 선택해 주세요.");
+    if (!businessParty) return alert("사업자분류를 선택해 주세요.");
     if (!username) return alert("사용자명을 입력해 주세요.");
     if (!loginId) return alert("아이디를 입력해 주세요.");
     if (/\s/.test(loginId)) return alert("아이디에는 공백을 사용할 수 없습니다.");
@@ -228,7 +245,7 @@ async function handleRegisterSubmit(e) {
         business_name: businessName,
         business_number: businessNumber,
         representative_name: representativeName,
-        participant_types: participantTypes,
+        business_party: businessParty,
         username,
         login_id: loginId,
         authority,
@@ -239,7 +256,6 @@ async function handleRegisterSubmit(e) {
         return;
     }
 
-    // 이메일 인증 설정 여부와 무관하게 즉시 로그인 시도
     const { data: signInData, error: signInError } = await client.auth.signInWithPassword({ email, password });
     if (signInError || !signInData.user?.id) {
         alert("회원가입이 완료되었습니다. 로그인 화면에서 다시 로그인해 주세요.");
@@ -247,14 +263,16 @@ async function handleRegisterSubmit(e) {
         return;
     }
 
-    const roles = mapParticipantTypesToAppRoles(participantTypes);
-    const activeRole = roles.includes("consumer") ? "consumer" : "supplier";
+    const { roles, activeRole } = rolesFromBusinessParty(businessParty);
+
     setAuth({
         id: loginId,
         name: businessName,
         roles,
         activeRole,
+        representativeName,
         authority,
+        businessParty,
         supabaseUserId: signInData.user.id,
         loggedInAt: new Date().toISOString(),
     });
@@ -278,7 +296,6 @@ function wireEvents() {
 
 function init() {
     initTheme();
-    // 로그인 상태면 로그인 페이지 대신 대시보드로 이동
     try {
         if (getAuth()) {
             window.location.href = "dashboard.html";

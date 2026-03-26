@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H2GO - 운송 자원 (T/T · 운반기사)</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="transport-assets.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="theme-dark">
+    <nav class="navbar">
+        <div class="navbar-brand-row">
+            <a href="dashboard.html" class="logo dashboard-brand" aria-label="H2GO 대시보드">
+                <div class="brand-mark brand-mark--lg" aria-label="H2GO 로고">
+                    <span class="brand-h2">H2</span><span class="brand-go">GO</span>
+                </div>
+            </a>
+            <div class="theme-switcher theme-switcher--compact">
+                <button id="themeToggle" type="button" class="theme-toggle-switch" aria-label="라이트/다크 모드 전환" data-theme="dark">
+                    <span class="theme-toggle-track">
+                        <span class="theme-toggle-thumb"></span>
+                    </span>
+                    <span class="theme-toggle-label">Dark</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="dashboard-top-right">
+            <div id="bizName" class="dashboard-biz-name">사업자</div>
+        </div>
+
+        <ul class="nav-links dashboard-nav">
+            <li><a href="dashboard.html" class="nav-fleet-link">대시보드</a></li>
+            <li class="logout-item"><button id="logoutBtn" type="button" class="btn btn-secondary btn-tiny">로그아웃</button></li>
+        </ul>
+    </nav>
+
+    <main class="dashboard-main transport-assets-main">
+        <header class="transport-assets-header">
+            <h1>운송 자원 관리</h1>
+            <p>수소 튜브트레일러(T/T)와 운반기사 정보를 등록하면 Supabase에 저장되며, 판매 대시보드의 <strong>운송 시작</strong> 시 선택할 수 있습니다.</p>
+        </header>
+
+        <div id="fleetStatus" class="transport-status-banner transport-status-banner--error is-hidden" role="alert"></div>
+
+        <div class="transport-assets-toolbar">
+            <div class="transport-tab-group" role="tablist" aria-label="등록 유형">
+                <button type="button" class="transport-tab is-active" role="tab" aria-selected="true" data-panel="trailers">튜브트레일러 (T/T)</button>
+                <button type="button" class="transport-tab" role="tab" aria-selected="false" data-panel="drivers">운반기사</button>
+            </div>
+        </div>
+
+        <div class="transport-assets-panels">
+            <section id="panelTrailers" class="transport-panel is-active" role="tabpanel" aria-labelledby="tab-trailers">
+                <div class="transport-form-card">
+                    <h2>T/T 등록</h2>
+                    <form id="ttForm" class="transport-asset-form" autocomplete="off">
+                        <input type="hidden" id="ttEditId" value="">
+                        <div class="transport-form-grid">
+                            <div class="form-group">
+                                <label for="ttVehicleNumber">차량번호 <span class="form-hint-inline">필수</span></label>
+                                <input type="text" id="ttVehicleNumber" required placeholder="예: 경기99가1234" maxlength="32">
+                            </div>
+                            <div class="form-group">
+                                <label for="ttOwnerName">소유자</label>
+                                <input type="text" id="ttOwnerName" placeholder="법인·개인명" maxlength="120">
+                            </div>
+                            <div class="form-group">
+                                <label for="ttVehicleInspection">차량검사일</label>
+                                <input type="date" id="ttVehicleInspection">
+                            </div>
+                            <div class="form-group">
+                                <label for="ttPressureInspection">압력용기검사일</label>
+                                <input type="date" id="ttPressureInspection">
+                            </div>
+                            <div class="form-group form-group--full">
+                                <label for="ttNotes">기타 정보</label>
+                                <textarea id="ttNotes" placeholder="비고, 특이사항 등" maxlength="2000"></textarea>
+                            </div>
+                        </div>
+                        <div class="transport-form-actions">
+                            <button type="submit" class="btn btn-primary" id="ttSubmitBtn">저장</button>
+                            <button type="button" class="btn btn-secondary" id="ttResetBtn">초기화</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="transport-list-card">
+                    <h2>등록된 T/T</h2>
+                    <div id="ttListMount" class="transport-table-wrap"></div>
+                </div>
+            </section>
+
+            <section id="panelDrivers" class="transport-panel" role="tabpanel" aria-labelledby="tab-drivers">
+                <div class="transport-form-card">
+                    <h2>운반기사 등록</h2>
+                    <form id="drvForm" class="transport-asset-form" autocomplete="off">
+                        <input type="hidden" id="drvEditId" value="">
+                        <div class="transport-form-grid">
+                            <div class="form-group">
+                                <label for="drvName">기사명 <span class="form-hint-inline">필수</span></label>
+                                <input type="text" id="drvName" required placeholder="예: 홍길동" maxlength="80">
+                            </div>
+                            <div class="form-group">
+                                <label for="drvTractorPlate">트랙터 차량번호</label>
+                                <input type="text" id="drvTractorPlate" placeholder="예: 경기11나2222" maxlength="32">
+                            </div>
+                            <div class="form-group">
+                                <label for="drvModelYear">연식</label>
+                                <input type="text" id="drvModelYear" placeholder="예: 2022" maxlength="16">
+                            </div>
+                            <div class="form-group">
+                                <label for="drvModelName">모델명</label>
+                                <input type="text" id="drvModelName" placeholder="차종·모델" maxlength="120">
+                            </div>
+                            <div class="form-group">
+                                <label for="drvVehicleInspection">차량검사일</label>
+                                <input type="date" id="drvVehicleInspection">
+                            </div>
+                            <div class="form-group form-group--full">
+                                <label for="drvNotes">기타 정보</label>
+                                <textarea id="drvNotes" placeholder="비고, 면허·연락처 등" maxlength="2000"></textarea>
+                            </div>
+                        </div>
+                        <div class="transport-form-actions">
+                            <button type="submit" class="btn btn-primary" id="drvSubmitBtn">저장</button>
+                            <button type="button" class="btn btn-secondary" id="drvResetBtn">초기화</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="transport-list-card">
+                    <h2>등록된 운반기사</h2>
+                    <div id="drvListMount" class="transport-table-wrap"></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="/h2go-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="transport-assets.js"></script>
+</body>
+</html>

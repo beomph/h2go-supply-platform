@@ -619,7 +619,7 @@ body.theme-dark .transport-schedule-card {
         /* styles.css 모바일 규칙(.nav-links { display:none }) 무효화 */
         display: grid;
         grid-area: controls;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: minmax(0, 1fr) auto auto;
         position: static;
         background: transparent;
         border-bottom: none;
@@ -639,8 +639,19 @@ body.theme-dark .transport-schedule-card {
         min-width: 0;
     }
 
-    .logout-item {
+    .nav-fleet-item {
         grid-column: 2;
+        justify-self: center;
+    }
+
+    .nav-fleet-item .nav-fleet-link {
+        min-height: 2.35rem;
+        padding: 0 0.55rem;
+        font-size: 0.82rem;
+    }
+
+    .logout-item {
+        grid-column: 3;
         justify-self: end;
     }
 
@@ -689,6 +700,44 @@ body.theme-dark .transport-schedule-card {
 .dashboard-view.active {
     display: block;
     animation: fadeIn 0.3s ease;
+}
+
+/* 대시보드 ↔ 운송 자원 페이지 네비 링크 */
+.nav-fleet-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0 0.9rem;
+    border-radius: 10px;
+    background: var(--surface-soft);
+    border: 1px solid var(--surface-soft-border);
+    color: var(--text-white);
+    text-decoration: none;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-sizing: border-box;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+}
+
+.nav-fleet-link:hover {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.25);
+}
+
+.nav-fleet-item.is-hidden {
+    display: none !important;
+}
+
+.order-form .transport-modal-hint {
+    display: block;
+    margin: 0.4rem 0 0;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.4;
 }
 
 @keyframes fadeIn {

@@ -493,11 +493,64 @@ async function initializeSupabaseOrders() {
 
         isSupabaseOrdersEnabled = true;
         await loadOrdersFromSupabase();
+        syncFleetNavVisibility();
         return true;
     } catch (err) {
         console.warn("[h2go] supabase orders initialization skipped:", err?.message || err);
         isSupabaseOrdersEnabled = false;
+        syncFleetNavVisibility();
         return true;
+    }
+}
+
+/** 판매모드 + Supabase 연동 시에만 운송 자원 페이지 링크 표시 */
+function syncFleetNavVisibility() {
+    const item = document.getElementById("fleetNavItem");
+    if (!item) return;
+    const allowed = auth?.roles || [];
+    const show =
+        isSupabaseOrdersEnabled &&
+        allowed.includes("supplier") &&
+        currentUser?.type === "supplier";
+    item.classList.toggle("is-hidden", !show);
+}
+
+function fillDatalistFromValues(datalistEl, values) {
+    if (!datalistEl) return;
+    datalistEl.innerHTML = "";
+    const uniq = [...new Set(values.map((v) => String(v || "").trim()).filter(Boolean))];
+    uniq.sort((a, b) => a.localeCompare(b, "ko"));
+    uniq.forEach((v) => {
+        const opt = document.createElement("option");
+        opt.value = v;
+        datalistEl.appendChild(opt);
+    });
+}
+
+async function loadTransportAssetDatalists() {
+    const ttList = document.getElementById("transportTrailerDatalist");
+    const drvList = document.getElementById("transportDriverDatalist");
+    if (!ttList || !drvList) return;
+    if (!supabaseClient || !isSupabaseOrdersEnabled) {
+        fillDatalistFromValues(ttList, []);
+        fillDatalistFromValues(drvList, []);
+        return;
+    }
+    try {
+        const [ttRes, drvRes] = await Promise.all([
+            supabaseClient.from("h2go_tube_trailers").select("vehicle_number").order("vehicle_number", { ascending: true }),
+            supabaseClient.from("h2go_transport_drivers").select("driver_name").order("driver_name", { ascending: true }),
+        ]);
+        if (ttRes.error) console.warn("[h2go] T/T datalist:", ttRes.error.message || ttRes.error);
+        if (drvRes.error) console.warn("[h2go] driver datalist:", drvRes.error.message || drvRes.error);
+        const ttNums = (ttRes.data || []).map((r) => r?.vehicle_number);
+        const drvNames = (drvRes.data || []).map((r) => r?.driver_name);
+        fillDatalistFromValues(ttList, ttNums);
+        fillDatalistFromValues(drvList, drvNames);
+    } catch (err) {
+        console.warn("[h2go] transport asset datalists failed:", err?.message || err);
+        fillDatalistFromValues(ttList, []);
+        fillDatalistFromValues(drvList, []);
     }
 }
 
@@ -1988,12 +2041,13 @@ function buildOrderChangeHistory(order) {
 }
 
 // ========== 운송 시작 모달 ==========
-function openTransportStartModal(orderId) {
+async function openTransportStartModal(orderId) {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
     document.getElementById('transportStartOrderId').value = orderId;
     document.getElementById('transportTrailerNumbers').value = '';
     document.getElementById('transportDriverName').value = '';
+    await loadTransportAssetDatalists();
     document.getElementById('transportStartModal').classList.add('active');
 }
 
@@ -2404,6 +2458,7 @@ document.getElementById('roleSelect').addEventListener('change', (e) => {
         localStorage.setItem(AUTH_KEY, JSON.stringify(nextAuth));
     } catch (_) {}
     showView(role);
+    syncFleetNavVisibility();
     if (role === 'consumer') renderConsumerView();
     if (role === 'supplier') renderSupplierView();
 });
@@ -2702,7 +2757,9 @@ document.addEventListener('click', (e) => {
         if (!nextStatus) return;
         if (actor === 'supplier') {
             if (nextStatus === 'in_transit') {
-                openTransportStartModal(orderId);
+                openTransportStartModal(orderId).catch((err) =>
+                    console.warn("[h2go] transport start modal:", err?.message || err)
+                );
                 return;
             }
             const supplierAction = getSupplierAdvanceAction(normalizeStatus(order.status));
@@ -2852,6 +2909,8 @@ if (roleSelectEl && auth) {
         roleSelectEl.title = '구매·판매 대시보드를 전환할 수 있습니다.';
     }
 }
+
+syncFleetNavVisibility();
 
 initTheme();
 initFormDefaults();

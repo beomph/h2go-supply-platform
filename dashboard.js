@@ -261,6 +261,19 @@ function getSupplyConditionLabel(order) {
     return s ? s.label : (v === 'ex_factory' ? '출하도' : '도착도');
 }
 
+/** 출하도 주문에 수요자가 입력한 T/T·기사 (있으면 공급자 운송 시작 시 안내용) */
+function getConsumerDeclaredTransport(order) {
+    if (!order || order.supplyCondition !== "ex_factory") return null;
+    const ct = order.consumerTransport;
+    if (!ct || typeof ct !== "object") return null;
+    const trailerNumbers = Array.isArray(ct.trailerNumbers)
+        ? ct.trailerNumbers.map((x) => String(x || "").trim()).filter(Boolean)
+        : [];
+    const driverName = String(ct.driverName || "").trim();
+    if (!trailerNumbers.length && !driverName) return null;
+    return { trailerNumbers, driverName };
+}
+
 // 주문별 운송시간(분): 출하도는 0(픽업), 도착도는 납품지까지 시간
 function getOrderTravelTimeMinutes(order) {
     if (!order) return 0;
@@ -373,6 +386,8 @@ function serializeOrderForSupabase(order) {
             returnAt: order.returnAt || null,
             outboundInfo,
             deliveryConfirmation,
+            consumerTransport:
+                order.consumerTransport && typeof order.consumerTransport === "object" ? order.consumerTransport : null,
         },
     };
 }
@@ -410,6 +425,7 @@ function deserializeSupabaseOrder(row) {
         changeHistory: Array.isArray(row.change_history) ? row.change_history : [],
         outboundInfo: (payload.outboundInfo && typeof payload.outboundInfo === "object") ? payload.outboundInfo : null,
         deliveryConfirmation: (payload.deliveryConfirmation && typeof payload.deliveryConfirmation === "object") ? payload.deliveryConfirmation : null,
+        consumerTransport: (payload.consumerTransport && typeof payload.consumerTransport === "object") ? payload.consumerTransport : null,
     };
 }
 
@@ -503,15 +519,16 @@ async function initializeSupabaseOrders() {
     }
 }
 
-/** 판매모드 + Supabase 연동 시에만 운송 자원 페이지 링크 표시 */
+/** Supabase 연동 시 구매/판매 모드에 맞춰 운송 자원 페이지 링크 표시 (수요자·공급자 모두 등록 가능) */
 function syncFleetNavVisibility() {
     const item = document.getElementById("fleetNavItem");
     if (!item) return;
     const allowed = auth?.roles || [];
-    const show =
-        isSupabaseOrdersEnabled &&
-        allowed.includes("supplier") &&
-        currentUser?.type === "supplier";
+    const role = currentUser?.type;
+    const roleOk =
+        (role === "supplier" && allowed.includes("supplier")) ||
+        (role === "consumer" && allowed.includes("consumer"));
+    const show = isSupabaseOrdersEnabled && roleOk;
     item.classList.toggle("is-hidden", !show);
 }
 
@@ -551,6 +568,160 @@ async function loadTransportAssetDatalists() {
         console.warn("[h2go] transport asset datalists failed:", err?.message || err);
         fillDatalistFromValues(ttList, []);
         fillDatalistFromValues(drvList, []);
+    }
+}
+
+/** 구매 화면 — 출하도 주문용 T/T·기사 datalist */
+async function loadConsumerTransportDatalists() {
+    const ttList = document.getElementById("orderConsumerTtDatalist");
+    const drvList = document.getElementById("orderConsumerDriverDatalist");
+    if (!ttList || !drvList) return;
+    if (!supabaseClient || !isSupabaseOrdersEnabled) {
+        fillDatalistFromValues(ttList, []);
+        fillDatalistFromValues(drvList, []);
+        return;
+    }
+    try {
+        const [ttRes, drvRes] = await Promise.all([
+            supabaseClient.from("h2go_tube_trailers").select("vehicle_number").order("vehicle_number", { ascending: true }),
+            supabaseClient.from("h2go_transport_drivers").select("driver_name").order("driver_name", { ascending: true }),
+        ]);
+        if (ttRes.error) console.warn("[h2go] consumer T/T datalist:", ttRes.error.message || ttRes.error);
+        if (drvRes.error) console.warn("[h2go] consumer driver datalist:", drvRes.error.message || drvRes.error);
+        fillDatalistFromValues(ttList, (ttRes.data || []).map((r) => r?.vehicle_number));
+        fillDatalistFromValues(drvList, (drvRes.data || []).map((r) => r?.driver_name));
+    } catch (err) {
+        console.warn("[h2go] consumer transport datalists failed:", err?.message || err);
+        fillDatalistFromValues(ttList, []);
+        fillDatalistFromValues(drvList, []);
+    }
+}
+
+let transportAssetPickState = { kind: null, targetInputId: null, rows: [] };
+
+function closeTransportAssetPickModal() {
+    document.getElementById("transportAssetPickModal")?.classList.remove("active");
+    transportAssetPickState = { kind: null, targetInputId: null, rows: [] };
+}
+
+function appendToCommaSeparatedField(inputEl, value) {
+    if (!inputEl || !value) return;
+    const v = String(value).trim();
+    if (!v) return;
+    const cur = String(inputEl.value || "").trim();
+    if (!cur) inputEl.value = v;
+    else if (cur.split(/[,，\s]+/).map((s) => s.trim().toLowerCase()).includes(v.toLowerCase())) return;
+    else inputEl.value = `${cur}, ${v}`;
+}
+
+async function openTransportAssetPickModal(kind, targetInputId) {
+    const modal = document.getElementById("transportAssetPickModal");
+    const titleEl = document.getElementById("transportAssetPickTitle");
+    const listEl = document.getElementById("transportAssetPickList");
+    if (!modal || !titleEl || !listEl || !supabaseClient || !isSupabaseOrdersEnabled) {
+        alert("Supabase에 연결된 경우에만 등록 목록을 불러올 수 있습니다.");
+        return;
+    }
+    const table = kind === "tt" ? "h2go_tube_trailers" : "h2go_transport_drivers";
+    const { data, error } = await supabaseClient.from(table).select("*").order(kind === "tt" ? "vehicle_number" : "driver_name", { ascending: true });
+    if (error) {
+        alert(error.message || "목록을 불러오지 못했습니다.");
+        return;
+    }
+    const rows = Array.isArray(data) ? data : [];
+    transportAssetPickState = { kind, targetInputId, rows };
+    titleEl.textContent = kind === "tt" ? "등록된 T/T 선택" : "등록된 운반기사 선택";
+    if (!rows.length) {
+        listEl.innerHTML = '<p class="transport-pick-empty">등록된 항목이 없습니다. 운송 자원 메뉴에서 추가해 주세요.</p>';
+        modal.classList.add("active");
+        return;
+    }
+    if (kind === "tt") {
+        listEl.innerHTML = rows
+            .map((r) => {
+                const num = String(r.vehicle_number || "").replace(/"/g, "&quot;");
+                const owner = String(r.owner_name || "—").replace(/</g, "&lt;");
+                const vInsp = r.vehicle_inspection_date || "—";
+                const pInsp = r.pressure_vessel_inspection_date || "—";
+                return `<button type="button" class="transport-asset-pick-item" data-pick-tt="${num}">
+                    <div class="transport-asset-pick-item-title">${num}</div>
+                    <div class="transport-asset-pick-item-meta">소유자 ${owner} · 차량검사 ${vInsp} · 압력용기 ${pInsp}</div>
+                </button>`;
+            })
+            .join("");
+    } else {
+        listEl.innerHTML = rows
+            .map((r) => {
+                const name = String(r.driver_name || "").replace(/"/g, "&quot;");
+                const plate = String(r.tractor_plate_number || "—").replace(/</g, "&lt;");
+                const yr = String(r.vehicle_model_year || "—");
+                const mdl = String(r.vehicle_model_name || "—").replace(/</g, "&lt;");
+                return `<button type="button" class="transport-asset-pick-item" data-pick-driver="${name}">
+                    <div class="transport-asset-pick-item-title">${name}</div>
+                    <div class="transport-asset-pick-item-meta">트랙터 ${plate} · ${yr} · ${mdl}</div>
+                </button>`;
+            })
+            .join("");
+    }
+    listEl.querySelectorAll("[data-pick-tt]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const input = document.getElementById(transportAssetPickState.targetInputId);
+            appendToCommaSeparatedField(input, btn.getAttribute("data-pick-tt"));
+            closeTransportAssetPickModal();
+        });
+    });
+    listEl.querySelectorAll("[data-pick-driver]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const input = document.getElementById(transportAssetPickState.targetInputId);
+            if (input) input.value = btn.getAttribute("data-pick-driver") || "";
+            closeTransportAssetPickModal();
+        });
+    });
+    modal.classList.add("active");
+}
+
+async function maybeSaveConsumerTransportAssets(ttRaw, driverName, saveTt, saveDriver) {
+    if (!supabaseClient || !isSupabaseOrdersEnabled) return;
+    const session = (await supabaseClient.auth.getSession()).data?.session;
+    if (!session?.user?.id) return;
+    const uid = session.user.id;
+    const ownerLabel = String(currentUser?.name || auth?.name || "").trim();
+    if (saveTt) {
+        const nums = String(ttRaw || "")
+            .split(/[,，\s]+/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+        for (const vehicle_number of nums) {
+            const { error } = await supabaseClient.from("h2go_tube_trailers").upsert(
+                {
+                    owner_member_id: uid,
+                    vehicle_number,
+                    owner_name: ownerLabel,
+                    vehicle_inspection_date: null,
+                    pressure_vessel_inspection_date: null,
+                    notes: "",
+                },
+                { onConflict: "owner_member_id,vehicle_number" }
+            );
+            if (error && !String(error.message || "").includes("duplicate")) console.warn("[h2go] save consumer T/T:", error.message || error);
+        }
+    }
+    if (saveDriver) {
+        const dn = String(driverName || "").trim();
+        if (dn) {
+            const { error } = await supabaseClient.from("h2go_transport_drivers").insert({
+                owner_member_id: uid,
+                driver_name: dn,
+                tractor_plate_number: "",
+                vehicle_model_year: "",
+                vehicle_model_name: "",
+                vehicle_inspection_date: null,
+                notes: "",
+            });
+            if (error && !String(error.message || "").toLowerCase().includes("duplicate") && !String(error.code || "").includes("23")) {
+                console.warn("[h2go] save consumer driver:", error.message || error);
+            }
+        }
     }
 }
 
@@ -1539,6 +1710,10 @@ function renderConsumerView() {
 
         const transportInfo = order.transportInfo;
         const transportInfoText = transportInfo ? `T/T: ${(transportInfo.trailerNumbers || []).join(', ')} · 기사: ${transportInfo.driverName || '-'}` : '';
+        const consumerDeclared = getConsumerDeclaredTransport(order);
+        const consumerDeclaredText = consumerDeclared
+            ? `수요자 운송(출하도): T/T ${consumerDeclared.trailerNumbers.join(', ') || '—'} · 기사 ${consumerDeclared.driverName || '—'}`
+            : '';
 
         const isCancelled = order.status === 'cancelled';
         return `
@@ -1574,6 +1749,7 @@ function renderConsumerView() {
                 </div>
             </div>
             ${transportInfoText ? `<div class="order-transport-info">${transportInfoText}</div>` : ''}
+            ${consumerDeclaredText ? `<div class="order-transport-info">${consumerDeclaredText}</div>` : ''}
             ${(changeBadge || cancelBadge) ? `
             <div class="order-item-foot">
                 <div class="order-item-badges"><div class="change-summary">${changeBadge || ''} ${cancelBadge || ''}</div></div>
@@ -1747,8 +1923,16 @@ function renderSupplierOrdersCards() {
 
         const isCancelled = o.status === 'cancelled';
 
+        const consumerDeclared = getConsumerDeclaredTransport(o);
+        const showConsumerTransportBtn =
+            advanceAction &&
+            advanceAction.next === "in_transit" &&
+            consumerDeclared &&
+            (consumerDeclared.trailerNumbers.length || consumerDeclared.driverName);
+
         const actionButtons = `
             ${advanceAction ? `<button type="button" class="btn btn-small btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : ''}
+            ${showConsumerTransportBtn ? `<button type="button" class="btn btn-small btn-secondary" data-action="apply-consumer-transport" data-id="${o.id}">수요자 운송자원 적용</button>` : ''}
             ${canCancelChangeRequest ? `<button type="button" class="btn btn-small btn-secondary" data-action="cancel-change-request" data-id="${o.id}">변경요청 취소</button>` : ''}
             ${canProposeChange ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${o.id}">변경</button>` : ''}
             ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${o.id}">취소</button>` : ''}
@@ -1781,6 +1965,7 @@ function renderSupplierOrdersCards() {
             <div class="order-item-supplier-meta">
                 <span class="order-id">${o.id}</span>
                 ${o.transportInfo ? `<span class="order-transport-info">T/T: ${(o.transportInfo.trailerNumbers || []).join(', ')} · 기사: ${o.transportInfo.driverName || '-'}</span>` : ''}
+                ${consumerDeclared ? `<span class="order-transport-info">수요자(출하도): T/T ${consumerDeclared.trailerNumbers.join(', ') || '—'} · 기사 ${consumerDeclared.driverName || '—'}</span>` : ''}
             </div>
             ${(noteText || changeBadge || cancelBadge) ? `
             <div class="order-item-foot">
@@ -2041,13 +2226,24 @@ function buildOrderChangeHistory(order) {
 }
 
 // ========== 운송 시작 모달 ==========
-async function openTransportStartModal(orderId) {
+async function openTransportStartModal(orderId, prefillFromConsumerTransport) {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
     document.getElementById('transportStartOrderId').value = orderId;
     document.getElementById('transportTrailerNumbers').value = '';
     document.getElementById('transportDriverName').value = '';
     await loadTransportAssetDatalists();
+    if (prefillFromConsumerTransport) {
+        const ct = order.consumerTransport && typeof order.consumerTransport === "object" ? order.consumerTransport : null;
+        if (ct) {
+            const ttEl = document.getElementById("transportTrailerNumbers");
+            const drvEl = document.getElementById("transportDriverName");
+            if (ttEl && Array.isArray(ct.trailerNumbers) && ct.trailerNumbers.length) {
+                ttEl.value = ct.trailerNumbers.map((x) => String(x || "").trim()).filter(Boolean).join(", ");
+            }
+            if (drvEl && ct.driverName) drvEl.value = String(ct.driverName).trim();
+        }
+    }
     document.getElementById('transportStartModal').classList.add('active');
 }
 
@@ -2337,20 +2533,44 @@ function setSupplierName(name) {
     if (input) input.value = selectedSupplierName || "";
 }
 
-// 출하도 선택 시 납품 주소 입력 숨김, 도착도 시 표시
+// 출하도 선택 시 납품 주소 숨김 → 수요자 운송 자원 입력 표시, 도착도 시 납품 주소 표시
 function toggleOrderAddressBySupplyCondition() {
     const scInput = document.getElementById('supplyConditionInput');
     const isExFactory = (scInput && scInput.value) === 'ex_factory';
     const group = document.getElementById('orderAddressFormGroup');
     const input = document.getElementById('orderAddress');
+    const exGroup = document.getElementById('consumerExFactoryTransportGroup');
+    const ttIn = document.getElementById('orderConsumerTtInput');
+    const drvIn = document.getElementById('orderConsumerDriverInput');
     if (!group || !input) return;
     if (isExFactory) {
         group.style.display = 'none';
         input.removeAttribute('required');
         input.value = '';
+        if (exGroup) {
+            exGroup.classList.remove('is-hidden');
+            if (ttIn) ttIn.setAttribute('required', 'required');
+            if (drvIn) drvIn.setAttribute('required', 'required');
+        }
+        loadConsumerTransportDatalists().catch((err) => console.warn("[h2go] consumer transport datalists:", err?.message || err));
     } else {
         group.style.display = '';
         input.setAttribute('required', 'required');
+        if (exGroup) {
+            exGroup.classList.add('is-hidden');
+            if (ttIn) {
+                ttIn.removeAttribute('required');
+                ttIn.value = '';
+            }
+            if (drvIn) {
+                drvIn.removeAttribute('required');
+                drvIn.value = '';
+            }
+        }
+        const saveTt = document.getElementById('orderSaveConsumerTt');
+        const saveDrv = document.getElementById('orderSaveConsumerDriver');
+        if (saveTt) saveTt.checked = false;
+        if (saveDrv) saveDrv.checked = false;
     }
 }
 
@@ -2495,9 +2715,30 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
     const supplierName = String(selectedSupplierName || auth?.name || currentUser.name).trim();
     const scInput = document.getElementById('supplyConditionInput');
     const supplyCondition = (scInput && scInput.value) || 'delivery';
-    const addressValue = supplyCondition === 'ex_factory'
-        ? getSupplierShippingAddress(supplierName)
-        : normalizeAddress(document.getElementById('orderAddress').value);
+    let addressValue;
+    let consumerTransport = null;
+    if (supplyCondition === 'ex_factory') {
+        const ttRaw = String(document.getElementById('orderConsumerTtInput')?.value || '');
+        const driverRaw = String(document.getElementById('orderConsumerDriverInput')?.value || '').trim();
+        const trailerNumbers = ttRaw.split(/[,，\s]+/).map((s) => s.trim()).filter(Boolean);
+        if (!trailerNumbers.length) {
+            alert('출하도(상차도) 주문은 T/T 차량번호를 입력해 주세요.');
+            return;
+        }
+        if (!driverRaw) {
+            alert('출하도(상차도) 주문은 운송기사를 입력해 주세요.');
+            return;
+        }
+        addressValue = getSupplierShippingAddress(supplierName);
+        consumerTransport = { trailerNumbers, driverName: driverRaw };
+        const saveTt = Boolean(document.getElementById('orderSaveConsumerTt')?.checked);
+        const saveDrv = Boolean(document.getElementById('orderSaveConsumerDriver')?.checked);
+        if (saveTt || saveDrv) {
+            void maybeSaveConsumerTransportAssets(ttRaw, driverRaw, saveTt, saveDrv);
+        }
+    } else {
+        addressValue = normalizeAddress(document.getElementById('orderAddress').value);
+    }
     if (!addressValue) {
         alert('납품 주소를 입력해 주세요.');
         return;
@@ -2528,6 +2769,7 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
         tubeTrailers: 1,
         address: addressValue,
         supplyCondition: supplyCondition,
+        consumerTransport,
         note: document.getElementById('orderNote').value,
         status: 'requested',
         createdAt: new Date().toISOString()
@@ -2539,6 +2781,7 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
         supplierAddress: getSupplierShippingAddress(order.supplierName),
         supplyCondition: order.supplyCondition,
         note: order.note || "",
+        consumerTransport: consumerTransport || undefined,
     });
     orders.push(order);
     saveOrdersToStorage();
@@ -2660,6 +2903,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (document.getElementById('orderMapModal').classList.contains('active')) closeOrderMapModal();
     else if (document.getElementById('qtyConfirmModal').classList.contains('active')) closeQtyConfirmModal();
+    else if (document.getElementById('transportAssetPickModal')?.classList.contains('active')) closeTransportAssetPickModal();
     else if (document.getElementById('transportStartModal').classList.contains('active')) closeTransportStartModal();
 });
 document.querySelector('#changeRequestModal .modal-close').addEventListener('click', () => {
@@ -2681,6 +2925,24 @@ document.getElementById('transportStartModal')?.addEventListener('click', (e) =>
 document.querySelector('#qtyConfirmModal .modal-close')?.addEventListener('click', closeQtyConfirmModal);
 document.getElementById('qtyConfirmModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeQtyConfirmModal();
+});
+
+document.querySelector('#transportAssetPickModal .modal-close')?.addEventListener('click', closeTransportAssetPickModal);
+document.getElementById('transportAssetPickModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeTransportAssetPickModal();
+});
+
+document.getElementById('transportTtPickBtn')?.addEventListener('click', () => {
+    openTransportAssetPickModal('tt', 'transportTrailerNumbers');
+});
+document.getElementById('transportDriverPickBtn')?.addEventListener('click', () => {
+    openTransportAssetPickModal('driver', 'transportDriverName');
+});
+document.getElementById('orderConsumerTtPickBtn')?.addEventListener('click', () => {
+    openTransportAssetPickModal('tt', 'orderConsumerTtInput');
+});
+document.getElementById('orderConsumerDriverPickBtn')?.addEventListener('click', () => {
+    openTransportAssetPickModal('driver', 'orderConsumerDriverInput');
 });
 
 document.addEventListener('click', (e) => {
@@ -2749,6 +3011,12 @@ document.addEventListener('click', (e) => {
             applyChange(orderId, false);
             alert('변경 요청이 거절되었습니다.');
         }
+    } else if (action === 'apply-consumer-transport') {
+        if (!order) return;
+        if (getActorForOrder(order) !== "supplier") return;
+        openTransportStartModal(orderId, true).catch((err) =>
+            console.warn("[h2go] transport start modal:", err?.message || err)
+        );
     } else if (action === 'advance-status') {
         if (!order) return;
         const actor = getActorForOrder(order);
@@ -2757,7 +3025,7 @@ document.addEventListener('click', (e) => {
         if (!nextStatus) return;
         if (actor === 'supplier') {
             if (nextStatus === 'in_transit') {
-                openTransportStartModal(orderId).catch((err) =>
+                openTransportStartModal(orderId, false).catch((err) =>
                     console.warn("[h2go] transport start modal:", err?.message || err)
                 );
                 return;

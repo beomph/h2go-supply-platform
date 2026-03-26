@@ -740,6 +740,118 @@ body.theme-dark .transport-schedule-card {
     line-height: 1.4;
 }
 
+.consumer-exfactory-hint {
+    display: block;
+    margin: 0.25rem 0 0.65rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+
+.consumer-exfactory-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem 1rem;
+}
+
+@media (max-width: 640px) {
+    .consumer-exfactory-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.consumer-exfactory-input-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.4rem;
+}
+
+.consumer-exfactory-input-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+.consumer-exfactory-save-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem 1.25rem;
+    margin-top: 0.75rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.consumer-exfactory-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.transport-modal-input-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.4rem;
+}
+
+.transport-modal-input-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+.modal-content--narrow {
+    max-width: 400px;
+}
+
+.transport-asset-pick-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    max-height: min(52vh, 360px);
+    overflow-y: auto;
+    margin-top: 0.5rem;
+}
+
+.transport-asset-pick-item {
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem 0.9rem;
+    border-radius: var(--radius-md, 10px);
+    border: 1px solid var(--border-color);
+    background: var(--surface-soft);
+    color: var(--text-white);
+    font-family: inherit;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.transport-asset-pick-item:hover,
+.transport-asset-pick-item:focus-visible {
+    border-color: var(--h2-blue);
+    outline: none;
+    background: color-mix(in srgb, var(--surface-soft) 85%, var(--h2-blue) 15%);
+}
+
+.transport-asset-pick-item-title {
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+
+.transport-asset-pick-item-meta {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+}
+
+.transport-pick-empty {
+    margin: 0;
+    padding: 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }

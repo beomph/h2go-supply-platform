@@ -29,11 +29,13 @@
 - Supabase Auth: 앱은 `signUp` 한 경로만 사용. Email 제공자+Allow new users 켜기(끄면 충돌). Confirm email은 끄기 권장. `supabase_mailer_autoconfirm.ps1`는 external_email+disable_signup+mailer_autoconfirm 정렬. URL/anon은 `/h2go-config.js`(H2GO_SUPABASE_*).
 - `member_profiles`: `business_parties[]`(공급자·운송자·수요자 복수), `username`, `authority`, `login_id`. 공급자→판매 대시보드, 수요자→구매, 둘 다면 전환 가능. 운송자만→구매만.
 
-1.4 운송 자원 마스터(Supabase, 판매자)
-- 화면: `transport-assets.html` — 로그인 후 T/T(`h2go_tube_trailers`)·운반기사(`h2go_transport_drivers`)를 등록·수정·삭제. 스키마 적용: `scripts/supabase_transport_assets.sql`.
+1.4 운송 자원 마스터(Supabase, 수요자·공급자 공통)
+- 화면: `transport-assets.html` — 로그인 후 T/T(`h2go_tube_trailers`)·운반기사(`h2go_transport_drivers`)를 등록·수정·삭제. 스키마 적용: `scripts/supabase_transport_assets.sql`(Supabase SQL Editor). **Supabase MCP는 이 환경에 연결되어 있지 않아** 테이블 생성은 위 스크립트 수동 실행으로 반영한다.
 - T/T 필드: `vehicle_number`, `owner_name`, `vehicle_inspection_date`, `pressure_vessel_inspection_date`, `notes`. RLS로 `owner_member_id = auth.uid()`인 행만 접근.
 - 운반기사 필드: `driver_name`, `tractor_plate_number`, `vehicle_model_year`, `vehicle_model_name`, `vehicle_inspection_date`, `notes`. 동일 RLS.
-- 판매 대시보드: Supabase 주문 연동이 켜진 공급자 계정에서만 네비에「운송 자원」링크 표시. `운송 시작` 모달은 위 테이블에서 불러온 값으로 datalist(선택)를 채우며, 미등록 시에도 수동 입력 가능.
+- 네비「운송 자원」: Supabase 주문 연동이 켜진 계정에서, 현재 모드가 구매면 수요자(`consumer`)·판매면 공급자(`supplier`)일 때 표시.
+- 구매 대시보드·출하도(상차도): 납품 주소 입력란 대신 **수요자 운송 자원** 블록(T/T·기사, datalist·「목록」모달, 신규 입력). 주문의 `extra_payload.consumerTransport`에 `{ trailerNumbers[], driverName }` 저장. 체크 시 입력값을 본인 `h2go_tube_trailers` / `h2go_transport_drivers`에 즉시 반영(T/T는 `upsert` on `(owner_member_id, vehicle_number)`, 기사는 `insert`).
+- 판매 대시보드·운송 시작: 모달에「등록 T/T」「등록 기사」버튼으로 등록 목록 모달 선택(다중 T/T는 기존 값에 쉼표로 추가). 출하도 주문이면 카드에 수요자 제출 T/T·기사 표시 및 **수요자 운송자원 적용**으로 모달에 자동 채움.
 
 ================================================================================
 2. 핵심 문제 정의 (AI 관점)
@@ -422,6 +424,10 @@ Phase 4 — 운영 안정화 및 확장 (지속)
 ================================================================================
 최근 변경
 ================================================================================
+
+- 2026-03-26 (2)
+  - 수요자도 운송 자원 메뉴·동일 Supabase 테이블 사용. 출하도 주문 시 납품 주소 대신 수요자 T/T·기사 입력·선택, `extra_payload.consumerTransport` 저장. 판매 카드에 수요자 운송 표시 및「수요자 운송자원 적용」·운송 시작 모달「등록 T/T·기사」목록 버튼.
+  - 연관: `dashboard.html`, `dashboard.js`, `dashboard.css`, `transport-assets.html`, `.taskmaster/docs/prd.txt` §1.4
 
 - 2026-03-26
   - T/T·운반기사 마스터를 Supabase에 저장하는 `transport-assets.html` 및 `scripts/supabase_transport_assets.sql` 추가. 판매 모드에서 운송 시작 모달에 등록 목록(datalist) 연동, 네비에 운송 자원 링크.

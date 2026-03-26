@@ -425,6 +425,10 @@ Phase 4 — 운영 안정화 및 확장 (지속)
 최근 변경
 ================================================================================
 
+- 2026-03-27
+  - 구매/판매 주문 현황 헤더: 조회기간 `type="date"` 최소 폭·래퍼 `min-width`로 일자 가림 완화, 제목 약간 상향 정렬. 다크 모드에서 날짜 캘린더 아이콘 가시성 개선(`color-scheme`, WebKit picker 필터). 판매 쪽 조회기간 폭을 구매와 맞추고 검색창은 오른쪽 정렬.
+  - `dashboard.css`
+
 - 2026-03-26 (2)
   - 수요자도 운송 자원 메뉴·동일 Supabase 테이블 사용. 출하도 주문 시 납품 주소 대신 수요자 T/T·기사 입력·선택, `extra_payload.consumerTransport` 저장. 판매 카드에 수요자 운송 표시 및「수요자 운송자원 적용」·운송 시작 모달「등록 T/T·기사」목록 버튼.
   - 연관: `dashboard.html`, `dashboard.js`, `dashboard.css`, `transport-assets.html`, `.taskmaster/docs/prd.txt` §1.4

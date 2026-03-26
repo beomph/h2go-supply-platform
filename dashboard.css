@@ -1933,7 +1933,7 @@ body.theme-dark .transport-schedule-card {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-start;
     justify-content: flex-start;
     gap: 0.65rem 1rem;
     margin-bottom: 1rem;
@@ -1946,7 +1946,10 @@ body.theme-dark .transport-schedule-card {
     margin: 0;
     padding: 0;
     border: none;
-    line-height: 1.2;
+    line-height: 1.15;
+    /* 제목이 조회기간 줄과 겹치며 날짜가 눌리는 현상 완화 */
+    align-self: flex-start;
+    transform: translateY(-0.12rem);
 }
 
 .orders-filter {
@@ -1956,6 +1959,11 @@ body.theme-dark .transport-schedule-card {
     font-size: 0.8rem;
     flex: 1 1 auto;
     min-width: 0;
+}
+
+/* 판매: 조회기간 폭을 구매와 비슷하게 제한 */
+.supplier-orders-header .orders-filter {
+    max-width: min(100%, 26.5rem);
 }
 
 .orders-filter label {
@@ -1971,6 +1979,16 @@ body.theme-dark .transport-schedule-card {
     margin-left: auto;
 }
 
+/* 판매 대시보드: 검색창을 행의 오른쪽에 고정 */
+.supplier-orders-header .orders-search-wrap {
+    margin-left: auto;
+    flex: 0 1 340px;
+}
+
+.supplier-orders-header .orders-filter {
+    flex: 0 1 auto;
+}
+
 /* 조회일 입력: 검색란과 높이 맞춤 */
 .orders-filter-input-wrap {
     display: flex;
@@ -1982,15 +2000,18 @@ body.theme-dark .transport-schedule-card {
     border: 1px solid var(--border-color);
     background: var(--surface-soft);
     flex: 1 1 auto;
-    min-width: 0;
+    /* 연·월·일 + 캘린더 아이콘까지 한 줄에 들어가도록 최소 폭 확보 */
+    min-width: min(100%, 20.5rem);
 }
 
 .orders-filter-input-wrap .orders-date-input {
     flex: 1 1 0;
-    min-width: 0;
+    min-width: 9.65rem;
+    width: 9.65rem;
+    max-width: 11rem;
     min-height: 2.05rem;
     height: 2.05rem;
-    padding: 0.35rem 0.5rem;
+    padding: 0.35rem 0.45rem 0.35rem 0.5rem;
     border: 1px solid var(--border-color);
     border-radius: 10px;
     background: var(--bg-card);
@@ -1998,6 +2019,28 @@ body.theme-dark .transport-schedule-card {
     font-family: inherit;
     font-size: 0.88rem;
     box-sizing: border-box;
+    /* 다크/라이트에서 네이티브 날짜 UI 대비 */
+    color-scheme: dark;
+}
+
+body.theme-light .orders-filter-input-wrap .orders-date-input {
+    color-scheme: light;
+}
+
+/* Chromium/WebKit: 캘린더 아이콘 — 다크 모드에서도 보이게 톤 조정 */
+.orders-filter-input-wrap .orders-date-input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.92;
+    padding: 0.15rem;
+}
+
+body.theme-dark .orders-filter-input-wrap .orders-date-input::-webkit-calendar-picker-indicator {
+    filter: invert(0.72) sepia(0.45) saturate(2.8) hue-rotate(175deg) brightness(1.05);
+}
+
+body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-picker-indicator {
+    filter: none;
+    opacity: 0.75;
 }
 
 .orders-filter-input-wrap .orders-date-input:focus {

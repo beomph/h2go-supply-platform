@@ -2374,6 +2374,37 @@ body.theme-light .order-item-action-footer {
     line-height: 1.2;
 }
 
+.order-item-summary-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.order-item-summary-row--sub {
+    margin-top: 0.05rem;
+}
+
+.order-item-summary-row--sub .order-summary-id {
+    font-size: 0.74rem;
+}
+
+.order-summary-shipment-inline,
+.order-summary-return-inline {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.order-summary-shipment-inline:empty,
+.order-summary-return-inline:empty {
+    display: none;
+}
+
 /* 주문 카드 요약 행: 웹에서 가로로 정보 밀도 확보, 모바일은 줄바꿈 */
 .order-item-summary-row {
     display: flex;
@@ -2430,28 +2461,35 @@ body.theme-light .order-item-action-footer {
     flex: 1 1 100%;
 }
 
-.order-item-supplier-subline {
-    margin-top: 0.25rem;
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    line-height: 1.35;
-}
-
 @media (min-width: 769px) {
-    .order-item-summary-row--consumer,
-    .order-item-summary-row--supplier {
+    .order-item-summary-row--consumer:not(.order-item-summary-row--sub) {
         display: grid;
         align-items: center;
-        gap: 0.5rem 0.75rem;
+        gap: 0.45rem 0.65rem;
         font-size: 0.8rem;
+        grid-template-columns: minmax(6.75rem, auto) minmax(5rem, 1fr) minmax(4.5rem, auto) minmax(7rem, 1.15fr);
     }
 
-    .order-item-summary-row--consumer {
-        grid-template-columns: minmax(6.5rem, auto) minmax(5.5rem, 0.9fr) minmax(4.5rem, 1fr) minmax(4rem, auto) minmax(7rem, 1.1fr);
+    .order-item-summary-row--consumer.order-item-summary-row--sub {
+        display: grid;
+        grid-template-columns: minmax(6.75rem, auto) 1fr;
+        gap: 0.45rem 0.65rem;
+        align-items: baseline;
     }
 
-    .order-item-summary-row--supplier {
-        grid-template-columns: minmax(6.5rem, auto) minmax(5.5rem, 0.85fr) minmax(5rem, 1.1fr) minmax(5.5rem, auto) minmax(7rem, 1fr);
+    .order-item-summary-row--supplier:not(.order-item-summary-row--sub) {
+        display: grid;
+        align-items: center;
+        gap: 0.45rem 0.6rem;
+        font-size: 0.8rem;
+        grid-template-columns: minmax(6.75rem, auto) minmax(6.25rem, auto) minmax(5rem, 1fr) minmax(5.25rem, auto) minmax(6.5rem, 1.1fr);
+    }
+
+    .order-item-summary-row--supplier.order-item-summary-row--sub {
+        display: grid;
+        grid-template-columns: minmax(6.75rem, auto) minmax(6.25rem, auto);
+        gap: 0.45rem 0.6rem;
+        align-items: baseline;
     }
 
     .order-item-summary-row--consumer .order-summary-tt,

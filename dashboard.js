@@ -281,6 +281,12 @@ function getOrderTravelTimeMinutes(order) {
     return getTravelTimeFromAddress(order.address);
 }
 
+/** 출하·회차 일정용 이동시간(분): 도착도·출하도 모두 납품지까지 이동시간으로 간주 */
+function getShipmentLegTravelMinutes(order) {
+    if (!order) return 0;
+    return getTravelTimeFromAddress(order.address);
+}
+
 // 주소별 좌표 (지도용)
 function getCoordinatesFromAddress(addr) {
     const keywords = [
@@ -943,10 +949,10 @@ function formatOrderDateTime(order) {
     return `${order.year}/${order.month}/${order.day} ${formatTimeText(order.time)}`;
 }
 
-// 도착도(납품)인 경우 운송시간을 뺀 출하일시 반환. 출하도는 null(표시 안 함)
+// 납품(또는 픽업) 일시 기준, 이동시간을 뺀 출하(공장 출발) 일시. 이동시간 0이면 null
 function formatShipmentDateTime(order) {
-    if (!order || order.supplyCondition === 'ex_factory') return null;
-    const travelMin = getOrderTravelTimeMinutes(order);
+    if (!order) return null;
+    const travelMin = getShipmentLegTravelMinutes(order);
     if (travelMin <= 0) return null;
     const y = order.year, m = order.month, d = order.day;
     const [hRaw = '0', mRaw = '0'] = String(order.time || '0:0').split(':');
@@ -964,10 +970,10 @@ function formatShipmentDateTime(order) {
     return `${year}/${month}/${day} ${timeStr}`;
 }
 
-// 도착도(납품)인 경우 회차일시 반환. 납품도착 + T/T교체(10분) + 운송시간. 출하도는 null
+// 납품(또는 픽업) 일시 + T/T교체(10분) + 편도 이동시간 = 회차 도착 시각
 function formatReturnDateTime(order) {
-    if (!order || order.supplyCondition === 'ex_factory') return null;
-    const travelMin = getOrderTravelTimeMinutes(order);
+    if (!order) return null;
+    const travelMin = getShipmentLegTravelMinutes(order);
     if (travelMin <= 0) return null;
     const TT_SWAP_MIN = 10;
     const totalMin = travelMin + TT_SWAP_MIN + travelMin;
@@ -1688,6 +1694,7 @@ function renderConsumerView() {
         const canCancelChangeRequest = hasPendingChange && cr.requestedBy === 'consumer';
 
         const canApproveChange = hasPendingChange && cr.requestedBy === 'supplier';
+        /* 공급자가 취소 요청 → 수요자가 승인/거절 */
         const canApproveCancel = hasPendingCancel && cancelReq.requestedBy === 'supplier';
         const hasDecisionRequest = canApproveChange || canApproveCancel;
 
@@ -1729,12 +1736,16 @@ function renderConsumerView() {
         <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
             <div class="order-item-layout">
                 <div class="order-item-main">
-                    <div class="order-item-summary-row order-item-summary-row--consumer" aria-label="주문 요약">
-                        <span class="order-summary-cell order-summary-datetime">${formatOrderDateTime(order)}</span>
-                        <span class="order-summary-cell order-summary-id">${order.id}</span>
-                        <span class="order-summary-cell order-summary-counterparty">${order.supplierName || '-'}</span>
-                        <span class="order-summary-cell order-summary-condition"><span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span></span>
-                        <span class="order-summary-cell order-summary-tt">${ttCombined}</span>
+                    <div class="order-item-summary-block order-item-summary-block--consumer" aria-label="주문 요약">
+                        <div class="order-item-summary-row order-item-summary-row--consumer">
+                            <span class="order-summary-cell order-summary-datetime">${formatOrderDateTime(order)}</span>
+                            <span class="order-summary-cell order-summary-counterparty">${order.supplierName || '-'}</span>
+                            <span class="order-summary-cell order-summary-condition"><span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span></span>
+                            <span class="order-summary-cell order-summary-tt">${ttCombined}</span>
+                        </div>
+                        <div class="order-item-summary-row order-item-summary-row--consumer order-item-summary-row--sub">
+                            <span class="order-summary-cell order-summary-id">${order.id}</span>
+                        </div>
                     </div>
             ${(changeBadge || cancelBadge) ? `
             <div class="order-item-foot">
@@ -1897,6 +1908,7 @@ function renderSupplierOrdersCards() {
         const hasPendingCancel = o.cancelRequest && o.cancelRequest.status === 'pending';
 
         const canApproveChange = hasPendingChange && o.changeRequest.requestedBy === 'consumer';
+        /* 수요자가 취소 요청 → 공급자가 승인/거절 */
         const canApproveCancel = hasPendingCancel && o.cancelRequest.requestedBy === 'consumer';
 
         const canProposeChange = !hasPendingChange && !hasPendingCancel && ['requested', 'accepted', 'change_accepted'].includes(status);
@@ -1906,8 +1918,6 @@ function renderSupplierOrdersCards() {
 
         const travelTimeMin = getOrderTravelTimeMinutes(o);
         const travelTimeText = travelTimeMin === 0 ? '—' : `${travelTimeMin}분`;
-        const shipmentDt = formatShipmentDateTime(o);
-        const returnDt = formatReturnDateTime(o);
         const changeBadge = getChangeBadgeText(o);
         const cancelBadge = getCancelBadgeText(o);
         const noteText = String(o.note || '').trim();
@@ -1937,23 +1947,26 @@ function renderSupplierOrdersCards() {
             o.transportInfo ? `T/T: ${(o.transportInfo.trailerNumbers || []).join(', ')} · 기사: ${o.transportInfo.driverName || '-'}` : '',
             consumerDeclared ? `수요자(출하도): ${consumerDeclared.trailerNumbers.join(', ') || '—'} · ${consumerDeclared.driverName || '—'}` : '',
         ].filter(Boolean).join(' · ') || '—';
-        const shipReturnBits = [
-            shipmentDt ? `출하 ${shipmentDt}` : '',
-            returnDt ? `회차 ${returnDt}` : '',
-        ].filter(Boolean).join(' · ');
+        const shipmentLine = formatShipmentDateTime(o);
+        const returnLine = formatReturnDateTime(o);
 
         return `
         <div class="order-item order-item-supplier order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'has-change-request' : ''}" data-order-id="${o.id}">
             <div class="order-item-layout order-item-supplier-layout">
                 <div class="order-item-main">
-                    <div class="order-item-summary-row order-item-summary-row--supplier" aria-label="주문 요약">
-                        <span class="order-summary-cell order-summary-datetime">${formatOrderDateTime(o)}</span>
-                        <span class="order-summary-cell order-summary-id">${o.id}</span>
-                        <span class="order-summary-cell order-summary-counterparty">${buyerLine}</span>
-                        <span class="order-summary-cell order-summary-condition"><span class="supply-condition-badge ${supplyBadgeClass}">${supplyLabel}</span><span class="order-summary-travel">${travelTimeText}</span></span>
-                        <span class="order-summary-cell order-summary-tt">${ttSupplierLine}</span>
+                    <div class="order-item-summary-block order-item-summary-block--supplier" aria-label="주문 요약">
+                        <div class="order-item-summary-row order-item-summary-row--supplier">
+                            <span class="order-summary-cell order-summary-datetime">${formatOrderDateTime(o)}</span>
+                            ${shipmentLine ? `<span class="order-summary-cell order-summary-shipment-inline">출하 ${shipmentLine}</span>` : '<span class="order-summary-cell order-summary-shipment-inline"></span>'}
+                            <span class="order-summary-cell order-summary-counterparty">${buyerLine}</span>
+                            <span class="order-summary-cell order-summary-condition"><span class="supply-condition-badge ${supplyBadgeClass}">${supplyLabel}</span><span class="order-summary-travel">${travelTimeText}</span></span>
+                            <span class="order-summary-cell order-summary-tt">${ttSupplierLine}</span>
+                        </div>
+                        <div class="order-item-summary-row order-item-summary-row--supplier order-item-summary-row--sub">
+                            <span class="order-summary-cell order-summary-id">${o.id}</span>
+                            ${returnLine ? `<span class="order-summary-cell order-summary-return-inline">회차 ${returnLine}</span>` : '<span class="order-summary-cell order-summary-return-inline"></span>'}
+                        </div>
                     </div>
-                    ${shipReturnBits ? `<div class="order-item-supplier-subline">${shipReturnBits}</div>` : ''}
                 </div>
                 <div class="order-item-status-column">
                     <div class="order-item-status-column-inner">
@@ -3076,6 +3089,9 @@ document.addEventListener('click', (e) => {
         alert('취소 요청을 보냈습니다. 상대방 승인을 기다립니다.');
     } else if (action === 'approve-cancel') {
         if (!order || !order.cancelRequest || order.cancelRequest.status !== 'pending') return;
+        const actor = getActorForOrder(order);
+        const reqBy = order.cancelRequest.requestedBy;
+        if ((reqBy === 'consumer' && actor !== 'supplier') || (reqBy === 'supplier' && actor !== 'consumer')) return;
         if (!confirm('취소 요청을 승인하시겠습니까? 승인하면 주문이 취소 상태로 표시됩니다.')) return;
         decideCancel(order, true);
         appendOrderChangeHistory(order, "cancel_approved", getActorForOrder(order), {});
@@ -3083,6 +3099,9 @@ document.addEventListener('click', (e) => {
         alert('취소 요청을 승인했습니다. 주문이 취소 상태로 표시됩니다.');
     } else if (action === 'reject-cancel') {
         if (!order || !order.cancelRequest || order.cancelRequest.status !== 'pending') return;
+        const actor = getActorForOrder(order);
+        const reqBy = order.cancelRequest.requestedBy;
+        if ((reqBy === 'consumer' && actor !== 'supplier') || (reqBy === 'supplier' && actor !== 'consumer')) return;
         const reason = window.prompt("취소 요청 거절 사유를 입력해 주세요.", "");
         if (reason === null) return;
         order.cancelRequest.reason = String(reason || "").trim();

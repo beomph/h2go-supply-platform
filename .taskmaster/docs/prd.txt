@@ -425,6 +425,11 @@ Phase 4 — 운영 안정화 및 확장 (지속)
 최근 변경
 ================================================================================
 
+- 2026-04-02
+  - 변경/취소 승인: `normalizeRequestParty`·`canActorApprovePendingChange`/`canActorApprovePendingCancel`로 구매·판매 카드 및 `approve-change`/`reject-change` 클릭 시 상대만 처리. 판매 카드에 취소·변경 승인/거절 푸터 추가.
+  - 운송 시작(`transportStartedAt`) 이후 출하·예상도착·회차 시각을 실시간 계산(편도 이동·T/T교체 10분). 카드에 출하/회차 세로 스택·예상도착은 주문번호 아래.
+  - `dashboard.js`, `dashboard.css`
+
 - 2026-04-01
   - 취소 요청: 공급자가 요청한 경우 수요자 화면에서 `requestedBy === 'supplier'`일 때 승인/거절 표시. `approve-cancel`/`reject-cancel`은 요청자와 현재 역할이 교차할 때만 동작하도록 검증.
   - 출하·회차 일시: `getShipmentLegTravelMinutes`로 출하도에도 납품지 기준 이동시간 적용, `formatShipmentDateTime`/`formatReturnDateTime`이 출하도 주문에도 출하·회차 시각 표시(회차 = 납품 + T/T교체 10분 + 편도).

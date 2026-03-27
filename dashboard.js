@@ -949,9 +949,74 @@ function formatOrderDateTime(order) {
     return `${order.year}/${order.month}/${order.day} ${formatTimeText(order.time)}`;
 }
 
-// 납품(또는 픽업) 일시 기준, 이동시간을 뺀 출하(공장 출발) 일시. 이동시간 0이면 null
+const TT_SWAP_MINUTES = 10;
+
+/** change/cancel 요청자 정규화 (저장값 대소문자·공백 흔들림 대비) */
+function normalizeRequestParty(raw) {
+    const s = String(raw || "").trim().toLowerCase();
+    if (s === "consumer" || s === "buyer") return "consumer";
+    if (s === "supplier" || s === "seller") return "supplier";
+    return s;
+}
+
+/** actor: 'consumer' | 'supplier' — 상대방이 건 대기 중일 때만 승인 가능 */
+function canActorApprovePendingChange(order, actor) {
+    const ch = order?.changeRequest;
+    if (!ch || ch.status !== "pending") return false;
+    const rb = normalizeRequestParty(ch.requestedBy);
+    if (rb === "consumer") return actor === "supplier";
+    if (rb === "supplier") return actor === "consumer";
+    return false;
+}
+
+function canActorApprovePendingCancel(order, actor) {
+    const cr = order?.cancelRequest;
+    if (!cr || cr.status !== "pending") return false;
+    const rb = normalizeRequestParty(cr.requestedBy);
+    if (rb === "consumer") return actor === "supplier";
+    if (rb === "supplier") return actor === "consumer";
+    return false;
+}
+
+function getTransportStartedAtDate(order) {
+    if (!order?.transportStartedAt) return null;
+    const t = new Date(order.transportStartedAt);
+    return Number.isFinite(t.getTime()) ? t : null;
+}
+
+function formatCalendarDateTimeFromDate(d) {
+    if (!d || !Number.isFinite(d.getTime())) return null;
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    const h = d.getHours();
+    const min = d.getMinutes();
+    return `${y}/${m}/${day} ${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+function addMinutesToDate(base, deltaMin) {
+    if (!base || !Number.isFinite(base.getTime())) return null;
+    return new Date(base.getTime() + deltaMin * 60 * 1000);
+}
+
+/** 운송 시작 후: 출하=시작 시각, 예상도착=시작+편도, 회차=시작+2*편도+T/T교체 */
+function getLiveTransportScheduleStrings(order) {
+    const anchor = getTransportStartedAtDate(order);
+    const travelMin = getShipmentLegTravelMinutes(order);
+    if (!anchor || travelMin <= 0) return null;
+    const departStr = formatCalendarDateTimeFromDate(anchor);
+    const arrive = addMinutesToDate(anchor, travelMin);
+    const arriveStr = formatCalendarDateTimeFromDate(arrive);
+    const ret = addMinutesToDate(anchor, travelMin + TT_SWAP_MINUTES + travelMin);
+    const returnStr = formatCalendarDateTimeFromDate(ret);
+    return { departStr, arriveStr, returnStr };
+}
+
+// 납품(또는 픽업) 약속 일시 기준, 이동시간을 뺀 출하 일시 (운송 미시작 시)
 function formatShipmentDateTime(order) {
     if (!order) return null;
+    const live = getLiveTransportScheduleStrings(order);
+    if (live) return live.departStr;
     const travelMin = getShipmentLegTravelMinutes(order);
     if (travelMin <= 0) return null;
     const y = order.year, m = order.month, d = order.day;
@@ -970,13 +1035,14 @@ function formatShipmentDateTime(order) {
     return `${year}/${month}/${day} ${timeStr}`;
 }
 
-// 납품(또는 픽업) 일시 + T/T교체(10분) + 편도 이동시간 = 회차 도착 시각
+// 약속 납품일시 + T/T교체 + 편도 (운송 미시작 시)
 function formatReturnDateTime(order) {
     if (!order) return null;
+    const live = getLiveTransportScheduleStrings(order);
+    if (live) return live.returnStr;
     const travelMin = getShipmentLegTravelMinutes(order);
     if (travelMin <= 0) return null;
-    const TT_SWAP_MIN = 10;
-    const totalMin = travelMin + TT_SWAP_MIN + travelMin;
+    const totalMin = travelMin + TT_SWAP_MINUTES + travelMin;
     const y = order.year, m = order.month, d = order.day;
     const [hRaw = '0', mRaw = '0'] = String(order.time || '0:0').split(':');
     let h = parseInt(hRaw, 10) || 0;
@@ -992,6 +1058,13 @@ function formatReturnDateTime(order) {
     }
     const timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
     return `${year}/${month}/${day} ${timeStr}`;
+}
+
+function formatExpectedArrivalDateTime(order) {
+    if (!order) return null;
+    const live = getLiveTransportScheduleStrings(order);
+    if (live) return live.arriveStr;
+    return formatOrderDateTime(order);
 }
 
 function formatOrderDate(order) {
@@ -1693,9 +1766,8 @@ function renderConsumerView() {
         const immediateCancelable = canRequestCancel && canImmediateCancelOrder(order, 'consumer');
         const canCancelChangeRequest = hasPendingChange && cr.requestedBy === 'consumer';
 
-        const canApproveChange = hasPendingChange && cr.requestedBy === 'supplier';
-        /* 공급자가 취소 요청 → 수요자가 승인/거절 */
-        const canApproveCancel = hasPendingCancel && cancelReq.requestedBy === 'supplier';
+        const canApproveChange = canActorApprovePendingChange(order, 'consumer');
+        const canApproveCancel = canActorApprovePendingCancel(order, 'consumer');
         const hasDecisionRequest = canApproveChange || canApproveCancel;
 
         const changeBadge = getChangeBadgeText(order);
@@ -1732,6 +1804,13 @@ function renderConsumerView() {
             actionButtons ? `<div class="order-actions order-actions--footer">${actionButtons}</div>` : '',
         ].filter(Boolean).join('');
         const ttCombined = [transportInfoText, consumerDeclaredText].filter(Boolean).join(' · ') || '—';
+        const shipmentLineC = formatShipmentDateTime(order);
+        const returnLineC = formatReturnDateTime(order);
+        const etaLineC = formatExpectedArrivalDateTime(order);
+        const scheduleStackC =
+            shipmentLineC || returnLineC
+                ? `<div class="order-summary-schedule-stack">${shipmentLineC ? `<span class="order-schedule-line">출하 ${shipmentLineC}</span>` : ''}${returnLineC ? `<span class="order-schedule-line">회차 ${returnLineC}</span>` : ''}</div>`
+                : '<div class="order-summary-schedule-stack"></div>';
         return `
         <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
             <div class="order-item-layout">
@@ -1739,12 +1818,14 @@ function renderConsumerView() {
                     <div class="order-item-summary-block order-item-summary-block--consumer" aria-label="주문 요약">
                         <div class="order-item-summary-row order-item-summary-row--consumer">
                             <span class="order-summary-cell order-summary-datetime">${formatOrderDateTime(order)}</span>
+                            ${scheduleStackC}
                             <span class="order-summary-cell order-summary-counterparty">${order.supplierName || '-'}</span>
                             <span class="order-summary-cell order-summary-condition"><span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span></span>
                             <span class="order-summary-cell order-summary-tt">${ttCombined}</span>
                         </div>
                         <div class="order-item-summary-row order-item-summary-row--consumer order-item-summary-row--sub">
                             <span class="order-summary-cell order-summary-id">${order.id}</span>
+                            ${etaLineC ? `<span class="order-summary-cell order-summary-eta">예상도착 ${etaLineC}</span>` : '<span class="order-summary-cell order-summary-eta"></span>'}
                         </div>
                     </div>
             ${(changeBadge || cancelBadge) ? `
@@ -1788,8 +1869,8 @@ function renderOrdersTable(tbodyId, showActions) {
         const hasPendingChange = o.changeRequest && o.changeRequest.status === 'pending';
         const hasPendingCancel = o.cancelRequest && o.cancelRequest.status === 'pending';
 
-        const canApproveChange = showActions && hasPendingChange && o.changeRequest.requestedBy === 'consumer';
-        const canApproveCancel = showActions && hasPendingCancel && o.cancelRequest.requestedBy === 'consumer';
+        const canApproveChange = showActions && canActorApprovePendingChange(o, 'supplier');
+        const canApproveCancel = showActions && canActorApprovePendingCancel(o, 'supplier');
 
         const canProposeChange = showActions && !hasPendingChange && !hasPendingCancel && ['requested', 'accepted', 'change_accepted'].includes(status);
         const canRequestCancel = showActions && !hasPendingChange && !hasPendingCancel && !['completed', 'cancelled'].includes(status);
@@ -1907,9 +1988,15 @@ function renderSupplierOrdersCards() {
         const hasPendingChange = o.changeRequest && o.changeRequest.status === 'pending';
         const hasPendingCancel = o.cancelRequest && o.cancelRequest.status === 'pending';
 
-        const canApproveChange = hasPendingChange && o.changeRequest.requestedBy === 'consumer';
-        /* 수요자가 취소 요청 → 공급자가 승인/거절 */
-        const canApproveCancel = hasPendingCancel && o.cancelRequest.requestedBy === 'consumer';
+        const canApproveChange = canActorApprovePendingChange(o, 'supplier');
+        const canApproveCancel = canActorApprovePendingCancel(o, 'supplier');
+        const decisionButtonsSupplier = `
+            ${canApproveChange ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${o.id}">승인</button>
+            <button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${o.id}">거절</button>` : ''}
+            ${canApproveCancel ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${o.id}">승인</button>
+            <button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${o.id}">거절</button>` : ''}
+        `.trim();
+        const hasSupplierDecision = canApproveChange || canApproveCancel;
 
         const canProposeChange = !hasPendingChange && !hasPendingCancel && ['requested', 'accepted', 'change_accepted'].includes(status);
         const canRequestCancel = !hasPendingChange && !hasPendingCancel && !['completed', 'cancelled'].includes(status);
@@ -1949,6 +2036,11 @@ function renderSupplierOrdersCards() {
         ].filter(Boolean).join(' · ') || '—';
         const shipmentLine = formatShipmentDateTime(o);
         const returnLine = formatReturnDateTime(o);
+        const etaLineS = formatExpectedArrivalDateTime(o);
+        const scheduleStackS =
+            shipmentLine || returnLine
+                ? `<div class="order-summary-schedule-stack">${shipmentLine ? `<span class="order-schedule-line">출하 ${shipmentLine}</span>` : ''}${returnLine ? `<span class="order-schedule-line">회차 ${returnLine}</span>` : ''}</div>`
+                : '<div class="order-summary-schedule-stack"></div>';
 
         return `
         <div class="order-item order-item-supplier order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'has-change-request' : ''}" data-order-id="${o.id}">
@@ -1957,14 +2049,14 @@ function renderSupplierOrdersCards() {
                     <div class="order-item-summary-block order-item-summary-block--supplier" aria-label="주문 요약">
                         <div class="order-item-summary-row order-item-summary-row--supplier">
                             <span class="order-summary-cell order-summary-datetime">${formatOrderDateTime(o)}</span>
-                            ${shipmentLine ? `<span class="order-summary-cell order-summary-shipment-inline">출하 ${shipmentLine}</span>` : '<span class="order-summary-cell order-summary-shipment-inline"></span>'}
+                            ${scheduleStackS}
                             <span class="order-summary-cell order-summary-counterparty">${buyerLine}</span>
                             <span class="order-summary-cell order-summary-condition"><span class="supply-condition-badge ${supplyBadgeClass}">${supplyLabel}</span><span class="order-summary-travel">${travelTimeText}</span></span>
                             <span class="order-summary-cell order-summary-tt">${ttSupplierLine}</span>
                         </div>
                         <div class="order-item-summary-row order-item-summary-row--supplier order-item-summary-row--sub">
                             <span class="order-summary-cell order-summary-id">${o.id}</span>
-                            ${returnLine ? `<span class="order-summary-cell order-summary-return-inline">회차 ${returnLine}</span>` : '<span class="order-summary-cell order-summary-return-inline"></span>'}
+                            ${etaLineS ? `<span class="order-summary-cell order-summary-eta">예상도착 ${etaLineS}</span>` : '<span class="order-summary-cell order-summary-eta"></span>'}
                         </div>
                     </div>
                 </div>
@@ -1975,7 +2067,7 @@ function renderSupplierOrdersCards() {
                     </div>
                 </div>
             </div>
-            ${actionButtons ? `<div class="order-item-action-footer"><div class="order-actions order-actions--footer order-actions--supplier">${actionButtons}</div></div>` : ''}
+            ${hasSupplierDecision || actionButtons ? `<div class="order-item-action-footer">${hasSupplierDecision ? `<div class="order-actions order-actions--footer order-actions--decision">${decisionButtonsSupplier}</div>` : ''}${actionButtons ? `<div class="order-actions order-actions--footer order-actions--supplier">${actionButtons}</div>` : ''}</div>` : ''}
             ${(noteText || changeBadge || cancelBadge) ? `
             <div class="order-item-foot">
                 <div class="order-item-badges">
@@ -3014,8 +3106,14 @@ document.addEventListener('click', (e) => {
         if (order.cancelRequest && order.cancelRequest.status === 'pending') return;
         openChangeRequestModal(orderId, actor);
     } else if (action === 'approve-change') {
+        if (!order || !order.changeRequest || order.changeRequest.status !== 'pending') return;
+        const actor = getActorForOrder(order);
+        if (!canActorApprovePendingChange(order, actor)) return;
         openApprovalModal(orderId);
     } else if (action === 'reject-change') {
+        if (!order || !order.changeRequest || order.changeRequest.status !== 'pending') return;
+        const actor = getActorForOrder(order);
+        if (!canActorApprovePendingChange(order, actor)) return;
         if (confirm('변경 요청을 거절하시겠습니까?')) {
             applyChange(orderId, false);
             alert('변경 요청이 거절되었습니다.');

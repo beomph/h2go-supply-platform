@@ -1263,8 +1263,12 @@ body.theme-dark .transport-schedule-card {
 }
 
 .consumer-order-stack--compact .my-orders-header {
-    margin-bottom: 0.65rem;
-    padding-bottom: 0.55rem;
+    margin-bottom: 0.55rem;
+}
+
+.consumer-order-stack--compact .my-orders-header-title-row {
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.55rem;
 }
 
 .consumer-order-stack--compact .orders-list {
@@ -1938,15 +1942,25 @@ body.theme-dark .transport-schedule-card {
 
 /* ------------------------------------------------------------
    주문 현황 카드 헤더 (구매·판매 공통)
-   - 제목 / 조회기간·조회 / 검색이 겹치지 않도록 그리드 + 툴바 분리
+   - 새 주문 카드와 같이: 제목 행 → 분리선 → 조회·검색 (항상 세로 스택)
 ------------------------------------------------------------ */
 .my-orders-header {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.65rem 1rem;
-    align-items: start;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
     margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.my-orders-header-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-bottom: 0.65rem;
+    margin-bottom: 0.75rem;
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -2096,23 +2110,6 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
     }
 }
 
-/* 와이드: 제목은 왼쪽, 나머지는 오른쪽 영역에 묶음 */
-@media (min-width: 960px) {
-    .my-orders-header {
-        grid-template-columns: auto minmax(0, 1fr);
-        align-items: start;
-        column-gap: 1.25rem;
-    }
-
-    .my-orders-header-title {
-        padding-top: 0.2rem;
-    }
-
-    .my-orders-header-toolbar {
-        min-width: 0;
-    }
-}
-
 /* 매우 좁은 폭: 날짜 두 개를 세로로 쌓아 가림 방지 */
 @media (max-width: 380px) {
     .orders-filter-input-wrap {
@@ -2159,8 +2156,12 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
         white-space: nowrap;
     }
 
-    .order-item-supplier-main {
+    .order-item-supplier-body {
         gap: 0.6rem;
+    }
+
+    .order-item-status-column {
+        max-width: 9.5rem;
     }
 
     .order-item-supplier-buyer {
@@ -2176,12 +2177,59 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
     border-left: 3px solid var(--h2-blue);
 }
 
+/* 주문 카드: 본문(왼쪽) | 상태·버튼(오른쪽 고정) */
+.order-item-layout {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.65rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.order-item-main {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.order-item-status-column {
+    flex: 0 0 auto;
+    min-width: 0;
+    max-width: 11.5rem;
+}
+
+.order-item-status-column-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.45rem;
+    text-align: right;
+}
+
+.order-item-status-column-inner .order-remove-cancelled-btn {
+    align-self: flex-end;
+}
+
+.order-actions--stacked {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.35rem;
+    flex-wrap: nowrap;
+}
+
+.order-actions--stacked .btn-small {
+    width: auto;
+    min-width: 4.5rem;
+    max-width: 100%;
+}
+
 .order-item-head {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: flex-start;
     gap: 0.45rem;
-    margin-bottom: 0.04rem;
+    margin-bottom: 0.12rem;
 }
 
 .order-item-head-right {
@@ -2229,9 +2277,10 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
 
 .order-item-datetime-row {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
-    gap: 1rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
     margin-bottom: 0.2rem;
 }
 
@@ -2480,17 +2529,23 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     padding: 2rem;
 }
 
-/* 판매 대시보드 주문카드: 구매자 왼쪽, 일시 중앙, 상태·버튼 오른쪽 (위아래 폭 축소) */
+/* 판매 대시보드 주문카드: 본문(구매자+일시) | 우측 상태·버튼 */
 .order-item-supplier {
-    padding: 0.3rem 0.5rem;
+    padding: 0.35rem 0.5rem;
 }
 
-.order-item-supplier-main {
+.order-item-supplier-layout {
+    align-items: stretch;
+}
+
+.order-item-supplier-body {
     display: flex;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 0.75rem 1rem;
     flex-wrap: wrap;
     margin-bottom: 0.15rem;
+    width: 100%;
+    min-width: 0;
 }
 
 .order-item-supplier-buyer {
@@ -2544,42 +2599,30 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     font-size: 0.72rem;
 }
 
-.order-item-supplier-actions {
-    flex: 0 0 auto;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.35rem;
-    flex-wrap: wrap;
-}
-
-.order-item-supplier-actions .order-status {
+.order-item-supplier .order-item-status-column .order-status {
     font-size: 0.72rem;
     min-height: 1.5rem;
-    padding: 0.2rem 0.4rem;
+    padding: 0.2rem 0.45rem;
 }
 
-.order-actions--supplier {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.25rem;
-    flex-wrap: wrap;
+.order-actions--supplier.order-actions--stacked {
+    align-items: flex-end;
 }
 
 .order-actions--supplier .btn-small {
-    padding: 0.2rem 0.4rem;
-    font-size: 0.7rem;
-    min-height: 1.5rem;
+    padding: 0.22rem 0.45rem;
+    font-size: 0.72rem;
+    min-height: 1.55rem;
 }
 
-.order-item-supplier-meta {
+.order-item-supplier .order-item-main > .order-item-supplier-meta {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem 0.75rem;
     font-size: 0.72rem;
     color: var(--text-muted);
-    margin-top: 0.05rem;
+    margin-top: 0.15rem;
 }
 
 .order-item-supplier-meta .order-id {

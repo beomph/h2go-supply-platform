@@ -1716,29 +1716,24 @@ function renderConsumerView() {
             : '';
 
         const isCancelled = order.status === 'cancelled';
+        const statusBadge = `<span class="order-status ${status}">${getStatusLabel(order.status)}</span>`;
+        const decisionActionsRow = hasDecisionRequest
+            ? `<div class="order-actions order-actions--stacked order-actions--decision">${decisionButtons}</div>`
+            : '';
         return `
         <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
-            <div class="order-item-head">
-                <div class="order-id">${order.id}</div>
-                <div class="order-item-head-right">
-                    ${hasDecisionRequest
-                        ? `<div class="order-status ${status} order-status--action">
-                            <span class="order-status-action-label">${getStatusLabel(order.status)}</span>
-                            <div class="order-status-action-buttons">${decisionButtons}</div>
-                        </div>`
-                        : `<span class="order-status ${status}">${getStatusLabel(order.status)}</span>`
-                    }
-                    ${isCancelled ? `<button type="button" class="order-remove-cancelled-btn" data-action="remove-cancelled-consumer" data-id="${order.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
-                </div>
-            </div>
-            <div class="order-item-datetime-row">
-                <div class="order-datetime-with-badge">
-                    <span class="order-datetime">${formatOrderDateTime(order)}</span>
-                    <span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span>
-                </div>
-                ${actionButtons ? `<div class="order-actions order-actions--inline">${actionButtons}</div>` : ''}
-            </div>
-            <div class="order-item-parties-row">
+            <div class="order-item-layout">
+                <div class="order-item-main">
+                    <div class="order-item-head">
+                        <div class="order-id">${order.id}</div>
+                    </div>
+                    <div class="order-item-datetime-row">
+                        <div class="order-datetime-with-badge">
+                            <span class="order-datetime">${formatOrderDateTime(order)}</span>
+                            <span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span>
+                        </div>
+                    </div>
+                    <div class="order-item-parties-row">
                 <div class="order-party order-party--seller">
                     <div class="order-party-name">${order.supplierName || '-'}</div>
                     <div class="order-party-addr">${getSupplierShippingAddress(order.supplierName)}</div>
@@ -1755,6 +1750,16 @@ function renderConsumerView() {
                 <div class="order-item-badges"><div class="change-summary">${changeBadge || ''} ${cancelBadge || ''}</div></div>
             </div>
             ` : ''}
+                </div>
+                <div class="order-item-status-column">
+                    <div class="order-item-status-column-inner">
+                        ${statusBadge}
+                        ${decisionActionsRow}
+                        ${isCancelled ? `<button type="button" class="order-remove-cancelled-btn" data-action="remove-cancelled-consumer" data-id="${order.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
+                        ${actionButtons ? `<div class="order-actions order-actions--stacked">${actionButtons}</div>` : ''}
+                    </div>
+                </div>
+            </div>
         </div>
     `}).join('');
 
@@ -1940,32 +1945,38 @@ function renderSupplierOrdersCards() {
 
         return `
         <div class="order-item order-item-supplier order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'has-change-request' : ''}" data-order-id="${o.id}">
-            <div class="order-item-supplier-main">
-                <div class="order-item-supplier-buyer">
-                    <div class="order-party-name">${o.consumerName || '-'}</div>
-                    <div class="order-party-addr">${o.address || '-'}</div>
-                </div>
-                <div class="order-item-supplier-datetimes">
-                    <div class="order-datetime-with-badge">
-                        <span class="order-datetime">${formatOrderDateTime(o)}</span>
-                        <span class="supply-condition-badge ${supplyBadgeClass}">${supplyLabel}</span>
-                        <span class="travel-time">${travelTimeText}</span>
+            <div class="order-item-layout order-item-supplier-layout">
+                <div class="order-item-main">
+                    <div class="order-item-supplier-body">
+                        <div class="order-item-supplier-buyer">
+                            <div class="order-party-name">${o.consumerName || '-'}</div>
+                            <div class="order-party-addr">${o.address || '-'}</div>
+                        </div>
+                        <div class="order-item-supplier-datetimes">
+                            <div class="order-datetime-with-badge">
+                                <span class="order-datetime">${formatOrderDateTime(o)}</span>
+                                <span class="supply-condition-badge ${supplyBadgeClass}">${supplyLabel}</span>
+                                <span class="travel-time">${travelTimeText}</span>
+                            </div>
+                            <div class="order-shipment-return-row">
+                                ${shipmentDt ? `<span class="shipment-datetime">출하 ${shipmentDt}</span>` : '<span class="shipment-datetime shipment-datetime--empty"></span>'}
+                                ${returnDt ? `<span class="return-datetime">회차 ${returnDt}</span>` : '<span class="return-datetime return-datetime--empty"></span>'}
+                            </div>
+                        </div>
                     </div>
-                    <div class="order-shipment-return-row">
-                        ${shipmentDt ? `<span class="shipment-datetime">출하 ${shipmentDt}</span>` : '<span class="shipment-datetime shipment-datetime--empty"></span>'}
-                        ${returnDt ? `<span class="return-datetime">회차 ${returnDt}</span>` : '<span class="return-datetime return-datetime--empty"></span>'}
+                    <div class="order-item-supplier-meta">
+                        <span class="order-id">${o.id}</span>
+                        ${o.transportInfo ? `<span class="order-transport-info">T/T: ${(o.transportInfo.trailerNumbers || []).join(', ')} · 기사: ${o.transportInfo.driverName || '-'}</span>` : ''}
+                        ${consumerDeclared ? `<span class="order-transport-info">수요자(출하도): T/T ${consumerDeclared.trailerNumbers.join(', ') || '—'} · 기사 ${consumerDeclared.driverName || '—'}</span>` : ''}
                     </div>
                 </div>
-                <div class="order-item-supplier-actions">
-                    <span class="order-status ${status}">${supplierStatus}</span>
-                    ${isCancelled ? `<button type="button" class="order-remove-cancelled-btn" data-action="remove-cancelled-supplier" data-id="${o.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
-                    ${actionButtons ? `<div class="order-actions order-actions--supplier">${actionButtons}</div>` : ''}
+                <div class="order-item-status-column">
+                    <div class="order-item-status-column-inner">
+                        <span class="order-status ${status}">${supplierStatus}</span>
+                        ${isCancelled ? `<button type="button" class="order-remove-cancelled-btn" data-action="remove-cancelled-supplier" data-id="${o.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
+                        ${actionButtons ? `<div class="order-actions order-actions--supplier order-actions--stacked">${actionButtons}</div>` : ''}
+                    </div>
                 </div>
-            </div>
-            <div class="order-item-supplier-meta">
-                <span class="order-id">${o.id}</span>
-                ${o.transportInfo ? `<span class="order-transport-info">T/T: ${(o.transportInfo.trailerNumbers || []).join(', ')} · 기사: ${o.transportInfo.driverName || '-'}</span>` : ''}
-                ${consumerDeclared ? `<span class="order-transport-info">수요자(출하도): T/T ${consumerDeclared.trailerNumbers.join(', ') || '—'} · 기사 ${consumerDeclared.driverName || '—'}</span>` : ''}
             </div>
             ${(noteText || changeBadge || cancelBadge) ? `
             <div class="order-item-foot">

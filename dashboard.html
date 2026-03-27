@@ -181,19 +181,23 @@
 
                     <div class="my-orders-card">
                         <div class="my-orders-header">
-                            <h3>주문 현황</h3>
-                            <div class="orders-filter">
-                                <label for="ordersFromDate">조회기간</label>
-                                <div class="orders-filter-input-wrap">
-                                    <input type="date" id="ordersFromDate" class="orders-date-input">
-                                    <span class="range-separator">~</span>
-                                    <input type="date" id="ordersToDate" class="orders-date-input">
-                                    <button type="button" class="btn btn-tiny btn-secondary" id="ordersDateApplyBtn">조회</button>
-                                </div>
+                            <div class="my-orders-header-title">
+                                <h3>주문 현황</h3>
                             </div>
-                            <div class="orders-search-wrap">
-                                <label class="visually-hidden" for="consumerOrderSearch">주문 검색</label>
-                                <input type="search" id="consumerOrderSearch" class="orders-search-input" placeholder="주문번호·주소·공급자 검색" autocomplete="off" enterkeyhint="search">
+                            <div class="my-orders-header-toolbar">
+                                <div class="orders-filter">
+                                    <span class="orders-filter-label" id="ordersPeriodLabel">조회기간</span>
+                                    <div class="orders-filter-input-wrap" role="group" aria-labelledby="ordersPeriodLabel">
+                                        <input type="date" id="ordersFromDate" class="orders-date-input" aria-label="조회 시작일">
+                                        <span class="range-separator" aria-hidden="true">~</span>
+                                        <input type="date" id="ordersToDate" class="orders-date-input" aria-label="조회 종료일">
+                                        <button type="button" class="btn btn-tiny btn-secondary orders-date-apply-btn" id="ordersDateApplyBtn">조회</button>
+                                    </div>
+                                </div>
+                                <div class="orders-search-wrap">
+                                    <label class="visually-hidden" for="consumerOrderSearch">주문 검색</label>
+                                    <input type="search" id="consumerOrderSearch" class="orders-search-input" placeholder="주문번호·주소·공급자 검색" autocomplete="off" enterkeyhint="search">
+                                </div>
                             </div>
                         </div>
                         <div id="consumerOrdersList" class="orders-list"></div>
@@ -269,19 +273,23 @@
             <div class="supplier-content">
                 <div class="supplier-orders-card">
                     <div class="my-orders-header supplier-orders-header">
-                        <h3>주문 현황</h3>
-                        <div class="orders-filter">
-                            <label for="supplierFromDate">조회기간</label>
-                            <div class="orders-filter-input-wrap supplier-range-inputs">
-                                <input type="date" id="supplierFromDate" class="orders-date-input">
-                                <span class="range-separator">~</span>
-                                <input type="date" id="supplierToDate" class="orders-date-input">
-                                <button type="button" class="btn btn-tiny btn-secondary" id="supplierDateApplyBtn">조회</button>
-                            </div>
+                        <div class="my-orders-header-title">
+                            <h3>주문 현황</h3>
                         </div>
-                        <div class="orders-search-wrap">
-                            <label class="visually-hidden" for="supplierOrderSearch">주문 검색</label>
-                            <input type="search" id="supplierOrderSearch" class="orders-search-input" placeholder="주문번호·주소·구매자 검색" autocomplete="off" enterkeyhint="search">
+                        <div class="my-orders-header-toolbar">
+                            <div class="orders-filter">
+                                <span class="orders-filter-label" id="supplierPeriodLabel">조회기간</span>
+                                <div class="orders-filter-input-wrap" role="group" aria-labelledby="supplierPeriodLabel">
+                                    <input type="date" id="supplierFromDate" class="orders-date-input" aria-label="조회 시작일">
+                                    <span class="range-separator" aria-hidden="true">~</span>
+                                    <input type="date" id="supplierToDate" class="orders-date-input" aria-label="조회 종료일">
+                                    <button type="button" class="btn btn-tiny btn-secondary orders-date-apply-btn" id="supplierDateApplyBtn">조회</button>
+                                </div>
+                            </div>
+                            <div class="orders-search-wrap">
+                                <label class="visually-hidden" for="supplierOrderSearch">주문 검색</label>
+                                <input type="search" id="supplierOrderSearch" class="orders-search-input" placeholder="주문번호·주소·구매자 검색" autocomplete="off" enterkeyhint="search">
+                            </div>
                         </div>
                     </div>
                     <div id="supplierOrdersList" class="orders-list"></div>

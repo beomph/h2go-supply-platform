@@ -2227,11 +2227,18 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
 }
 
 .order-item {
-    padding: 0.4rem 0.55rem;
+    padding: 0.55rem 0.65rem 0.5rem;
     background: var(--bg-dark);
-    border-radius: 8px;
-    margin-bottom: 0.28rem;
+    border-radius: 10px;
+    margin-bottom: 0.35rem;
+    border: 1px solid rgba(148, 163, 184, 0.12);
     border-left: 3px solid var(--h2-blue);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+}
+
+body.theme-light .order-item {
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: none;
 }
 
 /* 주문 카드: 본문(왼쪽) | 상태·버튼(오른쪽 고정) */
@@ -2267,21 +2274,59 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
     align-self: flex-end;
 }
 
-/* 카드 하단: 액션 버튼 우측 정렬 (상태 배지와 분리) */
-.order-item-action-footer {
+/* 카드 하단 툴바: 회색 실선 + 주문번호·예상도착 + 버튼(동일 가로선) */
+.order-card-toolbar {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.35rem;
-    margin-top: 0.45rem;
-    padding-top: 0.45rem;
-    border-top: 1px solid rgba(148, 163, 184, 0.12);
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 0.75rem;
+    margin-top: 0.55rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.28);
     width: 100%;
     min-width: 0;
 }
 
-body.theme-light .order-item-action-footer {
-    border-top-color: rgba(15, 23, 42, 0.08);
+body.theme-light .order-card-toolbar {
+    border-top-color: rgba(100, 116, 139, 0.35);
+}
+
+.order-card-toolbar-main {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 1.25rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.order-card-order-id {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+}
+
+.order-card-eta {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--h2-blue-light);
+}
+
+.order-card-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem 0.45rem;
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.order-card-toolbar-actions .order-actions--footer {
+    justify-content: flex-end;
 }
 
 .order-actions--footer {
@@ -2291,7 +2336,8 @@ body.theme-light .order-item-action-footer {
     justify-content: flex-end;
     align-items: center;
     gap: 0.28rem 0.4rem;
-    width: 100%;
+    width: auto;
+    max-width: 100%;
 }
 
 .order-actions--footer .btn-small {
@@ -2382,12 +2428,40 @@ body.theme-light .order-item-action-footer {
     min-width: 0;
 }
 
-.order-item-summary-row--sub {
-    margin-top: 0.05rem;
+/* 판매: 납품·예상도착·출하/회차 묶음 */
+.order-summary-lead-times {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.28rem 0.75rem;
+    min-width: 0;
 }
 
-.order-item-summary-row--sub .order-summary-id {
-    font-size: 0.74rem;
+.order-lead-due {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    line-height: 1.25;
+}
+
+.order-lead-eta {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--h2-blue-light);
+    white-space: nowrap;
+}
+
+.order-lead-ship {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+    font-size: 0.72rem;
+    line-height: 1.3;
+    color: var(--text-muted);
+}
+
+.order-lead-ship .order-schedule-line + .order-schedule-line {
+    margin-top: 0.02rem;
 }
 
 .order-summary-shipment-inline,
@@ -2495,34 +2569,40 @@ body.theme-light .order-item-action-footer {
 }
 
 @media (min-width: 769px) {
-    .order-item-summary-row--consumer:not(.order-item-summary-row--sub) {
+    .order-item-summary-row--consumer {
         display: grid;
-        align-items: center;
-        gap: 0.45rem 0.6rem;
+        align-items: start;
+        gap: 0.55rem 1rem;
         font-size: 0.8rem;
-        grid-template-columns: minmax(6.75rem, auto) minmax(5.75rem, auto) minmax(5rem, 1fr) minmax(4.5rem, auto) minmax(7rem, 1.1fr);
+        grid-template-columns: minmax(7rem, auto) minmax(6rem, 1.1fr) minmax(5.25rem, auto) minmax(7.5rem, 1.15fr);
     }
 
-    .order-item-summary-row--consumer.order-item-summary-row--sub {
-        display: grid;
-        grid-template-columns: minmax(6.75rem, auto) 1fr;
-        gap: 0.45rem 0.65rem;
-        align-items: baseline;
+    .order-summary-lead-times {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        column-gap: 1.15rem;
+        row-gap: 0.28rem;
     }
 
-    .order-item-summary-row--supplier:not(.order-item-summary-row--sub) {
-        display: grid;
+    .order-lead-ship {
+        flex-direction: row;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 0.45rem 0.55rem;
-        font-size: 0.8rem;
-        grid-template-columns: minmax(6.75rem, auto) minmax(5.75rem, auto) minmax(5rem, 1fr) minmax(5.25rem, auto) minmax(6.5rem, 1.05fr);
+        column-gap: 1rem;
+        row-gap: 0.12rem;
     }
 
-    .order-item-summary-row--supplier.order-item-summary-row--sub {
+    .order-lead-ship .order-schedule-line + .order-schedule-line {
+        margin-top: 0;
+    }
+
+    .order-item-summary-row--supplier {
         display: grid;
-        grid-template-columns: minmax(6.75rem, auto) 1fr;
-        gap: 0.45rem 0.6rem;
-        align-items: baseline;
+        align-items: start;
+        gap: 0.55rem 1rem;
+        font-size: 0.8rem;
+        grid-template-columns: minmax(12rem, auto) minmax(6rem, 1.1fr) minmax(5.5rem, auto) minmax(7.5rem, 1.1fr);
     }
 
     .order-item-summary-row--consumer .order-summary-tt,

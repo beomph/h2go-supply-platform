@@ -1799,18 +1799,12 @@ function renderConsumerView() {
         const decisionActionsRow = hasDecisionRequest
             ? `<div class="order-actions order-actions--footer order-actions--decision">${decisionButtons}</div>`
             : '';
-        const actionFooter = [
+        const ttCombined = [transportInfoText, consumerDeclaredText].filter(Boolean).join(' · ') || '—';
+        const etaLineC = formatExpectedArrivalDateTime(order);
+        const toolbarActions = [
             decisionActionsRow,
             actionButtons ? `<div class="order-actions order-actions--footer">${actionButtons}</div>` : '',
         ].filter(Boolean).join('');
-        const ttCombined = [transportInfoText, consumerDeclaredText].filter(Boolean).join(' · ') || '—';
-        const shipmentLineC = formatShipmentDateTime(order);
-        const returnLineC = formatReturnDateTime(order);
-        const etaLineC = formatExpectedArrivalDateTime(order);
-        const scheduleStackC =
-            shipmentLineC || returnLineC
-                ? `<div class="order-summary-schedule-stack">${shipmentLineC ? `<span class="order-schedule-line">출하 ${shipmentLineC}</span>` : ''}${returnLineC ? `<span class="order-schedule-line">회차 ${returnLineC}</span>` : ''}</div>`
-                : '<div class="order-summary-schedule-stack"></div>';
         return `
         <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
             <div class="order-item-layout">
@@ -1818,14 +1812,9 @@ function renderConsumerView() {
                     <div class="order-item-summary-block order-item-summary-block--consumer" aria-label="주문 요약">
                         <div class="order-item-summary-row order-item-summary-row--consumer">
                             <span class="order-summary-cell order-summary-datetime">${formatOrderDateTime(order)}</span>
-                            ${scheduleStackC}
                             <span class="order-summary-cell order-summary-counterparty">${order.supplierName || '-'}</span>
                             <span class="order-summary-cell order-summary-condition"><span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span></span>
                             <span class="order-summary-cell order-summary-tt">${ttCombined}</span>
-                        </div>
-                        <div class="order-item-summary-row order-item-summary-row--consumer order-item-summary-row--sub">
-                            <span class="order-summary-cell order-summary-id">${order.id}</span>
-                            ${etaLineC ? `<span class="order-summary-cell order-summary-eta">예상도착 ${etaLineC}</span>` : '<span class="order-summary-cell order-summary-eta"></span>'}
                         </div>
                     </div>
             ${(changeBadge || cancelBadge) ? `
@@ -1841,7 +1830,13 @@ function renderConsumerView() {
                     </div>
                 </div>
             </div>
-            ${actionFooter ? `<div class="order-item-action-footer">${actionFooter}</div>` : ''}
+            <div class="order-card-toolbar">
+                <div class="order-card-toolbar-main">
+                    <span class="order-card-order-id">주문번호 ${order.id}</span>
+                    ${etaLineC ? `<span class="order-card-eta">예상도착 ${etaLineC}</span>` : ''}
+                </div>
+                ${toolbarActions ? `<div class="order-card-toolbar-actions">${toolbarActions}</div>` : ''}
+            </div>
         </div>
     `}).join('');
 
@@ -2037,10 +2032,20 @@ function renderSupplierOrdersCards() {
         const shipmentLine = formatShipmentDateTime(o);
         const returnLine = formatReturnDateTime(o);
         const etaLineS = formatExpectedArrivalDateTime(o);
-        const scheduleStackS =
+        const shipReturnBlock =
             shipmentLine || returnLine
-                ? `<div class="order-summary-schedule-stack">${shipmentLine ? `<span class="order-schedule-line">출하 ${shipmentLine}</span>` : ''}${returnLine ? `<span class="order-schedule-line">회차 ${returnLine}</span>` : ''}</div>`
-                : '<div class="order-summary-schedule-stack"></div>';
+                ? `<div class="order-lead-ship">${shipmentLine ? `<span class="order-schedule-line">출하 ${shipmentLine}</span>` : ''}${returnLine ? `<span class="order-schedule-line">회차 ${returnLine}</span>` : ''}</div>`
+                : '';
+        const leadTimesCluster = `
+            <div class="order-summary-cell order-summary-lead-times">
+                <span class="order-lead-due">${formatOrderDateTime(o)}</span>
+                ${etaLineS ? `<span class="order-lead-eta">예상도착 ${etaLineS}</span>` : ''}
+                ${shipReturnBlock}
+            </div>`;
+        const supplierToolbarActions = [
+            hasSupplierDecision ? `<div class="order-actions order-actions--footer order-actions--decision">${decisionButtonsSupplier}</div>` : '',
+            actionButtons ? `<div class="order-actions order-actions--footer order-actions--supplier">${actionButtons}</div>` : '',
+        ].filter(Boolean).join('');
 
         return `
         <div class="order-item order-item-supplier order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'has-change-request' : ''}" data-order-id="${o.id}">
@@ -2048,15 +2053,10 @@ function renderSupplierOrdersCards() {
                 <div class="order-item-main">
                     <div class="order-item-summary-block order-item-summary-block--supplier" aria-label="주문 요약">
                         <div class="order-item-summary-row order-item-summary-row--supplier">
-                            <span class="order-summary-cell order-summary-datetime">${formatOrderDateTime(o)}</span>
-                            ${scheduleStackS}
+                            ${leadTimesCluster}
                             <span class="order-summary-cell order-summary-counterparty">${buyerLine}</span>
                             <span class="order-summary-cell order-summary-condition"><span class="supply-condition-badge ${supplyBadgeClass}">${supplyLabel}</span><span class="order-summary-travel">${travelTimeText}</span></span>
                             <span class="order-summary-cell order-summary-tt">${ttSupplierLine}</span>
-                        </div>
-                        <div class="order-item-summary-row order-item-summary-row--supplier order-item-summary-row--sub">
-                            <span class="order-summary-cell order-summary-id">${o.id}</span>
-                            ${etaLineS ? `<span class="order-summary-cell order-summary-eta">예상도착 ${etaLineS}</span>` : '<span class="order-summary-cell order-summary-eta"></span>'}
                         </div>
                     </div>
                 </div>
@@ -2067,7 +2067,12 @@ function renderSupplierOrdersCards() {
                     </div>
                 </div>
             </div>
-            ${hasSupplierDecision || actionButtons ? `<div class="order-item-action-footer">${hasSupplierDecision ? `<div class="order-actions order-actions--footer order-actions--decision">${decisionButtonsSupplier}</div>` : ''}${actionButtons ? `<div class="order-actions order-actions--footer order-actions--supplier">${actionButtons}</div>` : ''}</div>` : ''}
+            <div class="order-card-toolbar">
+                <div class="order-card-toolbar-main">
+                    <span class="order-card-order-id">주문번호 ${o.id}</span>
+                </div>
+                ${supplierToolbarActions ? `<div class="order-card-toolbar-actions">${supplierToolbarActions}</div>` : ''}
+            </div>
             ${(noteText || changeBadge || cancelBadge) ? `
             <div class="order-item-foot">
                 <div class="order-item-badges">

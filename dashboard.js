@@ -408,6 +408,8 @@ function serializeOrderForSupabase(order) {
                 order.consumerTransport && typeof order.consumerTransport === "object" ? order.consumerTransport : null,
             emptyLegReturnInfo:
                 order.emptyLegReturnInfo && typeof order.emptyLegReturnInfo === "object" ? order.emptyLegReturnInfo : null,
+            qtySettlement: order.qtySettlement && typeof order.qtySettlement === "object" ? order.qtySettlement : null,
+            trailerVolumeM3Default: order.trailerVolumeM3Default ?? null,
         },
     };
 }
@@ -450,6 +452,8 @@ function deserializeSupabaseOrder(row) {
         deliveryConfirmation: (payload.deliveryConfirmation && typeof payload.deliveryConfirmation === "object") ? payload.deliveryConfirmation : null,
         consumerTransport: (payload.consumerTransport && typeof payload.consumerTransport === "object") ? payload.consumerTransport : null,
         emptyLegReturnInfo: (payload.emptyLegReturnInfo && typeof payload.emptyLegReturnInfo === "object") ? payload.emptyLegReturnInfo : null,
+        qtySettlement: (payload.qtySettlement && typeof payload.qtySettlement === "object") ? payload.qtySettlement : null,
+        trailerVolumeM3Default: payload.trailerVolumeM3Default != null ? Number(payload.trailerVolumeM3Default) : null,
     };
 }
 
@@ -968,6 +972,81 @@ function formatOrderDateTime(order) {
 }
 
 const TT_SWAP_MINUTES = 15;
+const DEFAULT_TT_VOLUME_M3 = 22;
+
+/** @returns {string[]} */
+function getOrderTrailerNumbers(order) {
+    const ti = order?.transportInfo;
+    const raw = ti && Array.isArray(ti.trailerNumbers) ? ti.trailerNumbers : [];
+    const list = raw.map((x) => String(x || "").trim()).filter(Boolean);
+    if (list.length) return list;
+    const n = Math.max(1, Number(order?.tubeTrailers || 1));
+    return Array.from({ length: n }, (_, i) => `T/T ${i + 1}`);
+}
+
+function findPreviousTrailerQtySnapshot(consumerName, address, trailerNo, excludeOrderId) {
+    const keyConsumer = String(consumerName || "").trim().toLowerCase();
+    const keyAddr = String(address || "").trim().toLowerCase();
+    const tt = String(trailerNo || "").trim();
+    if (!tt) return null;
+    let best = null;
+    let bestT = 0;
+    for (const o of orders) {
+        if (!o || o.id === excludeOrderId) continue;
+        if (String(o.consumerName || "").trim().toLowerCase() !== keyConsumer) continue;
+        if (String(o.address || "").trim().toLowerCase() !== keyAddr) continue;
+        const qs = o.qtySettlement;
+        if (!qs || typeof qs !== "object" || !qs.byTrailer || typeof qs.byTrailer !== "object") continue;
+        const snap = qs.byTrailer[tt];
+        if (!snap || typeof snap !== "object") continue;
+        const t = o.completedAt || o.arrivedAt || o.createdAt || "";
+        const ts = t ? new Date(t).getTime() : 0;
+        if (ts >= bestT) {
+            bestT = ts;
+            best = snap;
+        }
+    }
+    return best;
+}
+
+function computeQtyDeltas(method, snap, volM3) {
+    const v = Number(volM3) > 0 ? Number(volM3) : DEFAULT_TT_VOLUME_M3;
+    const num = (x) => {
+        const n = parseFloat(String(x ?? "").replace(/,/g, ""));
+        return Number.isFinite(n) ? n : null;
+    };
+    if (method === "flow") {
+        const refIn = num(snap.flowInRef);
+        const refOut = num(snap.flowOutRef);
+        const curIn = num(snap.flowInCurr);
+        const curOut = num(snap.flowOutCurr);
+        if (refIn == null || refOut == null || curIn == null || curOut == null) return { delta: null, label: "유량계 차이(Nm³)" };
+        const usageRef = refOut - refIn;
+        const usageCur = curOut - curIn;
+        return { delta: usageCur - usageRef, label: "유량계 차이(Nm³)" };
+    }
+    if (method === "pressure") {
+        const refIn = num(snap.pressureInRef);
+        const refOut = num(snap.pressureOutRef);
+        const curIn = num(snap.pressureInCurr);
+        const curOut = num(snap.pressureOutCurr);
+        if (refIn == null || refOut == null || curIn == null || curOut == null) return { delta: null, label: "차압 기준 증감(kg)" };
+        const deltaPRef = refOut - refIn;
+        const deltaPCur = curOut - curIn;
+        return { delta: (deltaPCur - deltaPRef) * v, label: "차압×내용적 증감(kg)" };
+    }
+    if (method === "weight") {
+        const refB = num(snap.weightBeforeRef);
+        const refA = num(snap.weightAfterRef);
+        const curB = num(snap.weightBeforeCurr);
+        const curA = num(snap.weightAfterCurr);
+        if (refB == null || refA == null || curB == null || curA == null) return { delta: null, label: "중량 차이(kg)" };
+        const chRef = refA - refB;
+        const chCur = curA - curB;
+        return { delta: chCur - chRef, label: "계량 차이(kg)" };
+    }
+    return { delta: null, label: "" };
+}
 
 /** change/cancel 요청자 정규화 (저장값 대소문자·공백 흔들림 대비) */
 function normalizeRequestParty(raw) {
@@ -1093,6 +1172,20 @@ function getOrderEtaLines(order) {
         return lines;
     }
     return lines;
+}
+
+function renderQtyCertificateLinks(order) {
+    const bt = order?.qtySettlement?.byTrailer;
+    if (!bt || typeof bt !== 'object') return '';
+    const keys = Object.keys(bt);
+    if (!keys.length) return '';
+    const links = keys
+        .map(
+            (k) =>
+                `<button type="button" class="btn btn-tiny btn-secondary" data-action="open-qty-cert" data-id="${order.id}" data-trailer="${String(k).replace(/"/g, '&quot;')}">물량확인증 ${String(k).replace(/</g, '&lt;')}</button>`
+        )
+        .join(' ');
+    return `<div class="order-qty-cert-links">${links}</div>`;
 }
 
 function formatOrderEtaToolbarHtml(order) {
@@ -1265,7 +1358,10 @@ function getConsumerAdvanceAction(order) {
     }
     switch (status) {
         case 'in_transit':
-            return { label: '실차 도착', next: 'arrived' };
+            if (isExFactoryOrder(order)) {
+                return { label: '실차 도착', next: 'completed' };
+            }
+            return null;
         case 'arrived':
             return { label: '공차 출발', next: 'empty_in_transit' };
         default:
@@ -1911,7 +2007,13 @@ function renderConsumerView() {
         const cancelBadge = getCancelBadgeText(order);
         const showChangeBtn = canRequestChange && !immediateCancelable;
         const consumerAdvanceAction = !hasPendingChange && !hasPendingCancel ? getConsumerAdvanceAction(order) : null;
+        const showDeliverySettle =
+            !hasPendingChange &&
+            !hasPendingCancel &&
+            order.supplyCondition === 'delivery' &&
+            status === 'in_transit';
         const actionButtons = `
+            ${showDeliverySettle ? `<button type="button" class="btn btn-small btn-primary" data-action="open-delivery-settlement" data-id="${order.id}">실차 도착 · 물량정산</button>` : ''}
             ${consumerAdvanceAction ? `<button type="button" class="btn btn-small btn-primary" data-action="advance-status" data-next-status="${consumerAdvanceAction.next}" data-id="${order.id}">${consumerAdvanceAction.label}</button>` : ''}
             ${canCancelChangeRequest ? `<button type="button" class="btn btn-small btn-secondary" data-action="cancel-change-request" data-id="${order.id}">변경요청 취소</button>` : ''}
             ${showChangeBtn ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
@@ -1978,6 +2080,7 @@ function renderConsumerView() {
                 </div>
                 ${toolbarActions ? `<div class="order-card-toolbar-actions">${toolbarActions}</div>` : ''}
             </div>
+            ${renderQtyCertificateLinks(order)}
         </div>
     `}).join('');
 
@@ -2215,6 +2318,7 @@ function renderSupplierOrdersCards() {
                 </div>
                 ${supplierToolbarActions ? `<div class="order-card-toolbar-actions">${supplierToolbarActions}</div>` : ''}
             </div>
+            ${renderQtyCertificateLinks(o)}
             ${(noteText || changeBadge || cancelBadge) ? `
             <div class="order-item-foot">
                 <div class="order-item-badges">
@@ -2237,11 +2341,19 @@ function renderSupplierOrdersCards() {
     });
 }
 
-function openQtyConfirmModal(orderId) {
+function openQtyConfirmModal(orderId, trailerNo) {
+    const order = orders.find((o) => o.id === orderId);
+    let tt = trailerNo != null && String(trailerNo).trim() ? String(trailerNo).trim() : '';
+    if (!tt && order?.qtySettlement?.byTrailer && typeof order.qtySettlement.byTrailer === 'object') {
+        const ks = Object.keys(order.qtySettlement.byTrailer);
+        if (ks.length === 1) tt = ks[0];
+        else if (ks.length > 1) tt = ks[0];
+    }
     const iframe = document.getElementById('qtyConfirmIframe');
     const modal = document.getElementById('qtyConfirmModal');
     if (iframe && modal) {
-        iframe.src = '물량확인증_양식.html?orderId=' + encodeURIComponent(orderId) + '&embed=1';
+        const q = tt ? `&trailerNo=${encodeURIComponent(tt)}` : '';
+        iframe.src = '물량확인증_양식.html?orderId=' + encodeURIComponent(orderId) + '&embed=1' + q;
         modal.classList.add('active');
     }
 }
@@ -2528,6 +2640,161 @@ async function openTransportStartModal(orderId, prefillFromConsumerTransport, mo
 
 function closeTransportStartModal() {
     document.getElementById('transportStartModal').classList.remove('active');
+}
+
+function closeDeliverySettlementModal() {
+    document.getElementById('deliverySettlementModal')?.classList.remove('active');
+}
+
+function wireDeliverySettlementRecalc(container) {
+    if (!container) return;
+    const vol = () => parseFloat(document.getElementById('deliverySettleVolume')?.value || '') || DEFAULT_TT_VOLUME_M3;
+    const sync = () => {
+        container.querySelectorAll('[data-del-settle-block]').forEach((block) => {
+            const method = block.querySelector('.delivery-settle-method')?.value || 'flow';
+            const snap = {};
+            const g = (name) => block.querySelector(`[name="${name}"]`);
+            const gv = (name) => (g(name)?.value ?? '').trim();
+            snap.flowInRef = gv('flowInRef');
+            snap.flowOutRef = gv('flowOutRef');
+            snap.flowInCurr = gv('flowInCurr');
+            snap.flowOutCurr = gv('flowOutCurr');
+            snap.pressureInRef = gv('pressureInRef');
+            snap.pressureOutRef = gv('pressureOutRef');
+            snap.pressureInCurr = gv('pressureInCurr');
+            snap.pressureOutCurr = gv('pressureOutCurr');
+            snap.weightBeforeRef = gv('weightBeforeRef');
+            snap.weightAfterRef = gv('weightAfterRef');
+            snap.weightBeforeCurr = gv('weightBeforeCurr');
+            snap.weightAfterCurr = gv('weightAfterCurr');
+            const { delta, label } = computeQtyDeltas(method, snap, vol());
+            const outEl = block.querySelector('.delivery-settle-delta-out');
+            if (outEl) {
+                outEl.textContent =
+                    delta == null || !Number.isFinite(delta)
+                        ? '—'
+                        : `${label}: ${delta.toLocaleString('ko-KR', { maximumFractionDigits: 3 })}`;
+            }
+        });
+    };
+    container.querySelectorAll('input, select').forEach((el) => {
+        el.addEventListener('input', sync);
+        el.addEventListener('change', sync);
+    });
+    const volEl = document.getElementById('deliverySettleVolume');
+    if (volEl && !volEl.dataset.settleVolBound) {
+        volEl.dataset.settleVolBound = '1';
+        volEl.addEventListener('input', sync);
+    }
+    sync();
+}
+
+function openDeliverySettlementModal(orderId) {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order || order.supplyCondition !== 'delivery') return;
+    const wrap = document.getElementById('deliverySettleTrailers');
+    const hid = document.getElementById('deliverySettleOrderId');
+    const volInput = document.getElementById('deliverySettleVolume');
+    if (!wrap || !hid) return;
+    hid.value = orderId;
+    const volDef =
+        order.trailerVolumeM3Default != null && Number.isFinite(Number(order.trailerVolumeM3Default))
+            ? Number(order.trailerVolumeM3Default)
+            : DEFAULT_TT_VOLUME_M3;
+    if (volInput) volInput.value = String(volDef);
+
+    const trailers = getOrderTrailerNumbers(order);
+    const prev = order.qtySettlement?.byTrailer && typeof order.qtySettlement.byTrailer === 'object'
+        ? order.qtySettlement.byTrailer
+        : {};
+
+    wrap.innerHTML = trailers
+        .map((tt) => {
+            const p = findPreviousTrailerQtySnapshot(order.consumerName, order.address, tt, order.id);
+            const cur = prev[tt] || {};
+            const method = cur.method || 'flow';
+            const loadedP = cur.loadedInboundPressureBar ?? '';
+            const emptyP = cur.emptyResidualPressureBar ?? '';
+            const fr = (k, def = '') => (cur[k] != null && cur[k] !== '' ? String(cur[k]) : def);
+            const flowRefIn = fr('flowInRef', p?.flowInCurr ?? p?.flowOutCurr ?? '');
+            const flowRefOut = fr('flowOutRef', p?.flowOutCurr ?? '');
+            const prInRef = fr('pressureInRef', p?.pressureInCurr ?? '');
+            const prOutRef = fr('pressureOutRef', p?.pressureOutCurr ?? '');
+            const wBeforeRef = fr('weightBeforeRef', p?.weightAfterCurr ?? p?.weightBeforeCurr ?? '');
+            const wAfterRef = fr('weightAfterRef', p?.weightAfterCurr ?? '');
+
+            return `
+            <div class="delivery-settle-tt-block" data-del-settle-block data-trailer-id="${String(tt).replace(/"/g, '&quot;')}">
+                <h4 class="delivery-settle-tt-title">T/T ${String(tt).replace(/</g, '&lt;')}</h4>
+                <div class="form-row form-row-2">
+                    <div class="form-group">
+                        <label>실차 입고 압력 (bar)</label>
+                        <input type="text" name="loadedInboundPressureBar" class="delivery-settle-loaded-p" value="${String(loadedP).replace(/"/g, '&quot;')}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>전입고 공차 잔압 (bar)</label>
+                        <input type="text" name="emptyResidualPressureBar" class="delivery-settle-empty-p" value="${String(emptyP).replace(/"/g, '&quot;')}" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>정산 방법</label>
+                    <select name="method" class="delivery-settle-method">
+                        <option value="flow" ${method === 'flow' ? 'selected' : ''}>유량계</option>
+                        <option value="pressure" ${method === 'pressure' ? 'selected' : ''}>차압</option>
+                        <option value="weight" ${method === 'weight' ? 'selected' : ''}>T/T 계량</option>
+                    </select>
+                </div>
+                <div class="delivery-settle-ref-curr">
+                    <p class="delivery-settle-ref-note">기준값(직전 정산 저장값 또는 수동 입력)</p>
+                    <table class="delivery-settle-mini-table">
+                        <thead><tr><th></th><th>기준 입고/전</th><th>기준 출고/후</th><th>현재 입고/전</th><th>현재 출고/후</th></tr></thead>
+                        <tbody>
+                            <tr class="delivery-row-flow" style="display:${method === 'flow' ? 'table-row' : 'none'}">
+                                <td>유량계</td>
+                                <td><input type="text" name="flowInRef" value="${String(flowRefIn).replace(/"/g, '&quot;')}"></td>
+                                <td><input type="text" name="flowOutRef" value="${String(flowRefOut).replace(/"/g, '&quot;')}"></td>
+                                <td><input type="text" name="flowInCurr" value="${fr('flowInCurr')}"></td>
+                                <td><input type="text" name="flowOutCurr" value="${fr('flowOutCurr')}"></td>
+                            </tr>
+                            <tr class="delivery-row-pressure" style="display:${method === 'pressure' ? 'table-row' : 'none'}">
+                                <td>차압(bar)</td>
+                                <td><input type="text" name="pressureInRef" value="${String(prInRef).replace(/"/g, '&quot;')}"></td>
+                                <td><input type="text" name="pressureOutRef" value="${String(prOutRef).replace(/"/g, '&quot;')}"></td>
+                                <td><input type="text" name="pressureInCurr" value="${fr('pressureInCurr')}"></td>
+                                <td><input type="text" name="pressureOutCurr" value="${fr('pressureOutCurr')}"></td>
+                            </tr>
+                            <tr class="delivery-row-weight" style="display:${method === 'weight' ? 'table-row' : 'none'}">
+                                <td>중량(kg)</td>
+                                <td><input type="text" name="weightBeforeRef" value="${String(wBeforeRef).replace(/"/g, '&quot;')}"></td>
+                                <td><input type="text" name="weightAfterRef" value="${String(wAfterRef).replace(/"/g, '&quot;')}"></td>
+                                <td><input type="text" name="weightBeforeCurr" value="${fr('weightBeforeCurr')}"></td>
+                                <td><input type="text" name="weightAfterCurr" value="${fr('weightAfterCurr')}"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="delivery-settle-delta-out"></p>
+            </div>`;
+        })
+        .join('');
+
+    wrap.querySelectorAll('.delivery-settle-method').forEach((sel) => {
+        sel.addEventListener('change', () => {
+            const block = sel.closest('[data-del-settle-block]');
+            if (!block) return;
+            const m = sel.value;
+            const show = (cls, on) => {
+                const row = block.querySelector(cls);
+                if (row) row.style.display = on ? 'table-row' : 'none';
+            };
+            show('.delivery-row-flow', m === 'flow');
+            show('.delivery-row-pressure', m === 'pressure');
+            show('.delivery-row-weight', m === 'weight');
+        });
+    });
+
+    wireDeliverySettlementRecalc(wrap);
+    document.getElementById('deliverySettlementModal')?.classList.add('active');
 }
 
 // ========== 변경 요청 ==========
@@ -3125,6 +3392,73 @@ document.getElementById('changeRequestForm')?.addEventListener('submit', (e) => 
     alert('변경 요청이 제출되었습니다. 상대방의 확정을 기다립니다.');
 });
 
+document.getElementById('deliverySettlementForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const orderId = document.getElementById('deliverySettleOrderId')?.value;
+    const order = orderId ? orders.find((o) => o.id === orderId) : null;
+    if (!order || order.supplyCondition !== 'delivery' || normalizeStatus(order.status) !== 'in_transit') return;
+    const vol = parseFloat(document.getElementById('deliverySettleVolume')?.value || '');
+    if (!Number.isFinite(vol) || vol <= 0) {
+        alert('내용적(m³)을 올바르게 입력해 주세요.');
+        return;
+    }
+    const wrap = document.getElementById('deliverySettleTrailers');
+    if (!wrap) return;
+    const byTrailer = {};
+    const blocks = wrap.querySelectorAll('[data-del-settle-block]');
+    for (const block of blocks) {
+        const tt = block.dataset.trailerId || '';
+        if (!tt) continue;
+        const loadedP = block.querySelector('.delivery-settle-loaded-p')?.value?.trim();
+        const emptyP = block.querySelector('.delivery-settle-empty-p')?.value?.trim();
+        if (!loadedP || !emptyP) {
+            alert(`T/T ${tt}: 실차 입고 압력과 전입고 공차 잔압을 모두 입력해 주세요.`);
+            return;
+        }
+        const method = block.querySelector('.delivery-settle-method')?.value || 'flow';
+        const gv = (name) => (block.querySelector(`[name="${name}"]`)?.value ?? '').trim();
+        const snap = {
+            method,
+            loadedInboundPressureBar: loadedP,
+            emptyResidualPressureBar: emptyP,
+            flowInRef: gv('flowInRef'),
+            flowOutRef: gv('flowOutRef'),
+            flowInCurr: gv('flowInCurr'),
+            flowOutCurr: gv('flowOutCurr'),
+            pressureInRef: gv('pressureInRef'),
+            pressureOutRef: gv('pressureOutRef'),
+            pressureInCurr: gv('pressureInCurr'),
+            pressureOutCurr: gv('pressureOutCurr'),
+            weightBeforeRef: gv('weightBeforeRef'),
+            weightAfterRef: gv('weightAfterRef'),
+            weightBeforeCurr: gv('weightBeforeCurr'),
+            weightAfterCurr: gv('weightAfterCurr'),
+        };
+        const { delta, label } = computeQtyDeltas(method, snap, vol);
+        snap.deltaValue = delta;
+        snap.deltaLabel = label;
+        byTrailer[tt] = snap;
+    }
+    if (Object.keys(byTrailer).length === 0) {
+        alert('정산할 T/T 정보가 없습니다.');
+        return;
+    }
+    order.trailerVolumeM3Default = vol;
+    order.qtySettlement = {
+        settledAt: new Date().toISOString(),
+        volumeM3: vol,
+        byTrailer,
+    };
+    order.arrivedAt = new Date().toISOString();
+    order.status = 'arrived';
+    appendOrderChangeHistory(order, 'delivery_qty_settled', 'consumer', { trailerKeys: Object.keys(byTrailer) });
+    saveOrdersToStorage();
+    closeDeliverySettlementModal();
+    renderConsumerView();
+    renderSupplierView();
+    alert('물량 정산이 저장되었습니다. 이제 공차 회수를 진행할 수 있습니다.');
+});
+
 document.getElementById('transportStartForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const orderId = document.getElementById('transportStartOrderId').value;
@@ -3150,6 +3484,15 @@ document.getElementById('transportStartForm').addEventListener('submit', (e) => 
         }
         order.emptyLegStartedAt = departedAt;
         order.status = 'empty_in_transit';
+        if (!isExFactoryOrder(order) && order.qtySettlement?.byTrailer && typeof order.qtySettlement.byTrailer === 'object') {
+            const drv = String(driverName).trim();
+            getOrderTrailerNumbers(order).forEach((tt) => {
+                const row = order.qtySettlement.byTrailer[tt];
+                if (row && typeof row === 'object') {
+                    row.outboundDriverNamePlanned = drv;
+                }
+            });
+        }
         appendOrderChangeHistory(order, "empty_leg_started", "consumer", {
             trailerNumbers,
             driverName,
@@ -3213,6 +3556,7 @@ document.addEventListener('keydown', (e) => {
     else if (document.getElementById('qtyConfirmModal').classList.contains('active')) closeQtyConfirmModal();
     else if (document.getElementById('transportAssetPickModal')?.classList.contains('active')) closeTransportAssetPickModal();
     else if (document.getElementById('transportStartModal').classList.contains('active')) closeTransportStartModal();
+    else if (document.getElementById('deliverySettlementModal')?.classList.contains('active')) closeDeliverySettlementModal();
 });
 document.querySelector('#changeRequestModal .modal-close').addEventListener('click', () => {
     document.getElementById('changeRequestModal').classList.remove('active');
@@ -3233,6 +3577,11 @@ document.getElementById('transportStartModal')?.addEventListener('click', (e) =>
 document.querySelector('#qtyConfirmModal .modal-close')?.addEventListener('click', closeQtyConfirmModal);
 document.getElementById('qtyConfirmModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeQtyConfirmModal();
+});
+
+document.getElementById('deliverySettlementModalClose')?.addEventListener('click', closeDeliverySettlementModal);
+document.getElementById('deliverySettlementModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeDeliverySettlementModal();
 });
 
 document.querySelector('#transportAssetPickModal .modal-close')?.addEventListener('click', closeTransportAssetPickModal);
@@ -3331,6 +3680,15 @@ document.addEventListener('click', (e) => {
         openTransportStartModal(orderId, true, "loaded_ex_factory").catch((err) =>
             console.warn("[h2go] transport start modal:", err?.message || err)
         );
+    } else if (action === 'open-delivery-settlement') {
+        if (!order) return;
+        if (getActorForOrder(order) !== 'consumer') return;
+        if (order.supplyCondition !== 'delivery' || normalizeStatus(order.status) !== 'in_transit') return;
+        openDeliverySettlementModal(orderId);
+    } else if (action === 'open-qty-cert') {
+        if (!order) return;
+        const tt = btn.dataset.trailer;
+        openQtyConfirmModal(orderId, tt);
     } else if (action === 'advance-status') {
         if (!order) return;
         const actor = getActorForOrder(order);

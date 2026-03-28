@@ -422,6 +422,7 @@
             if (w) w.style.display = 'block';
         }
         const orderId = getParam('orderId');
+        const trailerParam = getParam('trailerNo');
         if (!orderId) return;
         let orders = [];
         try {
@@ -429,6 +430,21 @@
         } catch (_) {}
         const order = orders.find(function(o) { return o.id === orderId; });
         if (!order) return;
+
+        var ti0 = order.transportInfo;
+        var trailerList = ti0 && ti0.trailerNumbers && ti0.trailerNumbers.length
+            ? ti0.trailerNumbers.map(function(x) { return String(x || '').trim(); }).filter(Boolean)
+            : [];
+        if (trailerList.length === 0) {
+            var n = Math.max(1, parseInt(order.tubeTrailers, 10) || 1);
+            for (var i = 0; i < n; i++) trailerList.push('T/T ' + (i + 1));
+        }
+        var activeTrailer = trailerParam ? String(trailerParam).trim() : trailerList[0];
+        if (activeTrailer && trailerList.indexOf(activeTrailer) < 0) trailerList.push(activeTrailer);
+
+        var qs = order.qtySettlement && order.qtySettlement.byTrailer ? order.qtySettlement.byTrailer : {};
+        var snap = qs[activeTrailer] || null;
+        var volM = (order.qtySettlement && order.qtySettlement.volumeM3) || order.trailerVolumeM3Default || 22;
 
         function getSupplierAddress(name) {
             const n = String(name || '').trim();
@@ -446,7 +462,7 @@
             return '인천시 남동구 논현고잔로 123 (인천 수소생산공장)';
         }
 
-        setText('qty-order-id', order.id || '');
+        setText('qty-order-id', (order.id || '') + (activeTrailer ? ' · T/T ' + activeTrailer : ''));
         setText('qty-customer-name', order.consumerName || '');
         setText('qty-customer-addr', order.address || '');
         setText('qty-customer-phone', '');
@@ -456,36 +472,68 @@
         setText('qty-supplier-phone', '');
 
         var ti = order.transportInfo;
-        var trailerNos = ti && ti.trailerNumbers && ti.trailerNumbers.length ? ti.trailerNumbers.join(', ') : '';
-        setText('qty-trailer-no', trailerNos);
-        setText('qty-trailer-vol', '');
+        setText('qty-trailer-no', activeTrailer || '');
+        setText('qty-trailer-vol', String(volM));
+        if (snap && (snap.loadedInboundPressureBar || snap.emptyResidualPressureBar)) {
+            var note = document.getElementById('qty-trailer-pressure-note');
+            if (!note) {
+                note = document.createElement('p');
+                note.id = 'qty-trailer-pressure-note';
+                note.style.cssText = 'font-size:8.5pt;margin-top:6px;color:#444;';
+                var sec = document.querySelector('.grid-left .section:last-of-type .section-body');
+                if (sec) sec.appendChild(note);
+            }
+            note.textContent = '실차 입고 압력: ' + (snap.loadedInboundPressureBar || '—') + ' bar · 전입고 공차 잔압: ' + (snap.emptyResidualPressureBar || '—') + ' bar';
+        }
 
         var y = order.year || '', m = order.month || '', d = order.day || '';
         setText('qty-in-datetime', (y && m && d) ? y + '년 ' + m + '월 ' + d + '일' : '');
-        setText('qty-out-datetime', '');
+        var outDt = '';
+        if (order.emptyLegStartedAt) {
+            try {
+                var d0 = new Date(order.emptyLegStartedAt);
+                if (!isNaN(d0.getTime())) {
+                    var pad2 = function(n) { return (n < 10 ? '0' : '') + n; };
+                    outDt = d0.getFullYear() + '년 ' + (d0.getMonth() + 1) + '월 ' + d0.getDate() + '일 ' +
+                        pad2(d0.getHours()) + ':' + pad2(d0.getMinutes());
+                }
+            } catch (_) {}
+        }
+        setText('qty-out-datetime', outDt);
 
         var inDriver = ti && ti.driverName ? ti.driverName : '';
         setText('qty-sign-in-driver', inDriver);
 
-        var prevOrder = null;
-        var consumerKey = String((order.consumerName || '') + '|' + (order.address || '')).toLowerCase();
-        var currY = parseInt(order.year, 10) || 0, currM = parseInt(order.month, 10) || 0, currD = parseInt(order.day, 10) || 0;
-        var currTs = order.createdAt ? new Date(order.createdAt).getTime() : 0;
-        orders.forEach(function(o) {
-            if (o.id === order.id || !o.transportInfo || !o.transportInfo.driverName) return;
-            if (String((o.consumerName || '') + '|' + (o.address || '')).toLowerCase() !== consumerKey) return;
-            var oy = parseInt(o.year, 10) || 0, om = parseInt(o.month, 10) || 0, od = parseInt(o.day, 10) || 0;
-            var ots = o.createdAt ? new Date(o.createdAt).getTime() : 0;
-            var isBefore = oy < currY || (oy === currY && om < currM) || (oy === currY && om === currM && od < currD) || (oy === currY && om === currM && od === currD && ots < currTs);
-            if (!isBefore) return;
-            if (!prevOrder) { prevOrder = o; return; }
-            var py = parseInt(prevOrder.year, 10) || 0, pm = parseInt(prevOrder.month, 10) || 0, pd = parseInt(prevOrder.day, 10) || 0;
-            var pts = prevOrder.createdAt ? new Date(prevOrder.createdAt).getTime() : 0;
-            var oIsNewer = oy > py || (oy === py && om > pm) || (oy === py && om === pm && od > pd) || (oy === py && om === pm && od === pd && ots > pts);
-            if (oIsNewer) prevOrder = o;
-        });
-        var outDriver = prevOrder && prevOrder.transportInfo && prevOrder.transportInfo.driverName ? prevOrder.transportInfo.driverName : '';
-        setText('qty-sign-out-driver', outDriver);
+        var outPlanned = snap && snap.outboundDriverNamePlanned ? snap.outboundDriverNamePlanned : '';
+        var eli = order.emptyLegReturnInfo;
+        if (!outPlanned && eli && eli.driverName) outPlanned = eli.driverName;
+        setText('qty-sign-out-driver', outPlanned || '');
+
+        if (snap) {
+            var flowTbody = document.querySelector('#qty-flow-table tbody');
+            if (flowTbody && snap.method === 'flow') {
+                flowTbody.innerHTML = '<tr><td><input type="text" class="qty-input" value="' + String(snap.flowInRef || '').replace(/"/g, '&quot;') + '" readonly></td><td><input type="text" class="qty-input" value="' + String(snap.flowOutRef || '').replace(/"/g, '&quot;') + '" readonly></td></tr>' +
+                    '<tr><td><input type="text" class="qty-input" value="' + String(snap.flowInCurr || '').replace(/"/g, '&quot;') + '"></td><td><input type="text" class="qty-input" value="' + String(snap.flowOutCurr || '').replace(/"/g, '&quot;') + '"></td></tr>';
+            }
+            var prTbody = document.querySelector('#qty-pressure-table tbody');
+            if (prTbody && snap.method === 'pressure') {
+                prTbody.innerHTML = '<tr><td><input type="text" class="qty-input" value="' + String(snap.pressureInRef || '').replace(/"/g, '&quot;') + '" readonly></td><td><input type="text" class="qty-input" value="' + String(snap.pressureOutRef || '').replace(/"/g, '&quot;') + '" readonly></td></tr>' +
+                    '<tr><td><input type="text" class="qty-input" value="' + String(snap.pressureInCurr || '').replace(/"/g, '&quot;') + '"></td><td><input type="text" class="qty-input" value="' + String(snap.pressureOutCurr || '').replace(/"/g, '&quot;') + '"></td></tr>';
+            }
+            setText('qty-usage-a', snap.flowInRef != null ? String(snap.flowInRef) : '');
+            setText('qty-usage-b', snap.flowOutRef != null ? String(snap.flowOutRef) : '');
+            if (snap.deltaValue != null && isFinite(Number(snap.deltaValue))) {
+                setText('qty-usage-sum', String(snap.deltaValue));
+            }
+            setText('qty-pressure-usage', snap.deltaValue != null && isFinite(Number(snap.deltaValue)) ? String(snap.deltaValue) : '');
+            setText('qty-weight-before', snap.weightBeforeRef != null ? String(snap.weightBeforeRef) : '');
+            setText('qty-weight-after', snap.weightAfterRef != null ? String(snap.weightAfterRef) : '');
+            if (snap.method === 'weight') {
+                var wb = parseFloat(String(snap.weightBeforeCurr || '').replace(/,/g, ''));
+                var wa = parseFloat(String(snap.weightAfterCurr || '').replace(/,/g, ''));
+                if (isFinite(wb) && isFinite(wa)) setText('qty-weight-charge', String(wa - wb));
+            }
+        }
 
         function addFlowRow() {
             var tbody = document.querySelector('#qty-flow-table tbody');

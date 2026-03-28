@@ -39,9 +39,9 @@
 
 1.5 출하도·도착도 주문 상태(운송 단계)
 - **출하도(`ex_factory`)**: 수요자 주문 → 수요자 **공차 출발**(모달·`emptyLegStartedAt`·`transportInfo`·`empty_in_transit`) → 공급자 **공차 도착**(`empty_arrived`) → 공급자 **실차 출발**(모달·`transportStartedAt`·`in_transit`) → 수요자 **실차 도착**(`completed`). 공차 ETA는 `empty_in_transit` 구간, 실차 ETA는 `in_transit` 구간.
-- **도착도(`delivery`)**: 수요자 주문 → 공급자 **실차 출발**(모달·`transportStartedAt`·`in_transit`) → 수요자 **실차 도착**(`arrived`) → 현장 T/T 교체(일정상 `TT_SWAP_MINUTES`≈15분, 회차 시각 계산에 반영) → 수요자 **공차 출발**(모달·`emptyLegStartedAt`·`emptyLegReturnInfo`로 회수 구간 T/T·기사 보관, `empty_in_transit`) → 공급자 **공차 도착**(`completed`).
+- **도착도(`delivery`)**: 수요자 주문 → 공급자 **실차 출발**(모달·`transportStartedAt`·`in_transit`) → 수요자 **실차 도착·물량정산**(모달: T/T별 실차 입고압·전입고 공차 잔압, 정산 방식 유량계/차압/T/T, 기준값 대비 차이 자동계산, `qtySettlement.byTrailer`, `arrived`) → 현장 T/T 교체(`TT_SWAP_MINUTES`≈15분) → 수요자 **공차 출발**(모달·`emptyLegStartedAt`, 출고 기사명이 물량확인증 출고란·`outboundDriverNamePlanned`) → 공급자 **공차 도착**(`completed`). 물량확인증은 **T/T별** URL(`trailerNo`)·카드에서 버튼으로 열기.
 - **예상도착(ETA)**: 운송이 실제로 시작되기 전(접수만 등)에는 미표시. ① 실차(도착도)·① 공차/② 실차(출하도·실차 구간) 등 단계별로 표시.
-- 주문 `extra_payload`: `emptyLegStartedAt`, `emptyArrivedAt`, `emptyLegReturnInfo`(도착도 공차 회수 구간), `outboundStartedAt`(레거시 호환) 등.
+- 주문 `extra_payload`: `emptyLegStartedAt`, `emptyArrivedAt`, `emptyLegReturnInfo`(도착도 공차 회수 구간), `qtySettlement`(도착도 물량정산), `trailerVolumeM3Default`, `outboundStartedAt`(레거시 호환) 등.
 
 ================================================================================
 2. 핵심 문제 정의 (AI 관점)
@@ -430,6 +430,10 @@ Phase 4 — 운영 안정화 및 확장 (지속)
 ================================================================================
 최근 변경
 ================================================================================
+
+- 2026-04-06
+  - 도착도: `in_transit`에서 수요자 **실차 도착·물량정산** 모달(T/T별 압력·정산 방식·차이 계산, `qtySettlement`) 후 `arrived`. 공차 출발 시 회수 기사명을 물량확인증 출고란에 반영. 물량확인증 `trailerNo`·T/T별 버튼. `물량확인증_양식.html`에 정산·압력 반영.
+  - `dashboard.js`, `dashboard.html`, `dashboard.css`, `물량확인증_양식.html`, `.taskmaster/docs/prd.txt` §1.5
 
 - 2026-04-05
   - 출하도: 공차 도착은 **공급자** 버튼, 실차 도착·완료는 **수요자** 버튼. 도착도: 실차 도착 → 수요자 **공차 출발**(`emptyLegReturnInfo`로 실차 `transportInfo`와 분리 저장) → 공급자 **공차 도착**으로 완료. T/T 교체 시간 상수 **15분**. 도착도 `collecting`·공급자「회수 완료」분기 제거.

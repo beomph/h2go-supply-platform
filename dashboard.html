@@ -348,6 +348,24 @@
         </div>
     </div>
 
+    <!-- 도착도: 실차 도착 후 물량정산 (T/T별) -->
+    <div id="deliverySettlementModal" class="modal">
+        <div class="modal-content modal-content--wide delivery-settlement-modal">
+            <button type="button" class="modal-close" id="deliverySettlementModalClose" aria-label="닫기">&times;</button>
+            <h3>물량 정산 (도착도 · 실차 도착)</h3>
+            <p class="form-hint-inline delivery-settlement-intro">실차 입고 압력과 전입고 공차 잔압을 입력한 뒤, 정산 방식을 선택하고 기준값 대비 현재값을 입력하면 차이가 자동 계산됩니다. T/T마다 별도 저장됩니다.</p>
+            <form id="deliverySettlementForm" class="order-form">
+                <input type="hidden" id="deliverySettleOrderId" value="">
+                <div class="form-group">
+                    <label for="deliverySettleVolume">내용적 (m³) — 차압 정산 시 사용</label>
+                    <input type="number" id="deliverySettleVolume" min="0.1" step="0.1" value="22" required>
+                </div>
+                <div id="deliverySettleTrailers" class="delivery-settle-trailers"></div>
+                <button type="submit" class="btn btn-primary">저장 후 공차 회수 진행</button>
+            </form>
+        </div>
+    </div>
+
     <!-- 운송 시작 입력 모달 (T/T 번호, 운송기사) -->
     <div id="transportStartModal" class="modal">
         <div class="modal-content">

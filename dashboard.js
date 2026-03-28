@@ -410,6 +410,9 @@ function serializeOrderForSupabase(order) {
                 order.emptyLegReturnInfo && typeof order.emptyLegReturnInfo === "object" ? order.emptyLegReturnInfo : null,
             qtySettlement: order.qtySettlement && typeof order.qtySettlement === "object" ? order.qtySettlement : null,
             trailerVolumeM3Default: order.trailerVolumeM3Default ?? null,
+            exFactoryConsumerSettlementMode:
+                order.exFactoryConsumerSettlementMode === "flow" ? "flow" : "pressure",
+            exFactoryConsumerFlowDone: Boolean(order.qtySettlement?.exFactoryConsumerFlowDone),
         },
     };
 }
@@ -418,7 +421,7 @@ function deserializeSupabaseOrder(row) {
     const payload = (row.extra_payload && typeof row.extra_payload === "object") ? row.extra_payload : {};
     const transportInfo = (row.transport_info && typeof row.transport_info === "object") ? row.transport_info : {};
     const fallbackTime = String(payload.time || "00:00");
-    return {
+    const out = {
         id: String(row.id),
         consumerName: String(row.consumer_name || ""),
         supplierName: String(row.supplier_name || ""),
@@ -454,7 +457,12 @@ function deserializeSupabaseOrder(row) {
         emptyLegReturnInfo: (payload.emptyLegReturnInfo && typeof payload.emptyLegReturnInfo === "object") ? payload.emptyLegReturnInfo : null,
         qtySettlement: (payload.qtySettlement && typeof payload.qtySettlement === "object") ? payload.qtySettlement : null,
         trailerVolumeM3Default: payload.trailerVolumeM3Default != null ? Number(payload.trailerVolumeM3Default) : null,
+        exFactoryConsumerSettlementMode: payload.exFactoryConsumerSettlementMode === "flow" ? "flow" : "pressure",
     };
+    if (payload.exFactoryConsumerFlowDone && out.qtySettlement && typeof out.qtySettlement === "object") {
+        out.qtySettlement.exFactoryConsumerFlowDone = true;
+    }
+    return out;
 }
 
 function saveOrdersToStorage() {
@@ -1020,32 +1028,45 @@ function computeQtyDeltas(method, snap, volM3) {
         const refOut = num(snap.flowOutRef);
         const curIn = num(snap.flowInCurr);
         const curOut = num(snap.flowOutCurr);
-        if (refIn == null || refOut == null || curIn == null || curOut == null) return { delta: null, label: "유량계 차이(Nm³)" };
+        if (refIn == null || refOut == null || curIn == null || curOut == null) return { delta: null, label: "유량계 차이(kg)" };
         const usageRef = refOut - refIn;
         const usageCur = curOut - curIn;
-        return { delta: usageCur - usageRef, label: "유량계 차이(Nm³)" };
+        return { delta: usageCur - usageRef, label: "유량계 차이(kg)" };
     }
     if (method === "pressure") {
         const refIn = num(snap.pressureInRef);
         const refOut = num(snap.pressureOutRef);
         const curIn = num(snap.pressureInCurr);
         const curOut = num(snap.pressureOutCurr);
-        if (refIn == null || refOut == null || curIn == null || curOut == null) return { delta: null, label: "차압 기준 증감(kg)" };
+        if (refIn == null || refOut == null || curIn == null || curOut == null) return { delta: null, label: "차압 기준 증감(m³)" };
         const deltaPRef = refOut - refIn;
         const deltaPCur = curOut - curIn;
-        return { delta: (deltaPCur - deltaPRef) * v, label: "차압×내용적 증감(kg)" };
+        return { delta: (deltaPCur - deltaPRef) * v, label: "차압×내용적 증감(m³)" };
     }
     if (method === "weight") {
         const refB = num(snap.weightBeforeRef);
         const refA = num(snap.weightAfterRef);
         const curB = num(snap.weightBeforeCurr);
         const curA = num(snap.weightAfterCurr);
-        if (refB == null || refA == null || curB == null || curA == null) return { delta: null, label: "중량 차이(kg)" };
+        if (refB == null || refA == null || curB == null || curA == null) return { delta: null, label: "T/T 계량 차이(kg)" };
         const chRef = refA - refB;
         const chCur = curA - curB;
-        return { delta: chCur - chRef, label: "계량 차이(kg)" };
+        return { delta: chCur - chRef, label: "T/T 계량 차이(kg)" };
     }
     return { delta: null, label: "" };
+}
+
+/** 출하도 충전: 입고압(충전 전) → 출고압(실차 출발) × 내용적 = 부피(Nm³) */
+function computeExFactoryChargeVolumeM3(chargeInBar, chargeOutBar, volM3) {
+    const num = (x) => {
+        const n = parseFloat(String(x ?? "").replace(/,/g, ""));
+        return Number.isFinite(n) ? n : null;
+    };
+    const a = num(chargeInBar);
+    const b = num(chargeOutBar);
+    const v = Number(volM3) > 0 ? Number(volM3) : DEFAULT_TT_VOLUME_M3;
+    if (a == null || b == null) return null;
+    return (b - a) * v;
 }
 
 /** change/cancel 요청자 정규화 (저장값 대소문자·공백 흔들림 대비) */
@@ -2012,8 +2033,16 @@ function renderConsumerView() {
             !hasPendingCancel &&
             order.supplyCondition === 'delivery' &&
             status === 'in_transit';
+        const showExFactoryFlowKg =
+            !hasPendingChange &&
+            !hasPendingCancel &&
+            order.supplyCondition === 'ex_factory' &&
+            status === 'in_transit' &&
+            order.exFactoryConsumerSettlementMode === 'flow' &&
+            !order.qtySettlement?.exFactoryConsumerFlowDone;
         const actionButtons = `
             ${showDeliverySettle ? `<button type="button" class="btn btn-small btn-primary" data-action="open-delivery-settlement" data-id="${order.id}">실차 도착 · 물량정산</button>` : ''}
+            ${showExFactoryFlowKg ? `<button type="button" class="btn btn-small btn-primary" data-action="open-exfactory-flow-kg" data-id="${order.id}">유량계 질량(kg) 입력</button>` : ''}
             ${consumerAdvanceAction ? `<button type="button" class="btn btn-small btn-primary" data-action="advance-status" data-next-status="${consumerAdvanceAction.next}" data-id="${order.id}">${consumerAdvanceAction.label}</button>` : ''}
             ${canCancelChangeRequest ? `<button type="button" class="btn btn-small btn-secondary" data-action="cancel-change-request" data-id="${order.id}">변경요청 취소</button>` : ''}
             ${showChangeBtn ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
@@ -2623,6 +2652,29 @@ async function openTransportStartModal(orderId, prefillFromConsumerTransport, mo
     document.getElementById('transportStartOrderId').value = orderId;
     document.getElementById('transportTrailerNumbers').value = '';
     document.getElementById('transportDriverName').value = '';
+    const exChg = document.getElementById('transportExFactoryChargeGroup');
+    const exFlowHint = document.getElementById('transportExFactoryFlowConsumerHint');
+    const volEl = document.getElementById('transportChargeVolumeM3');
+    const inPEl = document.getElementById('transportChargeInPressure');
+    const outPEl = document.getElementById('transportChargeOutPressure');
+    const prevVol = order.trailerVolumeM3Default != null && Number.isFinite(Number(order.trailerVolumeM3Default))
+        ? Number(order.trailerVolumeM3Default)
+        : DEFAULT_TT_VOLUME_M3;
+    if (mode === 'loaded_ex_factory') {
+        if (exChg) exChg.classList.remove('is-hidden');
+        if (volEl) volEl.value = String(prevVol);
+        if (inPEl) inPEl.value = '';
+        if (outPEl) outPEl.value = '';
+        if (exFlowHint) {
+            exFlowHint.classList.toggle(
+                'is-hidden',
+                order.exFactoryConsumerSettlementMode !== 'flow'
+            );
+        }
+        updateTransportChargePreview();
+    } else {
+        if (exChg) exChg.classList.add('is-hidden');
+    }
     await loadTransportAssetDatalists();
     if (prefillFromConsumerTransport) {
         const ct = order.consumerTransport && typeof order.consumerTransport === "object" ? order.consumerTransport : null;
@@ -2642,8 +2694,100 @@ function closeTransportStartModal() {
     document.getElementById('transportStartModal').classList.remove('active');
 }
 
+function updateTransportChargePreview() {
+    const volEl = document.getElementById('transportChargeVolumeM3');
+    const inPEl = document.getElementById('transportChargeInPressure');
+    const outPEl = document.getElementById('transportChargeOutPressure');
+    const preview = document.getElementById('transportChargeVolumePreview');
+    if (!preview || !volEl || !inPEl || !outPEl) return;
+    const v = computeExFactoryChargeVolumeM3(inPEl.value, outPEl.value, parseFloat(volEl.value || ''));
+    preview.textContent =
+        v != null && Number.isFinite(v)
+            ? `산정 부피(차압×내용적): ${v.toLocaleString('ko-KR', { maximumFractionDigits: 3 })} m³`
+            : '입고·출고 압력과 내용적을 입력하면 부피(m³)가 표시됩니다.';
+}
+
 function closeDeliverySettlementModal() {
     document.getElementById('deliverySettlementModal')?.classList.remove('active');
+}
+
+function closeExFactoryFlowKgModal() {
+    document.getElementById('exFactoryFlowKgModal')?.classList.remove('active');
+}
+
+function wireExFactoryFlowKgRecalc(container) {
+    if (!container) return;
+    const sync = () => {
+        container.querySelectorAll('[data-exflow-block]').forEach((block) => {
+            const num = (x) => {
+                const n = parseFloat(String(x ?? '').replace(/,/g, ''));
+                return Number.isFinite(n) ? n : null;
+            };
+            const g = (name) => block.querySelector(`[name="${name}"]`);
+            const gv = (name) => (g(name)?.value ?? '').trim();
+            const refIn = num(gv('flowInRef'));
+            const refOut = num(gv('flowOutRef'));
+            const curIn = num(gv('flowInCurr'));
+            const curOut = num(gv('flowOutCurr'));
+            const outEl = block.querySelector('.exfactory-flow-delta-out');
+            if (!outEl) return;
+            if (refIn == null || refOut == null || curIn == null || curOut == null) {
+                outEl.textContent = '—';
+                return;
+            }
+            const d = curOut - curIn - (refOut - refIn);
+            outEl.textContent = Number.isFinite(d)
+                ? `유량계 차이(kg): ${d.toLocaleString('ko-KR', { maximumFractionDigits: 3 })}`
+                : '—';
+        });
+    };
+    container.querySelectorAll('input').forEach((el) => {
+        el.addEventListener('input', sync);
+    });
+    sync();
+}
+
+function openExFactoryFlowKgModal(orderId) {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order || !isExFactoryOrder(order)) return;
+    if (order.exFactoryConsumerSettlementMode !== 'flow') return;
+    const wrap = document.getElementById('exFactoryFlowKgTrailers');
+    const hid = document.getElementById('exFactoryFlowKgOrderId');
+    if (!wrap || !hid) return;
+    hid.value = orderId;
+    const trailers = getOrderTrailerNumbers(order);
+    const prevRoot = order.qtySettlement?.byTrailer && typeof order.qtySettlement.byTrailer === 'object'
+        ? order.qtySettlement.byTrailer
+        : {};
+    wrap.innerHTML = trailers
+        .map((tt) => {
+            const p = findPreviousTrailerQtySnapshot(order.consumerName, order.address, tt, order.id);
+            const cur = prevRoot[tt] || {};
+            const fr = (k, def = '') => (cur[k] != null && cur[k] !== '' ? String(cur[k]) : def);
+            const flowRefIn = fr('consumerFlowInRef', p?.flowInCurr ?? p?.flowOutCurr ?? '');
+            const flowRefOut = fr('consumerFlowOutRef', p?.flowOutCurr ?? '');
+            return `
+            <div class="delivery-settle-tt-block" data-exflow-block data-trailer-id="${String(tt).replace(/"/g, '&quot;')}">
+                <h4 class="delivery-settle-tt-title">T/T ${String(tt).replace(/</g, '&lt;')}</h4>
+                <p class="delivery-settle-ref-note">유량계 지침(kg) — 기준은 직전 정산 또는 수동</p>
+                <table class="delivery-settle-mini-table">
+                    <thead><tr><th></th><th>기준 입고</th><th>기준 출고</th><th>현재 입고</th><th>현재 출고</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td>kg</td>
+                            <td><input type="text" name="flowInRef" value="${String(flowRefIn).replace(/"/g, '&quot;')}"></td>
+                            <td><input type="text" name="flowOutRef" value="${String(flowRefOut).replace(/"/g, '&quot;')}"></td>
+                            <td><input type="text" name="flowInCurr" value="${fr('consumerFlowInCurr')}"></td>
+                            <td><input type="text" name="flowOutCurr" value="${fr('consumerFlowOutCurr')}"></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="exfactory-flow-delta-out delivery-settle-delta-out"></p>
+            </div>`;
+        })
+        .join('');
+    wireExFactoryFlowKgRecalc(wrap);
+    document.getElementById('exFactoryFlowKgModal')?.classList.add('active');
 }
 
 function wireDeliverySettlementRecalc(container) {
@@ -3089,10 +3233,12 @@ function toggleOrderAddressBySupplyCondition() {
     const ttIn = document.getElementById('orderConsumerTtInput');
     const drvIn = document.getElementById('orderConsumerDriverInput');
     if (!group || !input) return;
+    const settleGrp = document.getElementById('exFactoryConsumerSettleGroup');
     if (isExFactory) {
         group.style.display = 'none';
         input.removeAttribute('required');
         input.value = '';
+        if (settleGrp) settleGrp.classList.remove('is-hidden');
         if (exGroup) {
             exGroup.classList.remove('is-hidden');
             if (ttIn) ttIn.setAttribute('required', 'required');
@@ -3100,6 +3246,7 @@ function toggleOrderAddressBySupplyCondition() {
         }
         loadConsumerTransportDatalists().catch((err) => console.warn("[h2go] consumer transport datalists:", err?.message || err));
     } else {
+        if (settleGrp) settleGrp.classList.add('is-hidden');
         group.style.display = '';
         input.setAttribute('required', 'required');
         if (exGroup) {
@@ -3315,6 +3462,12 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
         tubeTrailers: 1,
         address: addressValue,
         supplyCondition: supplyCondition,
+        exFactoryConsumerSettlementMode:
+            supplyCondition === 'ex_factory'
+                ? (document.querySelector('input[name="exFactoryConsumerSettlementMode"]:checked')?.value === 'flow'
+                      ? 'flow'
+                      : 'pressure')
+                : 'pressure',
         consumerTransport,
         note: document.getElementById('orderNote').value,
         status: 'requested',
@@ -3459,6 +3612,58 @@ document.getElementById('deliverySettlementForm')?.addEventListener('submit', (e
     alert('물량 정산이 저장되었습니다. 이제 공차 회수를 진행할 수 있습니다.');
 });
 
+document.getElementById('exFactoryFlowKgForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const orderId = document.getElementById('exFactoryFlowKgOrderId')?.value;
+    const order = orderId ? orders.find((o) => o.id === orderId) : null;
+    if (!order || !isExFactoryOrder(order) || order.exFactoryConsumerSettlementMode !== 'flow') return;
+    const wrap = document.getElementById('exFactoryFlowKgTrailers');
+    if (!wrap) return;
+    const prevBt =
+        order.qtySettlement?.byTrailer && typeof order.qtySettlement.byTrailer === 'object'
+            ? { ...order.qtySettlement.byTrailer }
+            : {};
+    const blocks = wrap.querySelectorAll('[data-exflow-block]');
+    for (const block of blocks) {
+        const tt = block.dataset.trailerId || '';
+        if (!tt) continue;
+        const gv = (name) => (block.querySelector(`[name="${name}"]`)?.value ?? '').trim();
+        const base = prevBt[tt] && typeof prevBt[tt] === 'object' ? { ...prevBt[tt] } : {};
+        const snap = {
+            ...base,
+            settlementKind: base.settlementKind || 'ex_factory_charge',
+            method: 'flow',
+            consumerFlowInRef: gv('flowInRef'),
+            consumerFlowOutRef: gv('flowOutRef'),
+            consumerFlowInCurr: gv('flowInCurr'),
+            consumerFlowOutCurr: gv('flowOutCurr'),
+        };
+        const fake = {
+            flowInRef: snap.consumerFlowInRef,
+            flowOutRef: snap.consumerFlowOutRef,
+            flowInCurr: snap.consumerFlowInCurr,
+            flowOutCurr: snap.consumerFlowOutCurr,
+        };
+        const { delta } = computeQtyDeltas('flow', fake, DEFAULT_TT_VOLUME_M3);
+        snap.consumerFlowDeltaKg = delta;
+        snap.deltaValue = delta;
+        snap.deltaLabel = '유량계 차이(kg)';
+        prevBt[tt] = snap;
+    }
+    order.qtySettlement = {
+        ...(order.qtySettlement && typeof order.qtySettlement === 'object' ? order.qtySettlement : {}),
+        byTrailer: prevBt,
+        exFactoryConsumerFlowDone: true,
+        consumerFlowSettledAt: new Date().toISOString(),
+    };
+    appendOrderChangeHistory(order, 'ex_factory_consumer_flow', 'consumer', {});
+    saveOrdersToStorage();
+    closeExFactoryFlowKgModal();
+    renderConsumerView();
+    renderSupplierView();
+    alert('유량계 질량(kg) 정산이 저장되었습니다.');
+});
+
 document.getElementById('transportStartForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const orderId = document.getElementById('transportStartOrderId').value;
@@ -3503,8 +3708,53 @@ document.getElementById('transportStartForm').addEventListener('submit', (e) => 
         if (getActorForOrder(order) !== 'supplier') return;
         order.transportInfo = { trailerNumbers, driverName };
         order.transportStartedAt = departedAt;
+        const volM =
+            parseFloat(document.getElementById('transportChargeVolumeM3')?.value || '') ||
+            order.trailerVolumeM3Default ||
+            DEFAULT_TT_VOLUME_M3;
+        order.trailerVolumeM3Default = volM;
+
+        if (mode === 'loaded_ex_factory') {
+            const inP = String(document.getElementById('transportChargeInPressure')?.value || '').trim();
+            const outP = String(document.getElementById('transportChargeOutPressure')?.value || '').trim();
+            if (!inP || !outP) {
+                alert('충전 시작 시 입고 압력과 실차 출발 시 출고 압력을 모두 입력해 주세요.');
+                return;
+            }
+            const volDelta = computeExFactoryChargeVolumeM3(inP, outP, volM);
+            if (volDelta == null || !Number.isFinite(volDelta)) {
+                alert('압력과 내용적을 확인해 주세요.');
+                return;
+            }
+            const prevBt =
+                order.qtySettlement?.byTrailer && typeof order.qtySettlement.byTrailer === 'object'
+                    ? { ...order.qtySettlement.byTrailer }
+                    : {};
+            const byTrailer = { ...prevBt };
+            trailerNumbers.forEach((tt) => {
+                const row =
+                    byTrailer[tt] && typeof byTrailer[tt] === 'object' ? { ...byTrailer[tt] } : {};
+                row.settlementKind = 'ex_factory_charge';
+                row.method = 'pressure';
+                row.chargeInPressureBar = inP;
+                row.chargeOutPressureBar = outP;
+                row.volumeM3 = volM;
+                row.volumeNm3 = volDelta;
+                row.deltaValue = volDelta;
+                row.deltaLabel = '차압×내용적(m³)';
+                byTrailer[tt] = row;
+            });
+            order.qtySettlement = {
+                ...(order.qtySettlement && typeof order.qtySettlement === 'object' ? order.qtySettlement : {}),
+                settledAt: new Date().toISOString(),
+                volumeM3: volM,
+                byTrailer,
+                exFactorySupplierChargeDone: true,
+            };
+        }
+
         order.status = 'in_transit';
-        appendOrderChangeHistory(order, "transport_started", "supplier", {
+        appendOrderChangeHistory(order, 'transport_started', 'supplier', {
             trailerNumbers,
             driverName,
             departedAt,
@@ -3518,6 +3768,13 @@ document.getElementById('transportStartForm').addEventListener('submit', (e) => 
     renderSupplierView();
     if (mode === 'empty_leg') {
         alert('공차 출발이 등록되었습니다. 공급자에게 공차 도착 예정 시각이 안내됩니다.');
+    } else if (mode === 'loaded_ex_factory') {
+        alert(
+            '실차 출발 및 차압 정산(부피)이 기록되었습니다. 출고 기사명이 물량확인증에 반영됩니다.' +
+                (order.exFactoryConsumerSettlementMode === 'flow'
+                    ? ' 유량계 질량(kg)은 수요자 화면에서 입력해 주세요.'
+                    : '')
+        );
     } else {
         alert('운송이 시작되었습니다. T/T 번호와 운송기사 정보가 상대방에게 표시됩니다.');
     }
@@ -3557,6 +3814,7 @@ document.addEventListener('keydown', (e) => {
     else if (document.getElementById('transportAssetPickModal')?.classList.contains('active')) closeTransportAssetPickModal();
     else if (document.getElementById('transportStartModal').classList.contains('active')) closeTransportStartModal();
     else if (document.getElementById('deliverySettlementModal')?.classList.contains('active')) closeDeliverySettlementModal();
+    else if (document.getElementById('exFactoryFlowKgModal')?.classList.contains('active')) closeExFactoryFlowKgModal();
 });
 document.querySelector('#changeRequestModal .modal-close').addEventListener('click', () => {
     document.getElementById('changeRequestModal').classList.remove('active');
@@ -3582,6 +3840,11 @@ document.getElementById('qtyConfirmModal')?.addEventListener('click', (e) => {
 document.getElementById('deliverySettlementModalClose')?.addEventListener('click', closeDeliverySettlementModal);
 document.getElementById('deliverySettlementModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeDeliverySettlementModal();
+});
+
+document.getElementById('exFactoryFlowKgModalClose')?.addEventListener('click', closeExFactoryFlowKgModal);
+document.getElementById('exFactoryFlowKgModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeExFactoryFlowKgModal();
 });
 
 document.querySelector('#transportAssetPickModal .modal-close')?.addEventListener('click', closeTransportAssetPickModal);
@@ -3685,6 +3948,10 @@ document.addEventListener('click', (e) => {
         if (getActorForOrder(order) !== 'consumer') return;
         if (order.supplyCondition !== 'delivery' || normalizeStatus(order.status) !== 'in_transit') return;
         openDeliverySettlementModal(orderId);
+    } else if (action === 'open-exfactory-flow-kg') {
+        if (!order) return;
+        if (getActorForOrder(order) !== 'consumer') return;
+        openExFactoryFlowKgModal(orderId);
     } else if (action === 'open-qty-cert') {
         if (!order) return;
         const tt = btn.dataset.trailer;

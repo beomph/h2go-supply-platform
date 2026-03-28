@@ -318,7 +318,7 @@
                             <tr><td><input type="text" class="qty-input" placeholder=""></td><td><input type="text" class="qty-input" placeholder=""></td></tr>
                         </tbody>
                     </table>
-                    <p class="qty-usage-line">사용량: 출고 지침값 (B) - 입고 지침값 (A)</p>
+                    <p class="qty-usage-line">사용량(질량): 출고 지침값 (B) − 입고 지침값 (A) — 단위 kg</p>
                     <p class="qty-usage-line qty-usage-inputs">
                         사용량 A: <input type="text" class="qty-input qty-inline" id="qty-usage-a"> &nbsp;
                         사용량 B: <input type="text" class="qty-input qty-inline" id="qty-usage-b"> &nbsp;
@@ -341,7 +341,7 @@
                         </tbody>
                     </table>
                     <p class="qty-usage-line qty-usage-inputs qty-pressure-row">사용량: <input type="text" class="qty-input qty-inline" id="qty-pressure-usage"></p>
-                    <div class="formula">▶ 사용량 산정식: (출고 압력 - 입고 압력, bar) × 내용적 (m³)</div>
+                    <div class="formula">▶ 사용량 산정식(부피): (출고 압력 − 입고 압력, bar) × 내용적 (m³) — 단위 m³</div>
 
                     <div class="weight-row">
                         <p class="qty-subsection-title" style="margin-bottom: 2px;">(3) T/T계량 방식</p>
@@ -511,21 +511,40 @@
 
         if (snap) {
             var flowTbody = document.querySelector('#qty-flow-table tbody');
-            if (flowTbody && snap.method === 'flow') {
-                flowTbody.innerHTML = '<tr><td><input type="text" class="qty-input" value="' + String(snap.flowInRef || '').replace(/"/g, '&quot;') + '" readonly></td><td><input type="text" class="qty-input" value="' + String(snap.flowOutRef || '').replace(/"/g, '&quot;') + '" readonly></td></tr>' +
-                    '<tr><td><input type="text" class="qty-input" value="' + String(snap.flowInCurr || '').replace(/"/g, '&quot;') + '"></td><td><input type="text" class="qty-input" value="' + String(snap.flowOutCurr || '').replace(/"/g, '&quot;') + '"></td></tr>';
-            }
             var prTbody = document.querySelector('#qty-pressure-table tbody');
-            if (prTbody && snap.method === 'pressure') {
+            if (snap.settlementKind === 'ex_factory_charge' && snap.method === 'pressure') {
+                if (prTbody) {
+                    prTbody.innerHTML = '<tr><td><input type="text" class="qty-input" value="' + String(snap.chargeInPressureBar || '').replace(/"/g, '&quot;') + '" readonly></td><td><input type="text" class="qty-input" value="' + String(snap.chargeOutPressureBar || '').replace(/"/g, '&quot;') + '" readonly></td></tr>';
+                }
+                setText('qty-pressure-usage', snap.volumeNm3 != null && isFinite(Number(snap.volumeNm3)) ? String(snap.volumeNm3) : '');
+            } else if (snap.consumerFlowInCurr != null || snap.consumerFlowInRef != null) {
+                if (flowTbody) {
+                    flowTbody.innerHTML = '<tr><td><input type="text" class="qty-input" value="' + String(snap.consumerFlowInRef || '').replace(/"/g, '&quot;') + '" readonly></td><td><input type="text" class="qty-input" value="' + String(snap.consumerFlowOutRef || '').replace(/"/g, '&quot;') + '" readonly></td></tr>' +
+                        '<tr><td><input type="text" class="qty-input" value="' + String(snap.consumerFlowInCurr || '').replace(/"/g, '&quot;') + '" readonly></td><td><input type="text" class="qty-input" value="' + String(snap.consumerFlowOutCurr || '').replace(/"/g, '&quot;') + '" readonly></td></tr>';
+                }
+                setText('qty-usage-a', snap.consumerFlowInRef != null ? String(snap.consumerFlowInRef) : '');
+                setText('qty-usage-b', snap.consumerFlowOutRef != null ? String(snap.consumerFlowOutRef) : '');
+                if (snap.consumerFlowDeltaKg != null && isFinite(Number(snap.consumerFlowDeltaKg))) {
+                    setText('qty-usage-sum', String(snap.consumerFlowDeltaKg));
+                }
+            } else if (snap.method === 'flow') {
+                if (flowTbody) {
+                    flowTbody.innerHTML = '<tr><td><input type="text" class="qty-input" value="' + String(snap.flowInRef || '').replace(/"/g, '&quot;') + '" readonly></td><td><input type="text" class="qty-input" value="' + String(snap.flowOutRef || '').replace(/"/g, '&quot;') + '" readonly></td></tr>' +
+                        '<tr><td><input type="text" class="qty-input" value="' + String(snap.flowInCurr || '').replace(/"/g, '&quot;') + '"></td><td><input type="text" class="qty-input" value="' + String(snap.flowOutCurr || '').replace(/"/g, '&quot;') + '"></td></tr>';
+                }
+                setText('qty-usage-a', snap.flowInRef != null ? String(snap.flowInRef) : '');
+                setText('qty-usage-b', snap.flowOutRef != null ? String(snap.flowOutRef) : '');
+                if (snap.deltaValue != null && isFinite(Number(snap.deltaValue))) {
+                    setText('qty-usage-sum', String(snap.deltaValue));
+                }
+            }
+            if (prTbody && snap.method === 'pressure' && snap.settlementKind !== 'ex_factory_charge') {
                 prTbody.innerHTML = '<tr><td><input type="text" class="qty-input" value="' + String(snap.pressureInRef || '').replace(/"/g, '&quot;') + '" readonly></td><td><input type="text" class="qty-input" value="' + String(snap.pressureOutRef || '').replace(/"/g, '&quot;') + '" readonly></td></tr>' +
                     '<tr><td><input type="text" class="qty-input" value="' + String(snap.pressureInCurr || '').replace(/"/g, '&quot;') + '"></td><td><input type="text" class="qty-input" value="' + String(snap.pressureOutCurr || '').replace(/"/g, '&quot;') + '"></td></tr>';
             }
-            setText('qty-usage-a', snap.flowInRef != null ? String(snap.flowInRef) : '');
-            setText('qty-usage-b', snap.flowOutRef != null ? String(snap.flowOutRef) : '');
-            if (snap.deltaValue != null && isFinite(Number(snap.deltaValue))) {
-                setText('qty-usage-sum', String(snap.deltaValue));
+            if (snap.settlementKind !== 'ex_factory_charge' && snap.method === 'pressure') {
+                setText('qty-pressure-usage', snap.deltaValue != null && isFinite(Number(snap.deltaValue)) ? String(snap.deltaValue) : '');
             }
-            setText('qty-pressure-usage', snap.deltaValue != null && isFinite(Number(snap.deltaValue)) ? String(snap.deltaValue) : '');
             setText('qty-weight-before', snap.weightBeforeRef != null ? String(snap.weightBeforeRef) : '');
             setText('qty-weight-after', snap.weightAfterRef != null ? String(snap.weightAfterRef) : '');
             if (snap.method === 'weight') {

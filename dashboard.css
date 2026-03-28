@@ -2315,6 +2315,29 @@ body.theme-light .order-card-toolbar {
     color: var(--h2-blue-light);
 }
 
+.order-card-eta--dual {
+    display: block;
+    margin-top: 0.2rem;
+}
+
+.order-card-eta--dual:first-of-type {
+    margin-top: 0;
+}
+
+.order-card-eta-prefix {
+    margin-right: 0.25rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 0.72rem;
+}
+
+.order-lead-eta-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    align-items: flex-start;
+}
+
 .order-card-toolbar-actions {
     display: flex;
     flex-wrap: wrap;

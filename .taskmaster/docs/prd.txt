@@ -37,6 +37,12 @@
 - 구매 대시보드·출하도(상차도): 납품 주소 입력란 대신 **수요자 운송 자원** 블록(T/T·기사, datalist·「목록」모달, 신규 입력). 주문의 `extra_payload.consumerTransport`에 `{ trailerNumbers[], driverName }` 저장. 체크 시 입력값을 본인 `h2go_tube_trailers` / `h2go_transport_drivers`에 즉시 반영(T/T는 `upsert` on `(owner_member_id, vehicle_number)`, 기사는 `insert`).
 - 판매 대시보드·운송 시작: 모달에「등록 T/T」「등록 기사」버튼으로 등록 목록 모달 선택(다중 T/T는 기존 값에 쉼표로 추가). 출하도 주문이면 카드에 수요자 제출 T/T·기사 표시 및 **수요자 운송자원 적용**으로 모달에 자동 채움.
 
+1.5 출하도·도착도 주문 상태(운송 단계)
+- **출하도(`ex_factory`)**: 접수 후 수요자가 먼저 **공차 출발**(모달: T/T·기사·실제 출발 일시, `emptyLegStartedAt`, 상태 `empty_in_transit`) → 공급자 **도착**(상태 `empty_arrived`, 충전) → 공급자 **회수 출발**(모달: 실차 운송, `transportStartedAt`, `in_transit`) → 수요자 **완료**(실차 도착 확정, `completed`). 회수 공차 ETA는 `회수 출발` 버튼 시각을 `outboundStartedAt`으로 기록해 표시.
+- **도착도(`delivery`)**: 공급자 **운송 시작**(모달, `transportStartedAt`) → 수요자 **도착** → 수요자 **회수 출발**(`outboundStartedAt`, `collecting`) → 공급자 **회수 완료**(`completed`).
+- **예상도착(ETA)**: 접수만 한 단계(`requested`/`accepted`/`change_accepted` 등 운송 미개시)에서는 표시하지 않음. 운송이 시작된 뒤 편도 이동시간으로 계산. 출하도·도착도 모두 필요 시 **두 줄**(①②)로 표시.
+- 주문 `extra_payload`: `emptyLegStartedAt`, `emptyArrivedAt`, `outboundStartedAt`(회수 출발) 등 보조 시각 필드.
+
 ================================================================================
 2. 핵심 문제 정의 (AI 관점)
 ================================================================================
@@ -424,6 +430,11 @@ Phase 4 — 운영 안정화 및 확장 (지속)
 ================================================================================
 최근 변경
 ================================================================================
+
+- 2026-04-04
+  - 출하도: 상태 `empty_in_transit`·`empty_arrived` 추가, 접수 후 **공차 출발**은 수요자·**실차 운송**은 공급자. 출하도 **완료**는 수요자 버튼 한 번으로 종료. 도착도: **회수 출발** 시 `outboundStartedAt`으로 ② ETA. ETA는 운송 미개시 시 숨김, 운송 중 두 구간이면 ①② 표시.
+  - 운송 시작 모달: **실제 출발 일시**(`datetime-local`, 기본 현재 시각). `serializeOrderForSupabase` `extra_payload`에 `emptyLegStartedAt` 등 동기화.
+  - `dashboard.js`, `dashboard.html`, `dashboard.css`, `.taskmaster/docs/prd.txt` §1.5
 
 - 2026-04-03
   - 주문 카드: 본문 아래 회색 실선(`.order-card-toolbar`)으로 구역 분리. **주문번호**·**예상도착**(구매만)과 **변경/취소·승인** 버튼을 동일 가로줄에 배치.

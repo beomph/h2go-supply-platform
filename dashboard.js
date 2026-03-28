@@ -262,6 +262,15 @@ function getSupplyConditionLabel(order) {
 }
 
 /** 출하도 주문에 수요자가 입력한 T/T·기사 (있으면 공급자 운송 시작 시 안내용) */
+function formatTransportInfoLine(info, prefix) {
+    if (!info || typeof info !== "object") return "";
+    const tt = Array.isArray(info.trailerNumbers) ? info.trailerNumbers.join(", ") : "";
+    const drv = String(info.driverName || "").trim();
+    if (!tt && !drv) return "";
+    const p = prefix ? `${prefix} ` : "";
+    return `${p}T/T: ${tt || "—"} · 기사: ${drv || "—"}`;
+}
+
 function getConsumerDeclaredTransport(order) {
     if (!order || order.supplyCondition !== "ex_factory") return null;
     const ct = order.consumerTransport;
@@ -397,6 +406,8 @@ function serializeOrderForSupabase(order) {
             deliveryConfirmation,
             consumerTransport:
                 order.consumerTransport && typeof order.consumerTransport === "object" ? order.consumerTransport : null,
+            emptyLegReturnInfo:
+                order.emptyLegReturnInfo && typeof order.emptyLegReturnInfo === "object" ? order.emptyLegReturnInfo : null,
         },
     };
 }
@@ -438,6 +449,7 @@ function deserializeSupabaseOrder(row) {
         outboundInfo: (payload.outboundInfo && typeof payload.outboundInfo === "object") ? payload.outboundInfo : null,
         deliveryConfirmation: (payload.deliveryConfirmation && typeof payload.deliveryConfirmation === "object") ? payload.deliveryConfirmation : null,
         consumerTransport: (payload.consumerTransport && typeof payload.consumerTransport === "object") ? payload.consumerTransport : null,
+        emptyLegReturnInfo: (payload.emptyLegReturnInfo && typeof payload.emptyLegReturnInfo === "object") ? payload.emptyLegReturnInfo : null,
     };
 }
 
@@ -955,7 +967,7 @@ function formatOrderDateTime(order) {
     return `${order.year}/${order.month}/${order.day} ${formatTimeText(order.time)}`;
 }
 
-const TT_SWAP_MINUTES = 10;
+const TT_SWAP_MINUTES = 15;
 
 /** change/cancel 요청자 정규화 (저장값 대소문자·공백 흔들림 대비) */
 function normalizeRequestParty(raw) {
@@ -1067,7 +1079,7 @@ function getOrderEtaLines(order) {
         }
         return lines;
     }
-    if (["requested", "accepted", "change_accepted", "empty_in_transit", "empty_arrived", "arrived"].includes(st)) {
+    if (["requested", "accepted", "change_accepted", "arrived"].includes(st)) {
         return lines;
     }
     if (st === "in_transit" && order.transportStartedAt) {
@@ -1075,9 +1087,9 @@ function getOrderEtaLines(order) {
         if (t) lines.push({ prefix: "① 실차", text: t });
         return lines;
     }
-    if (st === "collecting" && order.outboundStartedAt) {
-        const t2 = etaFromAnchorIso(order.outboundStartedAt, travelMin);
-        if (t2) lines.push({ prefix: "② 공차 회수", text: t2 });
+    if (st === "empty_in_transit" && order.emptyLegStartedAt && !isExFactoryOrder(order)) {
+        const t2 = etaFromAnchorIso(order.emptyLegStartedAt, travelMin);
+        if (t2) lines.push({ prefix: "② 공차", text: t2 });
         return lines;
     }
     return lines;
@@ -1221,13 +1233,18 @@ function getSupplierAdvanceAction(order) {
         case 'accepted':
         case 'change_accepted':
             if (isExFactoryOrder(order)) return null;
-            return { label: '운송 시작', next: 'in_transit' };
+            return { label: '실차 출발', next: 'in_transit' };
+        case 'empty_in_transit':
+            if (isExFactoryOrder(order)) {
+                return { label: '공차 도착', next: 'empty_arrived' };
+            }
+            return { label: '공차 도착', next: 'completed' };
         case 'empty_arrived':
             if (!isExFactoryOrder(order)) return null;
-            return { label: '회수 출발', next: 'in_transit' };
+            return { label: '실차 출발', next: 'in_transit' };
         case 'collecting':
             if (isExFactoryOrder(order)) return null;
-            return { label: '회수 완료', next: 'completed' };
+            return { label: '공차 도착', next: 'completed' };
         default:
             return null;
     }
@@ -1240,19 +1257,17 @@ function getConsumerAdvanceAction(order) {
             case 'accepted':
             case 'change_accepted':
                 return { label: '공차 출발', next: 'empty_in_transit' };
-            case 'empty_in_transit':
-                return { label: '도착', next: 'empty_arrived' };
             case 'in_transit':
-                return { label: '완료', next: 'completed' };
+                return { label: '실차 도착', next: 'completed' };
             default:
                 return null;
         }
     }
     switch (status) {
         case 'in_transit':
-            return { label: '도착', next: 'arrived' };
+            return { label: '실차 도착', next: 'arrived' };
         case 'arrived':
-            return { label: '회수 출발', next: 'collecting' };
+            return { label: '공차 출발', next: 'empty_in_transit' };
         default:
             return null;
     }
@@ -1910,18 +1925,22 @@ function renderConsumerView() {
         `.trim();
 
         const transportInfo = order.transportInfo;
-        const transportInfoText = transportInfo ? `T/T: ${(transportInfo.trailerNumbers || []).join(', ')} · 기사: ${transportInfo.driverName || '-'}` : '';
+        const transportInfoText = formatTransportInfoLine(transportInfo, "");
         const consumerDeclared = getConsumerDeclaredTransport(order);
         const consumerDeclaredText = consumerDeclared
             ? `수요자 운송(출하도): T/T ${consumerDeclared.trailerNumbers.join(', ') || '—'} · 기사 ${consumerDeclared.driverName || '—'}`
             : '';
+        const emptyReturnText =
+            order.supplyCondition === "delivery" && order.emptyLegReturnInfo
+                ? formatTransportInfoLine(order.emptyLegReturnInfo, "공차 회수")
+                : "";
 
         const isCancelled = order.status === 'cancelled';
         const statusBadge = `<span class="order-status ${status}">${getStatusLabel(order.status)}</span>`;
         const decisionActionsRow = hasDecisionRequest
             ? `<div class="order-actions order-actions--footer order-actions--decision">${decisionButtons}</div>`
             : '';
-        const ttCombined = [transportInfoText, consumerDeclaredText].filter(Boolean).join(' · ') || '—';
+        const ttCombined = [transportInfoText, consumerDeclaredText, emptyReturnText].filter(Boolean).join(' · ') || '—';
         const etaToolbarC = formatOrderEtaToolbarHtml(order);
         const toolbarActions = [
             decisionActionsRow,
@@ -2148,8 +2167,9 @@ function renderSupplierOrdersCards() {
         `.trim();
         const buyerLine = `${o.consumerName || '-'}${o.address ? ` · ${o.address}` : ''}`;
         const ttSupplierLine = [
-            o.transportInfo ? `T/T: ${(o.transportInfo.trailerNumbers || []).join(', ')} · 기사: ${o.transportInfo.driverName || '-'}` : '',
+            formatTransportInfoLine(o.transportInfo, ""),
             consumerDeclared ? `수요자(출하도): ${consumerDeclared.trailerNumbers.join(', ') || '—'} · ${consumerDeclared.driverName || '—'}` : '',
+            o.supplyCondition === "delivery" && o.emptyLegReturnInfo ? formatTransportInfoLine(o.emptyLegReturnInfo, "공차 회수") : "",
         ].filter(Boolean).join(' · ') || '—';
         const shipmentLine = formatShipmentDateTime(o);
         const returnLine = formatReturnDateTime(o);
@@ -3122,13 +3142,19 @@ document.getElementById('transportStartForm').addEventListener('submit', (e) => 
     if (!order) return;
     if (mode === 'empty_leg') {
         if (getActorForOrder(order) !== 'consumer') return;
-        order.transportInfo = { trailerNumbers, driverName };
+        const legInfo = { trailerNumbers, driverName };
+        if (isExFactoryOrder(order)) {
+            order.transportInfo = legInfo;
+        } else {
+            order.emptyLegReturnInfo = legInfo;
+        }
         order.emptyLegStartedAt = departedAt;
         order.status = 'empty_in_transit';
         appendOrderChangeHistory(order, "empty_leg_started", "consumer", {
             trailerNumbers,
             driverName,
             departedAt,
+            leg: isExFactoryOrder(order) ? "to_supplier" : "return_to_supplier",
         });
     } else {
         if (getActorForOrder(order) !== 'supplier') return;
@@ -3323,8 +3349,8 @@ document.addEventListener('click', (e) => {
             const supplierAction = getSupplierAdvanceAction(order);
             if (!supplierAction || supplierAction.next !== nextStatus) return;
         } else if (actor === 'consumer') {
-            if (nextStatus === 'empty_in_transit' && isExFactoryOrder(order)) {
-                openTransportStartModal(orderId, true, 'empty_leg').catch((err) =>
+            if (nextStatus === 'empty_in_transit') {
+                openTransportStartModal(orderId, isExFactoryOrder(order), 'empty_leg').catch((err) =>
                     console.warn("[h2go] transport start modal:", err?.message || err)
                 );
                 return;
@@ -3341,9 +3367,6 @@ document.addEventListener('click', (e) => {
         if (nextStatus === 'empty_arrived') order.emptyArrivedAt = nowIso;
         if (nextStatus === 'collecting') {
             order.collectingAt = nowIso;
-            if (!isExFactoryOrder(order)) {
-                order.outboundStartedAt = nowIso;
-            }
         }
         if (nextStatus === 'completed') {
             order.completedAt = nowIso;

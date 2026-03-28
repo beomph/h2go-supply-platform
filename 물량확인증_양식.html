@@ -505,6 +505,7 @@
         setText('qty-sign-in-driver', inDriver);
 
         var outPlanned = snap && snap.outboundDriverNamePlanned ? snap.outboundDriverNamePlanned : '';
+        if (!outPlanned && snap && snap.handoffDriverName) outPlanned = snap.handoffDriverName;
         var eli = order.emptyLegReturnInfo;
         if (!outPlanned && eli && eli.driverName) outPlanned = eli.driverName;
         setText('qty-sign-out-driver', outPlanned || '');

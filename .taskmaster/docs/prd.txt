@@ -39,7 +39,7 @@
 
 1.5 출하도·도착도 주문 상태(운송 단계)
 - **출하도(`ex_factory`)**: 수요자 주문 시 **정산 방식(수요자)**: `exFactoryConsumerSettlementMode` — 기본 **차압만(공급자)** 또는 **유량계 질량(kg) 병행**. 수요자 **공차 출발** → 공급자 **공차 도착** → 공급자 **실차 출발** 모달에서 **충전 시작 입고압(bar)·실차 출발 출고압(bar)·내용적(m³)** 입력 → 부피 `(출고−입고)×내용적` m³를 `qtySettlement.byTrailer`(차압 `settlementKind: ex_factory_charge`)에 저장 후 `in_transit`. 출고 기사명은 물량확인증 출고란에 반영. **유량계 병행** 주문은 실차 출발 후 수요자 **유량계 질량(kg)** 모달로 별도 저장(`consumerFlow*`, `exFactoryConsumerFlowDone`). 수요자 **실차 도착** → `completed`.
-- **도착도(`delivery`)**: 수요자 주문 → 공급자 **실차 출발**(모달·`transportStartedAt`·`in_transit`) → 수요자 **실차 도착·물량정산**(모달: T/T별 실차 입고압·전입고 공차 잔압, 정산 방식 **유량계·차압·T/T** — **차압 차이는 m³**, **유량계·T/T 차이는 kg**, `qtySettlement.byTrailer`, `arrived`) → 현장 T/T 교체(`TT_SWAP_MINUTES`≈15분) → 수요자 **공차 출발**(모달·`emptyLegStartedAt`, 출고 기사명·`outboundDriverNamePlanned`) → 공급자 **공차 도착**(`completed`). 물량확인증은 주문 카드 빈 영역 클릭으로 열며, **T/T별** 내용은 `?trailerNo=` 또는 단일 T/T 시 자동 선택.
+- **도착도(`delivery`)**: 수요자 주문 → 공급자 **실차 출발**(모달·`transportStartedAt`·`in_transit`) → 수요자 **실차 도착·물량정산**(모달: 동일 납품지·**납품일시 기준 직전 도착도 주문**이 있으면 **① 이전 주문 T/T**(공차 잔압·유량계 출고=이번 입고·기사명) + **② 이번 주문 T/T**를 한 화면에서 입력. **차압 차이는 m³**, **유량계·T/T 차이는 kg**. 저장 시 이전 주문 `qtySettlement`도 갱신(`chainHandoffToOrderId` 등). 이후 공차 회수·완료 동일. 물량확인증은 카드 클릭, T/T는 `?trailerNo=`.
 - **예상도착(ETA)**: 운송이 실제로 시작되기 전(접수만 등)에는 미표시. ① 실차(도착도)·① 공차/② 실차(출하도·실차 구간) 등 단계별로 표시.
 - 주문 `extra_payload`: `emptyLegStartedAt`, `emptyArrivedAt`, `emptyLegReturnInfo`, `qtySettlement`, `trailerVolumeM3Default`, `exFactoryConsumerSettlementMode`, `exFactoryConsumerFlowDone`(후보), `outboundStartedAt`(레거시 호환) 등.
 
@@ -433,6 +433,9 @@ Phase 4 — 운영 안정화 및 확장 (지속)
 
 - 2026-04-08
   - 주문 카드에서 **물량확인증** 별도 버튼 제거. 카드 본문 클릭 시 기존과 같이 물량확인증 모달 표시(`dashboard.js`, `dashboard.css`).
+
+- 2026-04-09
+  - 도착도 **연속 납품**: 수요자·동일 납품지에서 **납품일시 직전** 주문을 찾아 물량정산 모달 상단에 **이전 T/T** 입력(잔압·유량계 인계·기사) + **이번 T/T** 입력을 통합. 유량계 인계값은 이번 T/T 입고 지침과 동기화.
 
 - 2026-04-07
   - 정산 단위: **차압** → 부피(m³), **유량계·T/T 계량** → 질량(kg). 출하도: 실차 출발 전 **충전 입고/출고 압력×내용적**으로 부피 산정·공급자 차압 저장, 선택 시 수요자 **유량계 kg** 병행 모달. 물량확인증 출하도 차압·유량 분기 표시.

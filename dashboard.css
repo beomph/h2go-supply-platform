@@ -3695,6 +3695,20 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     line-height: 1.45;
 }
 
+.delivery-settle-chain-block {
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    border-radius: 10px;
+    padding: 0.75rem 0.85rem;
+    margin-bottom: 1rem;
+    background: rgba(59, 130, 246, 0.06);
+}
+
+.delivery-settle-chain-title {
+    font-size: 0.9rem;
+    margin: 0 0 0.5rem 0;
+    color: var(--h2-blue-light);
+}
+
 .delivery-settle-tt-block {
     border: 1px solid var(--border-color);
     border-radius: 10px;

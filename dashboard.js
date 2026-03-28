@@ -1287,6 +1287,29 @@ function getOrderDateTimeSortKey(order) {
     return `${y}-${m}-${d} ${t}`;
 }
 
+/** 동일 수요자·납품지에서 납품일시 기준 직전 도착도 주문 (연속 납품 물량 연계용) */
+function findPreviousDeliveryOrderByDeliveryTime(currentOrder) {
+    if (!currentOrder || currentOrder.supplyCondition !== "delivery") return null;
+    const me = String(currentOrder.consumerName || "").trim().toLowerCase();
+    const addr = String(currentOrder.address || "").trim().toLowerCase();
+    const myKey = getOrderDateTimeSortKey(currentOrder);
+    let best = null;
+    let bestKey = "";
+    for (const o of orders) {
+        if (!o || o.id === currentOrder.id) continue;
+        if (o.supplyCondition !== "delivery") continue;
+        if (String(o.consumerName || "").trim().toLowerCase() !== me) continue;
+        if (String(o.address || "").trim().toLowerCase() !== addr) continue;
+        if (normalizeStatus(o.status) === "cancelled") continue;
+        const k = getOrderDateTimeSortKey(o);
+        if (k < myKey && (!best || k > bestKey)) {
+            best = o;
+            bestKey = k;
+        }
+    }
+    return best;
+}
+
 function summarizeChange(order, proposed) {
     if (!order || !proposed) return "";
     const changes = [];
@@ -2817,26 +2840,85 @@ function wireDeliverySettlementRecalc(container) {
     sync();
 }
 
+function syncChainHandoffFlowToCurrent() {
+    const handoff = document.getElementById('chainHandoffFlow');
+    const v = handoff?.value?.trim() ?? '';
+    document.querySelectorAll('.delivery-settle-flow-in-curr-sync').forEach((el) => {
+        el.value = v;
+    });
+    wireDeliverySettlementRecalc(document.getElementById('deliverySettleTrailers'));
+}
+
 function openDeliverySettlementModal(orderId) {
     const order = orders.find((o) => o.id === orderId);
     if (!order || order.supplyCondition !== 'delivery') return;
     const wrap = document.getElementById('deliverySettleTrailers');
     const hid = document.getElementById('deliverySettleOrderId');
+    const chainHid = document.getElementById('deliverySettleChainPrevId');
     const volInput = document.getElementById('deliverySettleVolume');
+    const introEl = document.querySelector('.delivery-settlement-intro');
     if (!wrap || !hid) return;
     hid.value = orderId;
+    const prevOrder = findPreviousDeliveryOrderByDeliveryTime(order);
+    if (chainHid) chainHid.value = prevOrder?.id || '';
+
     const volDef =
         order.trailerVolumeM3Default != null && Number.isFinite(Number(order.trailerVolumeM3Default))
             ? Number(order.trailerVolumeM3Default)
             : DEFAULT_TT_VOLUME_M3;
     if (volInput) volInput.value = String(volDef);
 
+    if (introEl) {
+        introEl.textContent = prevOrder
+            ? '연속 납품입니다. 이전 주문(공차 회수)과 이번 주문(실차 입고)을 한 번에 입력합니다. 유량계 값은 이전 출고 지침과 이번 입고 지침이 동일합니다.'
+            : '실차 입고 압력과 전입고 공차 잔압을 입력한 뒤, 정산 방식을 선택하고 기준값 대비 현재값을 입력하면 차이가 자동 계산됩니다.';
+    }
+
     const trailers = getOrderTrailerNumbers(order);
     const prev = order.qtySettlement?.byTrailer && typeof order.qtySettlement.byTrailer === 'object'
         ? order.qtySettlement.byTrailer
         : {};
 
-    wrap.innerHTML = trailers
+    const prevTT = prevOrder ? getOrderTrailerNumbers(prevOrder)[0] : '';
+    const prevSnap = prevTT && prevOrder?.qtySettlement?.byTrailer?.[prevTT]
+        ? prevOrder.qtySettlement.byTrailer[prevTT]
+        : {};
+    const prevP = prevTT ? findPreviousTrailerQtySnapshot(prevOrder.consumerName, prevOrder.address, prevTT, prevOrder.id) : null;
+    const prevDriverDefault =
+        prevOrder?.transportInfo?.driverName ||
+        prevSnap?.handoffDriverName ||
+        '';
+
+    let chainHtml = '';
+    if (prevOrder && prevTT) {
+        chainHtml = `
+        <div class="delivery-settle-chain-block" data-chain-section>
+            <h4 class="delivery-settle-chain-title">① 이전 납품 · 주문 ${String(prevOrder.id).replace(/</g, '&lt;')} · T/T ${String(prevTT).replace(/</g, '&lt;')}</h4>
+            <div class="form-row form-row-2">
+                <div class="form-group">
+                    <label for="chainPrevEmptyResidual">공차 잔압 (bar)</label>
+                    <input type="text" id="chainPrevEmptyResidual" name="chainPrevEmptyResidual" value="${String(prevSnap?.emptyResidualPressureBar ?? '').replace(/"/g, '&quot;')}" required>
+                </div>
+                <div class="form-group">
+                    <label for="chainDriverName">회수·인계 기사명</label>
+                    <input type="text" id="chainDriverName" name="chainDriverName" value="${String(prevDriverDefault).replace(/"/g, '&quot;')}" required>
+                </div>
+            </div>
+            <p class="delivery-settle-ref-note">유량계 (kg) — 이전 T/T 출고 지침 = 아래 이번 T/T 입고 지침과 동일</p>
+            <div class="form-row form-row-3">
+                <div class="form-group">
+                    <label for="chainPrevFlowIn">입고 지침 (kg)</label>
+                    <input type="text" id="chainPrevFlowIn" name="chainPrevFlowIn" value="${String(prevSnap?.flowInCurr ?? prevSnap?.consumerFlowInCurr ?? '').replace(/"/g, '&quot;')}">
+                </div>
+                <div class="form-group">
+                    <label for="chainHandoffFlow">출고 = 이번 입고 (kg)</label>
+                    <input type="text" id="chainHandoffFlow" name="chainHandoffFlow" value="${String(prevSnap?.flowOutCurr ?? prevSnap?.consumerFlowOutCurr ?? '').replace(/"/g, '&quot;')}" required>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    const currentBlocks = trailers
         .map((tt) => {
             const p = findPreviousTrailerQtySnapshot(order.consumerName, order.address, tt, order.id);
             const cur = prev[tt] || {};
@@ -2850,10 +2932,11 @@ function openDeliverySettlementModal(orderId) {
             const prOutRef = fr('pressureOutRef', p?.pressureOutCurr ?? '');
             const wBeforeRef = fr('weightBeforeRef', p?.weightAfterCurr ?? p?.weightBeforeCurr ?? '');
             const wAfterRef = fr('weightAfterRef', p?.weightAfterCurr ?? '');
+            const flowInInit = fr('flowInCurr');
 
             return `
             <div class="delivery-settle-tt-block" data-del-settle-block data-trailer-id="${String(tt).replace(/"/g, '&quot;')}">
-                <h4 class="delivery-settle-tt-title">T/T ${String(tt).replace(/</g, '&lt;')}</h4>
+                <h4 class="delivery-settle-tt-title">② 이번 납품 · 주문 ${String(order.id).replace(/</g, '&lt;')} · T/T ${String(tt).replace(/</g, '&lt;')}</h4>
                 <div class="form-row form-row-2">
                     <div class="form-group">
                         <label>실차 입고 압력 (bar)</label>
@@ -2878,10 +2961,10 @@ function openDeliverySettlementModal(orderId) {
                         <thead><tr><th></th><th>기준 입고/전</th><th>기준 출고/후</th><th>현재 입고/전</th><th>현재 출고/후</th></tr></thead>
                         <tbody>
                             <tr class="delivery-row-flow" style="display:${method === 'flow' ? 'table-row' : 'none'}">
-                                <td>유량계</td>
+                                <td>유량계(kg)</td>
                                 <td><input type="text" name="flowInRef" value="${String(flowRefIn).replace(/"/g, '&quot;')}"></td>
                                 <td><input type="text" name="flowOutRef" value="${String(flowRefOut).replace(/"/g, '&quot;')}"></td>
-                                <td><input type="text" name="flowInCurr" value="${fr('flowInCurr')}"></td>
+                                <td><input type="text" name="flowInCurr" class="delivery-settle-flow-in-curr-sync" value="${String(prevOrder ? '' : flowInInit).replace(/"/g, '&quot;')}" ${prevOrder ? 'readonly' : ''}></td>
                                 <td><input type="text" name="flowOutCurr" value="${fr('flowOutCurr')}"></td>
                             </tr>
                             <tr class="delivery-row-pressure" style="display:${method === 'pressure' ? 'table-row' : 'none'}">
@@ -2905,6 +2988,11 @@ function openDeliverySettlementModal(orderId) {
             </div>`;
         })
         .join('');
+
+    wrap.innerHTML = chainHtml + currentBlocks;
+
+    document.getElementById('chainHandoffFlow')?.addEventListener('input', syncChainHandoffFlowToCurrent);
+    syncChainHandoffFlowToCurrent();
 
     wrap.querySelectorAll('.delivery-settle-method').forEach((sel) => {
         sel.addEventListener('change', () => {
@@ -3532,6 +3620,7 @@ document.getElementById('changeRequestForm')?.addEventListener('submit', (e) => 
 document.getElementById('deliverySettlementForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
     const orderId = document.getElementById('deliverySettleOrderId')?.value;
+    const chainPrevId = document.getElementById('deliverySettleChainPrevId')?.value?.trim() || '';
     const order = orderId ? orders.find((o) => o.id === orderId) : null;
     if (!order || order.supplyCondition !== 'delivery' || normalizeStatus(order.status) !== 'in_transit') return;
     const vol = parseFloat(document.getElementById('deliverySettleVolume')?.value || '');
@@ -3541,6 +3630,62 @@ document.getElementById('deliverySettlementForm')?.addEventListener('submit', (e
     }
     const wrap = document.getElementById('deliverySettleTrailers');
     if (!wrap) return;
+
+    const prevOrder = chainPrevId ? orders.find((o) => o.id === chainPrevId) : null;
+    if (chainPrevId && !prevOrder) {
+        alert('이전 주문 정보를 찾을 수 없습니다.');
+        return;
+    }
+    const prevTT = prevOrder ? getOrderTrailerNumbers(prevOrder)[0] : '';
+    if (prevOrder && prevTT) {
+        const emptyP = document.getElementById('chainPrevEmptyResidual')?.value?.trim();
+        const handoff = document.getElementById('chainHandoffFlow')?.value?.trim();
+        const prevFlowIn = document.getElementById('chainPrevFlowIn')?.value?.trim();
+        const drv = document.getElementById('chainDriverName')?.value?.trim();
+        if (!emptyP || !handoff || !drv) {
+            alert('① 이전 납품: 공차 잔압, 유량계 출고(인계) 값, 기사명을 모두 입력해 주세요.');
+            return;
+        }
+        const prevVol =
+            prevOrder.trailerVolumeM3Default != null && Number.isFinite(Number(prevOrder.trailerVolumeM3Default))
+                ? Number(prevOrder.trailerVolumeM3Default)
+                : vol;
+        const prevBt = prevOrder.qtySettlement?.byTrailer && typeof prevOrder.qtySettlement.byTrailer === 'object'
+            ? { ...prevOrder.qtySettlement.byTrailer }
+            : {};
+        const base = prevBt[prevTT] && typeof prevBt[prevTT] === 'object' ? { ...prevBt[prevTT] } : {};
+        const snapPrev = {
+            ...base,
+            method: 'flow',
+            emptyResidualPressureBar: emptyP,
+            flowOutCurr: handoff,
+            consumerFlowOutCurr: handoff,
+            flowInCurr: prevFlowIn || base.flowInCurr || '',
+            consumerFlowInCurr: prevFlowIn || base.consumerFlowInCurr || '',
+            handoffDriverName: drv,
+            chainHandoffToOrderId: order.id,
+            chainHandoffFlowKg: handoff,
+        };
+        const rin = snapPrev.flowInRef ?? base.flowInRef ?? '';
+        const rout = snapPrev.flowOutRef ?? base.flowOutRef ?? '';
+        const fakePrev = {
+            flowInRef: rin || snapPrev.flowInCurr,
+            flowOutRef: rout || snapPrev.flowOutCurr,
+            flowInCurr: snapPrev.flowInCurr,
+            flowOutCurr: snapPrev.flowOutCurr,
+        };
+        const dPrev = computeQtyDeltas('flow', fakePrev, prevVol);
+        snapPrev.deltaValue = dPrev.delta;
+        snapPrev.deltaLabel = dPrev.label || '유량계 차이(kg)';
+        prevBt[prevTT] = snapPrev;
+        prevOrder.qtySettlement = {
+            ...(prevOrder.qtySettlement && typeof prevOrder.qtySettlement === 'object' ? prevOrder.qtySettlement : {}),
+            byTrailer: prevBt,
+            chainUpdatedAt: new Date().toISOString(),
+        };
+        appendOrderChangeHistory(prevOrder, 'delivery_chain_prev_updated', 'consumer', { nextOrderId: order.id });
+    }
+
     const byTrailer = {};
     const blocks = wrap.querySelectorAll('[data-del-settle-block]');
     for (const block of blocks) {
@@ -3571,6 +3716,13 @@ document.getElementById('deliverySettlementForm')?.addEventListener('submit', (e
             weightBeforeCurr: gv('weightBeforeCurr'),
             weightAfterCurr: gv('weightAfterCurr'),
         };
+        if (prevOrder && prevTT) {
+            const h = document.getElementById('chainHandoffFlow')?.value?.trim();
+            snap.flowInCurr = h || snap.flowInCurr;
+            snap.chainHandoffFromOrderId = prevOrder.id;
+            snap.chainHandoffFromTrailer = prevTT;
+            snap.handoffDriverName = document.getElementById('chainDriverName')?.value?.trim() || '';
+        }
         const { delta, label } = computeQtyDeltas(method, snap, vol);
         snap.deltaValue = delta;
         snap.deltaLabel = label;
@@ -3588,7 +3740,7 @@ document.getElementById('deliverySettlementForm')?.addEventListener('submit', (e
     };
     order.arrivedAt = new Date().toISOString();
     order.status = 'arrived';
-    appendOrderChangeHistory(order, 'delivery_qty_settled', 'consumer', { trailerKeys: Object.keys(byTrailer) });
+    appendOrderChangeHistory(order, 'delivery_qty_settled', 'consumer', { trailerKeys: Object.keys(byTrailer), chainPrevId: chainPrevId || null });
     saveOrdersToStorage();
     closeDeliverySettlementModal();
     renderConsumerView();

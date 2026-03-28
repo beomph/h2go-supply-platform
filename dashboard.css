@@ -3747,14 +3747,6 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     color: var(--h2-blue-light);
 }
 
-.order-qty-cert-links {
-    margin-top: 0.45rem;
-    padding: 0 0.65rem 0.45rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-}
-
 /* 대시보드 모달 */
 #changeRequestModal.modal,
 #changeApprovalModal.modal {

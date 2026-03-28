@@ -1195,20 +1195,6 @@ function getOrderEtaLines(order) {
     return lines;
 }
 
-function renderQtyCertificateLinks(order) {
-    const bt = order?.qtySettlement?.byTrailer;
-    if (!bt || typeof bt !== 'object') return '';
-    const keys = Object.keys(bt);
-    if (!keys.length) return '';
-    const links = keys
-        .map(
-            (k) =>
-                `<button type="button" class="btn btn-tiny btn-secondary" data-action="open-qty-cert" data-id="${order.id}" data-trailer="${String(k).replace(/"/g, '&quot;')}">물량확인증 ${String(k).replace(/</g, '&lt;')}</button>`
-        )
-        .join(' ');
-    return `<div class="order-qty-cert-links">${links}</div>`;
-}
-
 function formatOrderEtaToolbarHtml(order) {
     const lines = getOrderEtaLines(order);
     if (!lines.length) return "";
@@ -2109,7 +2095,6 @@ function renderConsumerView() {
                 </div>
                 ${toolbarActions ? `<div class="order-card-toolbar-actions">${toolbarActions}</div>` : ''}
             </div>
-            ${renderQtyCertificateLinks(order)}
         </div>
     `}).join('');
 
@@ -2347,7 +2332,6 @@ function renderSupplierOrdersCards() {
                 </div>
                 ${supplierToolbarActions ? `<div class="order-card-toolbar-actions">${supplierToolbarActions}</div>` : ''}
             </div>
-            ${renderQtyCertificateLinks(o)}
             ${(noteText || changeBadge || cancelBadge) ? `
             <div class="order-item-foot">
                 <div class="order-item-badges">
@@ -3952,10 +3936,6 @@ document.addEventListener('click', (e) => {
         if (!order) return;
         if (getActorForOrder(order) !== 'consumer') return;
         openExFactoryFlowKgModal(orderId);
-    } else if (action === 'open-qty-cert') {
-        if (!order) return;
-        const tt = btn.dataset.trailer;
-        openQtyConfirmModal(orderId, tt);
     } else if (action === 'advance-status') {
         if (!order) return;
         const actor = getActorForOrder(order);

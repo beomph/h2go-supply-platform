@@ -2554,6 +2554,27 @@ body.theme-light .order-item {
     }
 }
 
+/* 가로 스크롤은 .orders-table-hscroll 한 곳만(목록·버튼 줄 이중 스크롤바 방지), 카드는 트랙 너비까지 채움 */
+.orders-table-hscroll .orders-column-header {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.orders-table-hscroll .orders-list {
+    overflow-x: hidden;
+    overflow-y: auto;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.orders-table-hscroll .order-item {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
 .orders-column-header {
     position: sticky;
     top: 0;
@@ -4590,20 +4611,24 @@ body.theme-light .dashboard-order-notif-title {
     display: flex;
     gap: 0.4rem;
     margin-top: 0;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    align-items: center;
+}
+
+/* 좁은 표 셀 등 한 줄 고정이 필요할 때만 가로 스croll */
+.order-actions--inline {
     flex-wrap: nowrap;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-}
-
-.order-actions::-webkit-scrollbar {
-    display: none;
-}
-
-.order-actions--inline {
     justify-content: flex-end;
     max-width: 100%;
     align-items: center;
+}
+
+.order-actions--inline::-webkit-scrollbar {
+    display: none;
 }
 
 .order-actions--inline .btn-small {

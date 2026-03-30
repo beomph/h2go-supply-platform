@@ -398,6 +398,7 @@ function serializeOrderForSupabase(order) {
         supplier_name: String(order.supplierName || ""),
         supplier_address: String(supplierAddress || ""),
         order_requested_at: order.createdAt || new Date().toISOString(),
+        order_accepted_at: order.acceptedAt || null,
         delivery_due_at: toIsoDateTimeFromOrder(order),
         supply_condition: order.supplyCondition === "ex_factory" ? "ex_factory" : "delivery",
         order_status: normalizeStatus(order.status),
@@ -465,7 +466,7 @@ function deserializeSupabaseOrder(row) {
         note: String(row.consumer_note || ""),
         status: normalizeStatus(row.order_status),
         createdAt: row.order_requested_at || null,
-        acceptedAt: payload.acceptedAt || null,
+        acceptedAt: row.order_accepted_at || payload.acceptedAt || null,
         arrivedAt: payload.arrivedAt || null,
         collectingAt: payload.collectingAt || null,
         completedAt: payload.completedAt || null,
@@ -998,23 +999,13 @@ function countOrdersByConsumerName(orderList) {
     return map;
 }
 
-/** 네이티브 title용: 수요처별 건수 (줄바꿈) */
-function formatSupplierInsightTooltipHeading(heading, orderList) {
+function formatSupplierInsightTooltipPanelHtml(heading, orderList) {
     const by = countOrdersByConsumerName(orderList);
     const lines = Array.from(by.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ko"));
-    const body = lines.length ? lines.map(([k, v]) => `${k}: ${v}건`).join("\n") : "해당 없음";
-    return `${heading}\n${body}`;
-}
-
-function escapeHtmlAttr(s) {
-    return String(s ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;")
-        .replace(/</g, "&lt;")
-        .replace(/\r\n/g, "&#10;")
-        .replace(/\n/g, "&#10;")
-        .replace(/\r/g, "&#10;");
+    const lis = lines.length
+        ? lines.map(([k, v]) => `<li><span class="insight-tooltip-name">${escapeBannerHtml(k)}</span> <span class="insight-tooltip-count">${v}건</span></li>`).join("")
+        : '<li class="insight-tooltip-empty">해당 없음</li>';
+    return `<div class="insight-tooltip-title">${escapeBannerHtml(heading)}</div><ul class="insight-tooltip-list">${lis}</ul>`;
 }
 
 function getConsumerOrders(consumerName) {
@@ -1293,7 +1284,42 @@ function formatBannerDateTimeTwoLinesHtml(dateTimeStr, opts = {}) {
     )}</span>${div}<span class="order-banner-time-line">${escapeBannerHtml(timePart)}</span></span>`;
 }
 
-/** T/T번호 + 실선 + 운송기사명 (+ 선택 메모) */
+/** 상단 행: 연월일만(또는 단일 토큰 한 줄) */
+function formatBannerDateTimeDateOnlyHtml(dateTimeStr, opts = {}) {
+    const mutedClass = opts.muted ? " order-banner-datetime-stack--muted" : "";
+    const dash = `<span class="order-banner-datetime-stack order-banner-datetime-stack--date-only${mutedClass}"><span class="order-banner-date-line">—</span></span>`;
+    if (dateTimeStr == null || dateTimeStr === "" || dateTimeStr === "—") return dash;
+    const s = String(dateTimeStr).trim();
+    if (!s || s === "—") return dash;
+    const spaceIdx = s.indexOf(" ");
+    const datePart = spaceIdx === -1 ? s : s.slice(0, spaceIdx);
+    return `<span class="order-banner-datetime-stack order-banner-datetime-stack--date-only${mutedClass}"><span class="order-banner-date-line">${escapeBannerHtml(
+        datePart
+    )}</span></span>`;
+}
+
+/** 하단 행: 시각·소요만 */
+function formatBannerDateTimeTimeOnlyHtml(dateTimeStr, opts = {}) {
+    const mutedClass = opts.muted ? " order-banner-datetime-stack--muted" : "";
+    const dash = `<span class="order-banner-datetime-stack order-banner-datetime-stack--time-only${mutedClass}"><span class="order-banner-time-line">—</span></span>`;
+    if (dateTimeStr == null || dateTimeStr === "" || dateTimeStr === "—") return dash;
+    const s = String(dateTimeStr).trim();
+    if (!s || s === "—") return dash;
+    const spaceIdx = s.indexOf(" ");
+    const timePart = spaceIdx === -1 ? s : s.slice(spaceIdx + 1).trim();
+    return `<span class="order-banner-datetime-stack order-banner-datetime-stack--time-only${mutedClass}"><span class="order-banner-time-line">${escapeBannerHtml(
+        timePart
+    )}</span></span>`;
+}
+
+/** T/T 번호만(상단 행). 메모는 하단 열용 */
+function formatOrderBannerTtNumberOnlyHtml(ttLine, extraHtml = "") {
+    const ttRaw = ttLine == null || ttLine === "" ? "—" : String(ttLine);
+    const tt = escapeBannerHtml(ttRaw);
+    return `<div class="order-banner-tt-stack order-banner-tt-stack--number-only"><div class="order-banner-strong order-tt-num">${tt}</div>${extraHtml || ""}</div>`;
+}
+
+/** T/T번호 + 실선 + 운송기사명 (+ 선택 메모) — 레거시·모달 등 */
 function formatOrderBannerTtStackHtml(ttLine, driverLine, extraHtml = "") {
     const ttRaw = ttLine == null || ttLine === "" ? "—" : String(ttLine);
     const tt = escapeBannerHtml(ttRaw);
@@ -1316,6 +1342,78 @@ function formatOrderEtaToolbarHtml(order) {
         });
     if (!segments.length) return "";
     return `<div class="order-card-eta-toolbar order-card-eta-toolbar--stacked">${segments.join("")}</div>`;
+}
+
+function formatOrderEtaDateToolbarHtml(order) {
+    const lines = getOrderEtaLines(order).filter((l) => l.text);
+    if (!lines.length) return "";
+    const segments = lines.map((l) => {
+        const stack = formatBannerDateTimeDateOnlyHtml(l.text, { muted: false });
+        return `<div class="order-card-eta-segment">${stack}</div>`;
+    });
+    return `<div class="order-card-eta-toolbar order-card-eta-toolbar--stacked order-card-eta-toolbar--dates-only">${segments.join("")}</div>`;
+}
+
+function formatOrderEtaTimeToolbarHtml(order) {
+    const lines = getOrderEtaLines(order).filter((l) => l.text);
+    if (!lines.length) return "";
+    const segments = lines.map((l) => {
+        const stack = formatBannerDateTimeTimeOnlyHtml(l.text, { muted: false });
+        return `<div class="order-card-eta-segment">${stack}</div>`;
+    });
+    return `<div class="order-card-eta-toolbar order-card-eta-toolbar--stacked order-card-eta-toolbar--times-only">${segments.join("")}</div>`;
+}
+
+function buildOrderCardEtaCells(order, travelTimeText) {
+    const etaLines = getOrderEtaLines(order).filter((l) => l.text);
+    let etaCellTop;
+    let etaCellFooter;
+    if (etaLines.length) {
+        etaCellTop = `<div class="supplier-tl-value supplier-tl-eta"><div class="supplier-tl-eta-toolbar">${formatOrderEtaDateToolbarHtml(
+            order
+        )}</div></div>`;
+        etaCellFooter = `<div class="order-card-footer-eta-wrap">${formatOrderEtaTimeToolbarHtml(order)}</div>`;
+    } else {
+        etaCellTop = `<div class="supplier-tl-value supplier-tl-eta">${formatBannerDateTimeDateOnlyHtml(null, {
+            muted: true,
+        })}</div>`;
+        if (travelTimeText && travelTimeText !== "—") {
+            etaCellTop = `<div class="supplier-tl-value supplier-tl-eta"><span class="order-banner-datetime-stack order-banner-datetime-stack--date-only order-banner-datetime-stack--muted"><span class="order-banner-date-line">—</span></span></div>`;
+            etaCellFooter = `<span class="order-footer-time-line">${escapeBannerHtml("소요 " + travelTimeText)}</span>`;
+        } else {
+            etaCellFooter = formatBannerDateTimeTimeOnlyHtml(null, { muted: true });
+        }
+    }
+    return { etaCellTop, etaCellFooter };
+}
+
+function buildOrderCardFooterGridHtml({
+    orderId,
+    driverLine,
+    transportNoteHtml,
+    etaFooterHtml,
+    shipmentFooterHtml,
+    returnFooterHtml,
+    variant,
+}) {
+    const drv = String(driverLine || "").trim();
+    const driverInner =
+        drv && drv !== "—"
+            ? `<span class="order-footer-driver">${escapeBannerHtml(drv)}</span>`
+            : `<span class="order-footer-driver order-footer-driver--empty">—</span>`;
+    const noteBlock = transportNoteHtml || "";
+    const gridExtra = variant === "supplier" ? "order-card-footer-grid--supplier" : "order-card-footer-grid--consumer";
+    return `<div class="order-card-footer-grid ${gridExtra}">
+        <div class="order-banner-cell order-footer-cell order-footer-cell--id">
+            <span class="order-card-order-id">주문번호 ${escapeBannerHtml(orderId)}</span>
+        </div>
+        <div class="order-banner-cell order-footer-cell order-footer-cell--spacer"></div>
+        <div class="order-banner-cell order-footer-cell order-footer-cell--tt">${driverInner}${noteBlock}</div>
+        <div class="order-banner-cell order-footer-cell order-footer-cell--eta">${etaFooterHtml}</div>
+        <div class="order-banner-cell order-footer-cell">${shipmentFooterHtml}</div>
+        <div class="order-banner-cell order-footer-cell">${returnFooterHtml}</div>
+        <div class="order-banner-cell order-footer-cell order-footer-cell--status-gap"></div>
+    </div>`;
 }
 
 // 납품(또는 픽업) 약속 일시 기준, 이동시간을 뺀 출하 일시 (운송 미시작 시)
@@ -1455,8 +1553,8 @@ function getSupplierStatusLabel(order) {
     const status = normalizeStatus(order?.status);
     if (order?.cancelRequest?.status === 'pending' || status === 'cancel_requested') return '취소 요청';
     if (order?.changeRequest?.status === 'pending' || status === 'change_requested') return '변경 요청';
-    if (status === 'empty_in_transit') return '공급자 입고(공차) 중';
-    if (status === 'in_transit') return '수요자 출고(실차) 중';
+    if (status === 'empty_in_transit') return '공차 입고 중';
+    if (status === 'in_transit') return '실차 출고 중';
     if (status === 'empty_arrived') return '공차 도착·충전';
     return getStatusLabel(status);
 }
@@ -1466,8 +1564,8 @@ function getConsumerStatusDisplayLabel(order) {
     const status = normalizeStatus(order?.status);
     if (order?.cancelRequest?.status === 'pending' || status === 'cancel_requested') return '취소 요청';
     if (order?.changeRequest?.status === 'pending' || status === 'change_requested') return '변경 요청';
-    if (status === 'empty_in_transit') return '공급자로 공차 입고 중';
-    if (status === 'in_transit') return '납품지로 실차 입고 중';
+    if (status === 'empty_in_transit') return '공차 입고 중';
+    if (status === 'in_transit') return '실차 입고 중';
     if (status === 'empty_arrived') return '공차 도착·충전';
     return getStatusLabel(status);
 }
@@ -1682,12 +1780,24 @@ function updateDashboardStats() {
             { key: 'active', k: '진행 중', v: active.length },
             { key: 'pending', k: '결재 대기', v: pending.length },
         ];
+        const consumerTipCopy = {
+            all: "이번 달 납품일 기준 주문 수입니다. 클릭하면 목록이 필터됩니다.",
+            active: "완료·취소를 제외한 진행 중인 주문입니다.",
+            pending: "변경 요청·변경 접수 등 상대방 확인이 필요한 건입니다.",
+        };
         container.innerHTML = stats
             .map(
                 ({ key, k, v }) =>
-                    `<button type="button" class="insight-stat insight-stat--btn ${selected === key ? 'is-active' : ''}" data-stat-filter="${key}" role="listitem"><span class="insight-stat-label">${k}</span><span class="insight-stat-value">${v}</span></button>`
+                    `<div class="insight-stat-wrap insight-stat--tip">
+                        <button type="button" class="insight-stat insight-stat--btn ${selected === key ? "is-active" : ""}" data-stat-filter="${key}" role="listitem" aria-describedby="insight-consumer-tip-${key}">
+                            <span class="insight-stat-label">${k}</span><span class="insight-stat-value">${v}</span>
+                        </button>
+                        <div id="insight-consumer-tip-${key}" class="insight-tooltip-panel insight-tooltip-panel--hint" role="tooltip">
+                            <p class="insight-tooltip-hint">${consumerTipCopy[key]}</p>
+                        </div>
+                    </div>`
             )
-            .join('');
+            .join("");
         container.querySelectorAll('[data-stat-filter]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 setDashboardStatFilter(btn.dataset.statFilter || 'all');
@@ -1714,15 +1824,11 @@ function updateDashboardStats() {
         });
         const tomorrowCount = tomorrowDelivery.length;
 
-        const titleToday = escapeHtmlAttr(
-            formatSupplierInsightTooltipHeading("납품일 오늘 · 수요처별", todayDelivery)
-        );
-        const titleTomorrow = escapeHtmlAttr(
-            formatSupplierInsightTooltipHeading("납품일 내일 · 수요처별", tomorrowDelivery)
-        );
+        const tipTodayInner = formatSupplierInsightTooltipPanelHtml("납품일 오늘 · 수요처별", todayDelivery);
+        const tipTomorrowInner = formatSupplierInsightTooltipPanelHtml("납품일 내일 · 수요처별", tomorrowDelivery);
 
         container.innerHTML = `
-            <div class="insight-stat insight-stat--banner insight-stat--readonly" role="listitem" title="${titleToday}">
+            <div class="insight-stat insight-stat--banner insight-stat--readonly insight-stat--tip" role="listitem" tabindex="0" aria-describedby="insight-supplier-tip-today">
                 <span class="insight-stat-label">오늘 주문</span>
                 <span class="insight-stat-values-triple" aria-label="접수 완료, 완료, 미완료 순">
                     <span class="insight-stat-value">${todayAccepted.length}</span>
@@ -1731,12 +1837,14 @@ function updateDashboardStats() {
                     <span class="insight-stat-triple-sep">/</span>
                     <span class="insight-stat-value">${todayIncomplete.length}</span>
                 </span>
-                <span class="insight-stat-sub hint">접수·완료·미완료</span>
+                <span class="insight-stat-sub hint">접수·완료·미완료 · 납품일 기준</span>
+                <div id="insight-supplier-tip-today" class="insight-tooltip-panel" role="tooltip">${tipTodayInner}</div>
             </div>
-            <div class="insight-stat insight-stat--banner insight-stat--readonly" role="listitem" title="${titleTomorrow}">
+            <div class="insight-stat insight-stat--banner insight-stat--readonly insight-stat--tip" role="listitem" tabindex="0" aria-describedby="insight-supplier-tip-tomorrow">
                 <span class="insight-stat-label">내일 주문</span>
                 <span class="insight-stat-value insight-stat-value--solo">${tomorrowCount}</span>
-                <span class="insight-stat-sub hint">납품 예정(건)</span>
+                <span class="insight-stat-sub hint">납품 예정(건) · 납품일 기준</span>
+                <div id="insight-supplier-tip-tomorrow" class="insight-tooltip-panel" role="tooltip">${tipTomorrowInner}</div>
             </div>
         `;
     }
@@ -2219,17 +2327,21 @@ function renderConsumerView() {
             order.supplyCondition === 'delivery' && order.emptyLegReturnInfo
                 ? formatTransportInfoLine(order.emptyLegReturnInfo, '공차 회수')
                 : '';
-        const etaToolbarC = formatOrderEtaToolbarHtml(order);
-        let etaCellInnerC;
-        if (etaToolbarC) {
-            etaCellInnerC = `<div class="supplier-tl-eta-toolbar">${etaToolbarC}</div>`;
-        } else if (travelTimeTextC && travelTimeTextC !== "—") {
-            etaCellInnerC = `<div class="supplier-tl-value supplier-tl-eta"><span class="order-banner-datetime-stack order-banner-datetime-stack--muted"><span class="order-banner-date-line">—</span><span class="order-banner-datetime-divider" aria-hidden="true"></span><span class="order-banner-time-line">${escapeBannerHtml(
-                "소요 " + travelTimeTextC
-            )}</span></span></div>`;
-        } else {
-            etaCellInnerC = `<div class="supplier-tl-value supplier-tl-eta">${formatBannerDateTimeTwoLinesHtml(null, { muted: true })}</div>`;
-        }
+        const emptyReturnNoteFooterC = emptyReturnNoteC
+            ? `<div class="order-footer-transport-note">${escapeBannerHtml(emptyReturnNoteC)}</div>`
+            : "";
+        const { etaCellTop: etaCellInnerC, etaCellFooter: etaFooterC } = buildOrderCardEtaCells(order, travelTimeTextC);
+        const shipmentFooterC = formatBannerDateTimeTimeOnlyHtml(shipmentDtC ? shipmentDisplayC : null, { muted: !shipmentDtC });
+        const returnFooterC = formatBannerDateTimeTimeOnlyHtml(returnDtC ? returnDisplayC : null, { muted: !returnDtC });
+        const footerGridConsumer = buildOrderCardFooterGridHtml({
+            orderId: order.id,
+            driverLine: driverLineC,
+            transportNoteHtml: emptyReturnNoteFooterC,
+            etaFooterHtml: etaFooterC,
+            shipmentFooterHtml: shipmentFooterC,
+            returnFooterHtml: returnFooterC,
+            variant: "consumer",
+        });
 
         const isCancelled = order.status === 'cancelled';
         const statusLabelC = getConsumerStatusDisplayLabel(order);
@@ -2257,21 +2369,17 @@ function renderConsumerView() {
                     </div>
                     <div class="order-banner-cell">
                         <div class="order-banner-value order-banner-value--tt">
-                            ${formatOrderBannerTtStackHtml(
-                                ttLineC,
-                                driverLineC,
-                                emptyReturnNoteC ? `<div class="order-banner-transport-note">${emptyReturnNoteC}</div>` : ""
-                            )}
+                            ${formatOrderBannerTtNumberOnlyHtml(ttLineC, "")}
                         </div>
                     </div>
                     <div class="order-banner-cell">
                         <div class="order-banner-value">${etaCellInnerC}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <div class="order-banner-value">${formatBannerDateTimeTwoLinesHtml(shipmentDtC ? shipmentDisplayC : null, { muted: !shipmentDtC })}</div>
+                        <div class="order-banner-value">${formatBannerDateTimeDateOnlyHtml(shipmentDtC ? shipmentDisplayC : null, { muted: !shipmentDtC })}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <div class="order-banner-value">${formatBannerDateTimeTwoLinesHtml(returnDtC ? returnDisplayC : null, { muted: !returnDtC })}</div>
+                        <div class="order-banner-value">${formatBannerDateTimeDateOnlyHtml(returnDtC ? returnDisplayC : null, { muted: !returnDtC })}</div>
                     </div>
                     <div class="order-banner-cell order-banner-cell--status">
                         <div class="order-banner-value order-banner-status-wrap">
@@ -2286,12 +2394,10 @@ function renderConsumerView() {
         <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
             ${orderDataRowConsumer}
             <div class="order-card-toolbar">
-                <div class="order-card-toolbar-main">
-                    <div class="order-card-toolbar-meta-inline">
-                        <span class="order-card-order-id">주문번호 ${order.id}</span>
-                    </div>
+                <div class="order-card-toolbar-primary">
+                    ${footerGridConsumer}
                 </div>
-                ${toolbarActions ? `<div class="order-card-toolbar-actions">${toolbarActions}</div>` : ''}
+                ${toolbarActions ? `<div class="order-card-toolbar-actions">${toolbarActions}</div>` : ""}
             </div>
             ${(changeBadge || cancelBadge) ? `
             <div class="order-item-foot">
@@ -2488,6 +2594,21 @@ function renderSupplierOrdersCards() {
             o.supplyCondition === 'delivery' && o.emptyLegReturnInfo
                 ? formatTransportInfoLine(o.emptyLegReturnInfo, '공차 회수')
                 : '';
+        const emptyReturnNoteFooterS = emptyReturnNoteS
+            ? `<div class="order-footer-transport-note">${escapeBannerHtml(emptyReturnNoteS)}</div>`
+            : "";
+        const { etaCellTop: etaCellInner, etaCellFooter: etaFooterS } = buildOrderCardEtaCells(o, travelTimeText);
+        const shipmentFooterS = formatBannerDateTimeTimeOnlyHtml(shipmentDt ? shipmentDisplay : null, { muted: !shipmentDt });
+        const returnFooterS = formatBannerDateTimeTimeOnlyHtml(returnDt ? returnDisplay : null, { muted: !returnDt });
+        const footerGridSupplier = buildOrderCardFooterGridHtml({
+            orderId: o.id,
+            driverLine,
+            transportNoteHtml: emptyReturnNoteFooterS,
+            etaFooterHtml: etaFooterS,
+            shipmentFooterHtml: shipmentFooterS,
+            returnFooterHtml: returnFooterS,
+            variant: "supplier",
+        });
         const actionButtons = `
             ${advanceAction ? `<button type="button" class="btn btn-small btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : ''}
             ${showConsumerTransportBtn ? `<button type="button" class="btn btn-small btn-secondary" data-action="apply-consumer-transport" data-id="${o.id}">수요자 운송자원 적용</button>` : ''}
@@ -2495,18 +2616,6 @@ function renderSupplierOrdersCards() {
             ${canProposeChange ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${o.id}">변경</button>` : ''}
             ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${o.id}">취소</button>` : ''}
         `.trim();
-
-        const etaToolbarS = formatOrderEtaToolbarHtml(o);
-        let etaCellInner;
-        if (etaToolbarS) {
-            etaCellInner = `<div class="supplier-tl-eta-toolbar">${etaToolbarS}</div>`;
-        } else if (travelTimeText && travelTimeText !== "—") {
-            etaCellInner = `<div class="supplier-tl-value supplier-tl-eta"><span class="order-banner-datetime-stack order-banner-datetime-stack--muted"><span class="order-banner-date-line">—</span><span class="order-banner-datetime-divider" aria-hidden="true"></span><span class="order-banner-time-line">${escapeBannerHtml(
-                "소요 " + travelTimeText
-            )}</span></span></div>`;
-        } else {
-            etaCellInner = `<div class="supplier-tl-value supplier-tl-eta">${formatBannerDateTimeTwoLinesHtml(null, { muted: true })}</div>`;
-        }
 
         const supplierToolbarActions = [
             hasSupplierDecision ? `<div class="order-actions order-actions--footer order-actions--decision">${decisionButtonsSupplier}</div>` : '',
@@ -2529,21 +2638,17 @@ function renderSupplierOrdersCards() {
                     </div>
                     <div class="order-banner-cell">
                         <div class="order-banner-value order-banner-value--tt">
-                            ${formatOrderBannerTtStackHtml(
-                                ttLine,
-                                driverLine,
-                                emptyReturnNoteS ? `<div class="order-banner-transport-note">${emptyReturnNoteS}</div>` : ""
-                            )}
+                            ${formatOrderBannerTtNumberOnlyHtml(ttLine, "")}
                         </div>
                     </div>
                     <div class="order-banner-cell">
                         <div class="order-banner-value">${etaCellInner}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <div class="order-banner-value">${formatBannerDateTimeTwoLinesHtml(shipmentDt ? shipmentDisplay : null, { muted: !shipmentDt })}</div>
+                        <div class="order-banner-value">${formatBannerDateTimeDateOnlyHtml(shipmentDt ? shipmentDisplay : null, { muted: !shipmentDt })}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <div class="order-banner-value">${formatBannerDateTimeTwoLinesHtml(returnDt ? returnDisplay : null, { muted: !returnDt })}</div>
+                        <div class="order-banner-value">${formatBannerDateTimeDateOnlyHtml(returnDt ? returnDisplay : null, { muted: !returnDt })}</div>
                     </div>
                     <div class="order-banner-cell order-banner-cell--status">
                         <div class="order-banner-value order-banner-status-wrap">
@@ -2558,12 +2663,10 @@ function renderSupplierOrdersCards() {
         <div class="order-item order-item-supplier order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'has-change-request' : ''}" data-order-id="${o.id}">
             ${orderDataRowSupplier}
             <div class="order-card-toolbar">
-                <div class="order-card-toolbar-main">
-                    <div class="order-card-toolbar-meta-inline">
-                        <span class="order-card-order-id">주문번호 ${o.id}</span>
-                    </div>
+                <div class="order-card-toolbar-primary">
+                    ${footerGridSupplier}
                 </div>
-                ${supplierToolbarActions ? `<div class="order-card-toolbar-actions">${supplierToolbarActions}</div>` : ''}
+                ${supplierToolbarActions ? `<div class="order-card-toolbar-actions">${supplierToolbarActions}</div>` : ""}
             </div>
             ${(noteText || changeBadge || cancelBadge) ? `
             <div class="order-item-foot">
@@ -3294,6 +3397,7 @@ function applyChange(orderId, approved) {
 
         order.changeRequest = null;
         order.status = 'change_accepted';
+        order.acceptedAt = decidedAt;
         appendOrderChangeHistory(order, "change_approved", decidedBy, {
             requestedBy,
             summary,
@@ -4542,7 +4646,7 @@ document.addEventListener('click', (e) => {
         }
         order.status = nextStatus;
         const nowIso = new Date().toISOString();
-        if (nextStatus === 'accepted') order.acceptedAt = nowIso;
+        if (nextStatus === 'accepted' || nextStatus === 'change_accepted') order.acceptedAt = nowIso;
         if (nextStatus === 'arrived') order.arrivedAt = nowIso;
         if (nextStatus === 'empty_arrived') order.emptyArrivedAt = nowIso;
         if (nextStatus === 'collecting') {

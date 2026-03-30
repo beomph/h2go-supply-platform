@@ -9,6 +9,7 @@ create table if not exists public.h2go_orders (
   supplier_name text not null,
   supplier_address text not null,
   order_requested_at timestamptz not null,
+  order_accepted_at timestamptz,
   delivery_due_at timestamptz,
   supply_condition text not null check (supply_condition in ('delivery', 'ex_factory')),
   order_status text not null,

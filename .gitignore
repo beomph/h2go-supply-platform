@@ -19,6 +19,10 @@ Thumbs.db
 .vscode/
 .idea/
 
+# 로컬 캐시 / IDE(MCP·규칙은 필요 시 `git add -f`로만 추적)
+.cache/
+.cursor/
+
 # Node
 node_modules/
 

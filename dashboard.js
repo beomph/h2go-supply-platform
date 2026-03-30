@@ -2126,7 +2126,7 @@ function renderConsumerView() {
             <div class="order-card-data-row">
                 <div class="order-card-banner-grid">
                     <div class="order-banner-cell">
-                        <div class="order-banner-value order-banner-datetime">
+                        <div class="order-banner-value order-banner-datetime order-datetime-with-badge-inline">
                             <span class="order-datetime">${formatOrderDateTime(order)}</span>
                             <span class="supply-condition-badge ${supplyBadgeClassC}">${getSupplyConditionLabel(order)}</span>
                         </div>
@@ -2138,8 +2138,9 @@ function renderConsumerView() {
                     </div>
                     <div class="order-banner-cell">
                         <div class="order-banner-value">
-                            <div class="order-tt-driver-row">
-                                <span class="order-banner-strong order-tt-num">${ttLineC}</span>${driverLineC && driverLineC !== "—" ? `<span class="order-tt-sep" aria-hidden="true">·</span><span class="order-driver-only">${driverLineC}</span>` : ""}
+                            <div class="order-tt-stack">
+                                <div class="order-banner-strong order-tt-num">${ttLineC}</div>
+                                ${driverLineC && driverLineC !== "—" ? `<hr class="order-tt-line-solid" aria-hidden="true"><div class="order-driver-below">${driverLineC}</div>` : ""}
                             </div>
                             ${emptyReturnNoteC ? `<div class="order-banner-transport-note">${emptyReturnNoteC}</div>` : ''}
                         </div>
@@ -2390,7 +2391,7 @@ function renderSupplierOrdersCards() {
             <div class="order-card-data-row">
                 <div class="order-card-banner-grid">
                     <div class="order-banner-cell">
-                        <div class="order-banner-value order-banner-datetime">
+                        <div class="order-banner-value order-banner-datetime order-datetime-with-badge-inline">
                             <span class="order-datetime">${formatOrderDateTime(o)}</span>
                             <span class="supply-condition-badge ${supplyBadgeClass}">${supplyLabel}</span>
                         </div>
@@ -2402,8 +2403,9 @@ function renderSupplierOrdersCards() {
                     </div>
                     <div class="order-banner-cell">
                         <div class="order-banner-value">
-                            <div class="order-tt-driver-row">
-                                <span class="order-banner-strong order-tt-num">${ttLine}</span>${driverLine && driverLine !== "—" ? `<span class="order-tt-sep" aria-hidden="true">·</span><span class="order-driver-only">${driverLine}</span>` : ""}
+                            <div class="order-tt-stack">
+                                <div class="order-banner-strong order-tt-num">${ttLine}</div>
+                                ${driverLine && driverLine !== "—" ? `<hr class="order-tt-line-solid" aria-hidden="true"><div class="order-driver-below">${driverLine}</div>` : ""}
                             </div>
                             ${emptyReturnNoteS ? `<div class="order-banner-transport-note">${emptyReturnNoteS}</div>` : ''}
                         </div>

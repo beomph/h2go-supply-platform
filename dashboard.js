@@ -1225,13 +1225,46 @@ function getOrderEtaLines(order) {
     return lines;
 }
 
+function escapeBannerHtml(s) {
+    return String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+/** 카드 열용: 첫 줄 연월일, 둘째 줄 시각 (공백 기준 분리). 잘림·이상 줄바꿈 방지 */
+function formatBannerDateTimeTwoLinesHtml(dateTimeStr, opts = {}) {
+    const mutedClass = opts.muted ? " order-banner-datetime-stack--muted" : "";
+    const dash = `<span class="order-banner-datetime-stack${mutedClass}"><span class="order-banner-date-line">—</span></span>`;
+    if (dateTimeStr == null || dateTimeStr === "" || dateTimeStr === "—") return dash;
+    const s = String(dateTimeStr).trim();
+    if (!s || s === "—") return dash;
+    const spaceIdx = s.indexOf(" ");
+    if (spaceIdx === -1) {
+        return `<span class="order-banner-datetime-stack${mutedClass}"><span class="order-banner-date-line">${escapeBannerHtml(s)}</span></span>`;
+    }
+    const datePart = s.slice(0, spaceIdx);
+    const timePart = s.slice(spaceIdx + 1).trim();
+    return `<span class="order-banner-datetime-stack${mutedClass}"><span class="order-banner-date-line">${escapeBannerHtml(
+        datePart
+    )}</span><span class="order-banner-time-line">${escapeBannerHtml(timePart)}</span></span>`;
+}
+
 function formatOrderEtaToolbarHtml(order) {
     const lines = getOrderEtaLines(order);
     if (!lines.length) return "";
-    const texts = lines.map((l) => l.text).filter(Boolean);
-    if (!texts.length) return "";
-    // 카드 열 높이 맞춤: 공차/실차·예상도착 문구 없이 시각만(복수 구간은 · 로 한 줄)
-    return `<span class="order-card-eta order-card-eta--times-only">${texts.join(" · ")}</span>`;
+    const segments = lines
+        .filter((l) => l.text)
+        .map((l) => {
+            const prefix = l.prefix
+                ? `<span class="order-card-eta-prefix">${escapeBannerHtml(l.prefix)}</span>`
+                : "";
+            const stack = formatBannerDateTimeTwoLinesHtml(l.text, { muted: false });
+            return `<div class="order-card-eta-segment">${prefix}${stack}</div>`;
+        });
+    if (!segments.length) return "";
+    return `<div class="order-card-eta-toolbar order-card-eta-toolbar--stacked">${segments.join("")}</div>`;
 }
 
 // 납품(또는 픽업) 약속 일시 기준, 이동시간을 뺀 출하 일시 (운송 미시작 시)
@@ -2109,9 +2142,16 @@ function renderConsumerView() {
                 ? formatTransportInfoLine(order.emptyLegReturnInfo, '공차 회수')
                 : '';
         const etaToolbarC = formatOrderEtaToolbarHtml(order);
-        const etaCellInnerC = etaToolbarC
-            ? `<div class="supplier-tl-eta-toolbar">${etaToolbarC}</div>`
-            : `<div class="supplier-tl-value supplier-tl-eta">${travelTimeTextC}</div>`;
+        let etaCellInnerC;
+        if (etaToolbarC) {
+            etaCellInnerC = `<div class="supplier-tl-eta-toolbar">${etaToolbarC}</div>`;
+        } else if (travelTimeTextC && travelTimeTextC !== "—") {
+            etaCellInnerC = `<div class="supplier-tl-value supplier-tl-eta"><span class="order-banner-datetime-stack order-banner-datetime-stack--muted"><span class="order-banner-date-line">—</span><span class="order-banner-time-line">${escapeBannerHtml(
+                "소요 " + travelTimeTextC
+            )}</span></span></div>`;
+        } else {
+            etaCellInnerC = `<div class="supplier-tl-value supplier-tl-eta">${formatBannerDateTimeTwoLinesHtml(null, { muted: true })}</div>`;
+        }
 
         const isCancelled = order.status === 'cancelled';
         const statusLabelC = getStatusLabel(normalizeStatus(order.status));
@@ -2147,10 +2187,10 @@ function renderConsumerView() {
                         <div class="order-banner-value">${etaCellInnerC}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <div class="order-banner-value ${!shipmentDtC ? 'order-banner-muted' : ''}">${shipmentDisplayC}</div>
+                        <div class="order-banner-value">${formatBannerDateTimeTwoLinesHtml(shipmentDtC ? shipmentDisplayC : null, { muted: !shipmentDtC })}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <div class="order-banner-value ${!returnDtC ? 'order-banner-muted' : ''}">${returnDisplayC}</div>
+                        <div class="order-banner-value">${formatBannerDateTimeTwoLinesHtml(returnDtC ? returnDisplayC : null, { muted: !returnDtC })}</div>
                     </div>
                     <div class="order-banner-cell order-banner-cell--status">
                         <div class="order-banner-value order-banner-status-wrap">
@@ -2380,9 +2420,16 @@ function renderSupplierOrdersCards() {
         `.trim();
 
         const etaToolbarS = formatOrderEtaToolbarHtml(o);
-        const etaCellInner = etaToolbarS
-            ? `<div class="supplier-tl-eta-toolbar">${etaToolbarS}</div>`
-            : `<div class="supplier-tl-value supplier-tl-eta">${travelTimeText}</div>`;
+        let etaCellInner;
+        if (etaToolbarS) {
+            etaCellInner = `<div class="supplier-tl-eta-toolbar">${etaToolbarS}</div>`;
+        } else if (travelTimeText && travelTimeText !== "—") {
+            etaCellInner = `<div class="supplier-tl-value supplier-tl-eta"><span class="order-banner-datetime-stack order-banner-datetime-stack--muted"><span class="order-banner-date-line">—</span><span class="order-banner-time-line">${escapeBannerHtml(
+                "소요 " + travelTimeText
+            )}</span></span></div>`;
+        } else {
+            etaCellInner = `<div class="supplier-tl-value supplier-tl-eta">${formatBannerDateTimeTwoLinesHtml(null, { muted: true })}</div>`;
+        }
 
         const supplierToolbarActions = [
             hasSupplierDecision ? `<div class="order-actions order-actions--footer order-actions--decision">${decisionButtonsSupplier}</div>` : '',
@@ -2413,10 +2460,10 @@ function renderSupplierOrdersCards() {
                         <div class="order-banner-value">${etaCellInner}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <div class="order-banner-value ${!shipmentDt ? 'order-banner-muted' : ''}">${shipmentDisplay}</div>
+                        <div class="order-banner-value">${formatBannerDateTimeTwoLinesHtml(shipmentDt ? shipmentDisplay : null, { muted: !shipmentDt })}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <div class="order-banner-value ${!returnDt ? 'order-banner-muted' : ''}">${returnDisplay}</div>
+                        <div class="order-banner-value">${formatBannerDateTimeTwoLinesHtml(returnDt ? returnDisplay : null, { muted: !returnDt })}</div>
                     </div>
                     <div class="order-banner-cell order-banner-cell--status">
                         <div class="order-banner-value order-banner-status-wrap">
@@ -3644,6 +3691,50 @@ function initSupplyConditionToggles() {
 }
 
 document.getElementById("changeSupplierBtn")?.addEventListener("click", openSupplierSelectModal);
+
+const NEW_ORDER_MODAL_CLOSE_MS = 340;
+let newOrderModalCloseTimer = null;
+
+function openNewOrderModal() {
+    const m = document.getElementById("newOrderModal");
+    if (!m) return;
+    m.classList.remove("modal--closing");
+    void m.offsetWidth;
+    m.classList.add("active");
+    m.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-new-order-open");
+    initFormDefaults();
+    initTimeInputs();
+}
+
+function closeNewOrderModal() {
+    const m = document.getElementById("newOrderModal");
+    if (!m || !m.classList.contains("active")) return;
+    if (m.classList.contains("modal--closing")) return;
+    m.classList.add("modal--closing");
+    m.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-new-order-open");
+    if (newOrderModalCloseTimer) clearTimeout(newOrderModalCloseTimer);
+    newOrderModalCloseTimer = setTimeout(() => {
+        m.classList.remove("active", "modal--closing");
+        newOrderModalCloseTimer = null;
+    }, NEW_ORDER_MODAL_CLOSE_MS);
+}
+
+document.getElementById("openNewOrderModalBtn")?.addEventListener("click", () => openNewOrderModal());
+document.querySelectorAll("[data-new-order-close]").forEach((btn) => {
+    btn.addEventListener("click", () => closeNewOrderModal());
+});
+document.getElementById("newOrderModal")?.addEventListener("click", (e) => {
+    if (e.target.id === "newOrderModal") closeNewOrderModal();
+});
+document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const m = document.getElementById("newOrderModal");
+    if (m?.classList.contains("active")) {
+        closeNewOrderModal();
+    }
+});
 document.getElementById("supplierManualApplyBtn")?.addEventListener("click", () => {
     const modal = document.getElementById("supplierSelectModal");
     const addressDisplay = document.getElementById("supplierShippingAddressDisplay");
@@ -3819,6 +3910,7 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
     toggleOrderAddressBySupplyCondition();
     renderConsumerView();
     renderSupplierView();
+    closeNewOrderModal();
     alert('주문이 등록되었습니다. 공급자에게 전달됩니다.');
 });
 

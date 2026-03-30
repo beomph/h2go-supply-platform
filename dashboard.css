@@ -881,14 +881,14 @@ body.theme-dark .transport-schedule-card {
 }
 
 /* 수요자 화면 레이아웃
-   - 상단: 주문현황(메인) + 새 주문(우측)
-   - 하단: 재고현황 + 발주예측 */
+   - 좌측: 주문현황(세로 2행 통합) · 새 주문은 모달
+   - 우측: 재고현황 + 발주예측 */
 .consumer-content {
     display: grid;
-    grid-template-columns: 1.5fr 1fr;
+    grid-template-columns: 1.55fr 1fr;
     grid-template-areas:
-        "orders form"
-        "inventory prediction";
+        "orders inventory"
+        "orders prediction";
     gap: 1.5rem;
     align-items: start;
 }
@@ -901,14 +901,13 @@ body.theme-dark .transport-schedule-card {
     display: contents;
 }
 
-.my-orders-card { grid-area: orders; min-width: 0; }
-.order-form-card { grid-area: form; min-width: 0; }
+.my-orders-card { grid-area: orders; min-width: 0; grid-row: span 2; }
 .inventory-card { grid-area: inventory; min-width: 0; }
 .prediction-card { grid-area: prediction; min-width: 0; }
 
 @media (max-width: 1200px) {
     .consumer-content {
-        grid-template-columns: 1.3fr 1fr;
+        grid-template-columns: 1.35fr 1fr;
     }
 }
 
@@ -917,9 +916,12 @@ body.theme-dark .transport-schedule-card {
         grid-template-columns: 1fr;
         grid-template-areas:
             "orders"
-            "form"
             "inventory"
             "prediction";
+    }
+
+    .my-orders-card {
+        grid-row: auto;
     }
 }
 
@@ -2377,6 +2379,19 @@ body.theme-light .orders-column-header {
     .order-card-data-row .order-card-banner-grid {
         grid-template-columns: minmax(11rem, 1.25fr) repeat(6, minmax(0, 1fr));
     }
+
+    /* 구매 카드: 예상도착·출하·회차 열을 넉넉히 (두 줄 날짜/시각 표시) */
+    .order-item:not(.order-item-supplier) .order-card-data-row .order-card-banner-grid,
+    #consumerOrdersColumnHeader .orders-column-header-grid {
+        grid-template-columns:
+            minmax(11.5rem, 1.2fr)
+            minmax(6.25rem, 0.88fr)
+            minmax(7.25rem, 0.95fr)
+            minmax(9.5rem, 1.05fr)
+            minmax(8.75rem, 0.98fr)
+            minmax(8.75rem, 0.98fr)
+            minmax(7.25rem, 0.82fr);
+    }
 }
 
 .order-banner-label {
@@ -2411,6 +2426,90 @@ body.theme-light .order-banner-value {
     color: var(--text-muted);
     word-break: keep-all;
     overflow-wrap: anywhere;
+}
+
+/* 주문 카드: 연월일 / 시각 두 줄 · 줄 안에서 날짜·시각 분리되지 않도록 */
+.order-banner-datetime-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    min-width: 0;
+    line-height: 1.22;
+}
+
+.order-banner-datetime-stack--muted .order-banner-date-line,
+.order-banner-datetime-stack--muted .order-banner-time-line {
+    color: var(--text-muted);
+}
+
+.order-banner-date-line,
+.order-banner-time-line {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.order-banner-date-line {
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+.order-banner-time-line {
+    font-size: 0.74rem;
+    font-weight: 600;
+}
+
+.order-card-eta-toolbar--stacked {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    align-items: flex-start;
+    min-width: 0;
+    width: 100%;
+}
+
+.order-card-eta-segment {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.2rem 0.35rem;
+    min-width: 0;
+}
+
+.order-card-eta-segment .order-banner-datetime-stack {
+    flex: 0 1 auto;
+}
+
+.order-banner-value .supplier-tl-eta-toolbar {
+    width: 100%;
+    min-width: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.25;
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+/* 주문상태: 한 줄 · 카드에서 열 폭 확보 */
+.order-banner-status-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: nowrap;
+    min-width: 0;
+    justify-content: flex-end;
+}
+
+.order-banner-status-wrap .order-status:not(.order-status--action) {
+    white-space: nowrap;
+    font-size: 0.7rem;
+    flex-shrink: 0;
+}
+
+@media (min-width: 1100px) {
+    .order-banner-status-wrap .order-status:not(.order-status--action) {
+        font-size: 0.72rem;
+    }
 }
 
 .order-banner-divider {
@@ -4286,4 +4385,93 @@ body.theme-light .dashboard-order-notif-title {
 }
 .marker-pin.prod { background: var(--h2-blue); }
 .marker-pin.dest { background: #22c55e; }
+
+/* ========== 새 주문 모달 (구매 대시보드) ========== */
+body.modal-new-order-open {
+    overflow: hidden;
+}
+
+#newOrderModal.modal.modal--new-order {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        opacity 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0.32s linear;
+}
+
+#newOrderModal.modal.modal--new-order.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+#newOrderModal.modal.modal--new-order .modal-content.modal-content--new-order {
+    animation: none;
+    max-width: min(32rem, calc(100vw - 2rem));
+    max-height: min(90vh, 46rem);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    transform: translateY(1.25rem) scale(0.97);
+    opacity: 0;
+    filter: blur(4px);
+    transition:
+        transform 0.38s cubic-bezier(0.33, 1.18, 0.45, 1),
+        opacity 0.3s ease,
+        filter 0.3s ease;
+}
+
+#newOrderModal.modal.modal--new-order.active .modal-content.modal-content--new-order {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    filter: blur(0);
+}
+
+#newOrderModal.modal.modal--new-order.modal--closing .modal-content.modal-content--new-order {
+    transform: translateY(0.85rem) scale(0.985);
+    opacity: 0;
+    filter: blur(3px);
+    transition:
+        transform 0.28s cubic-bezier(0.4, 0, 0.6, 1),
+        opacity 0.26s ease,
+        filter 0.26s ease;
+}
+
+.new-order-modal-title {
+    margin: 0;
+    padding: 1.35rem 3rem 0.85rem 1.5rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.new-order-modal-body {
+    padding: 1rem 1.5rem 1.25rem;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+#newOrderModal .order-form--modal .form-group:last-of-type {
+    margin-bottom: 0.5rem;
+}
+
+.new-order-modal-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    margin-top: 1.15rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+#newOrderModal .modal-close {
+    z-index: 2;
+}
 

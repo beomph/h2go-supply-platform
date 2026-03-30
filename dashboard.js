@@ -283,6 +283,36 @@ function getConsumerDeclaredTransport(order) {
     return { trailerNumbers, driverName };
 }
 
+function hasInboundTransportInfo(order) {
+    const ti = order?.transportInfo;
+    if (!ti || typeof ti !== "object") return false;
+    const tt = Array.isArray(ti.trailerNumbers)
+        ? ti.trailerNumbers.map((x) => String(x || "").trim()).filter(Boolean)
+        : [];
+    return tt.length > 0 || String(ti.driverName || "").trim().length > 0;
+}
+
+/** 카드·배너: 운송 시작/공차 출발 후 transportInfo 우선, 없으면 출하도 사전 수요자 입력 */
+function getOrderCardTransportDisplay(order) {
+    if (hasInboundTransportInfo(order)) {
+        const ti = order.transportInfo;
+        const ttLine = (Array.isArray(ti.trailerNumbers) ? ti.trailerNumbers : [])
+            .map((x) => String(x || "").trim())
+            .filter(Boolean)
+            .join(", ") || "—";
+        const driverLine = String(ti.driverName || "").trim() || "—";
+        return { ttLine, driverLine };
+    }
+    const cd = getConsumerDeclaredTransport(order);
+    if (cd) {
+        return {
+            ttLine: cd.trailerNumbers.join(", ") || "—",
+            driverLine: cd.driverName || "—",
+        };
+    }
+    return { ttLine: "—", driverLine: "—" };
+}
+
 // 주문별 운송시간(분): 출하도는 0(픽업), 도착도는 납품지까지 시간
 function getOrderTravelTimeMinutes(order) {
     if (!order) return 0;
@@ -2064,60 +2094,101 @@ function renderConsumerView() {
             <button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${order.id}">거절</button>` : ''}
         `.trim();
 
-        const transportInfo = order.transportInfo;
-        const transportInfoText = formatTransportInfoLine(transportInfo, "");
-        const consumerDeclared = getConsumerDeclaredTransport(order);
-        const consumerDeclaredText = consumerDeclared
-            ? `수요자 운송(출하도): T/T ${consumerDeclared.trailerNumbers.join(', ') || '—'} · 기사 ${consumerDeclared.driverName || '—'}`
-            : '';
-        const emptyReturnText =
-            order.supplyCondition === "delivery" && order.emptyLegReturnInfo
-                ? formatTransportInfoLine(order.emptyLegReturnInfo, "공차 회수")
-                : "";
+        const travelTimeMinC = getOrderTravelTimeMinutes(order);
+        const travelTimeTextC = travelTimeMinC === 0 ? '—' : `${travelTimeMinC}분`;
+        const shipmentDtC = formatShipmentDateTime(order);
+        const returnDtC = formatReturnDateTime(order);
+        const shipmentDisplayC = shipmentDtC || '—';
+        const returnDisplayC = returnDtC || '—';
+        const supplyBadgeClassC =
+            order.supplyCondition === 'ex_factory' ? 'supply-condition-ex-factory' : 'supply-condition-delivery';
+        const { ttLine: ttLineC, driverLine: driverLineC } = getOrderCardTransportDisplay(order);
+        const emptyReturnNoteC =
+            order.supplyCondition === 'delivery' && order.emptyLegReturnInfo
+                ? formatTransportInfoLine(order.emptyLegReturnInfo, '공차 회수')
+                : '';
+        const counterpartAddrC =
+            order.supplyCondition === 'ex_factory'
+                ? getSupplierShippingAddress(order.supplierName) || '—'
+                : order.address || '—';
+        const etaToolbarC = formatOrderEtaToolbarHtml(order);
+        const etaCellInnerC = etaToolbarC
+            ? `<div class="supplier-tl-eta-toolbar">${etaToolbarC}</div>`
+            : `<div class="supplier-tl-value supplier-tl-eta">${travelTimeTextC}</div>`;
 
         const isCancelled = order.status === 'cancelled';
-        const statusBadge = `<span class="order-status ${status}">${getStatusLabel(order.status)}</span>`;
+        const statusLabelC = getStatusLabel(order.status);
         const decisionActionsRow = hasDecisionRequest
             ? `<div class="order-actions order-actions--footer order-actions--decision">${decisionButtons}</div>`
             : '';
-        const ttCombined = [transportInfoText, consumerDeclaredText, emptyReturnText].filter(Boolean).join(' · ') || '—';
-        const etaToolbarC = formatOrderEtaToolbarHtml(order);
         const toolbarActions = [
             decisionActionsRow,
             actionButtons ? `<div class="order-actions order-actions--footer">${actionButtons}</div>` : '',
         ].filter(Boolean).join('');
-        return `
-        <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
-            <div class="order-item-layout">
-                <div class="order-item-main">
-                    <div class="order-item-summary-block order-item-summary-block--consumer" aria-label="주문 요약">
-                        <div class="order-item-summary-row order-item-summary-row--consumer">
-                            <span class="order-summary-cell order-summary-datetime">${formatOrderDateTime(order)}</span>
-                            <span class="order-summary-cell order-summary-counterparty">${order.supplierName || '-'}</span>
-                            <span class="order-summary-cell order-summary-condition"><span class="supply-condition-badge supply-condition-${order.supplyCondition === 'ex_factory' ? 'ex-factory' : 'delivery'}">${getSupplyConditionLabel(order)}</span></span>
-                            <span class="order-summary-cell order-summary-tt">${ttCombined}</span>
+
+        const orderBannerConsumer = `
+            <div class="order-card-banner">
+                <div class="order-card-banner-grid">
+                    <div class="order-banner-cell">
+                        <span class="order-banner-label">납품일시</span>
+                        <div class="order-banner-value order-banner-datetime">
+                            <span class="order-datetime">${formatOrderDateTime(order)}</span>
+                            <span class="supply-condition-badge ${supplyBadgeClassC}">${getSupplyConditionLabel(order)}</span>
                         </div>
                     </div>
+                    <div class="order-banner-cell">
+                        <span class="order-banner-label">공급자</span>
+                        <div class="order-banner-value">
+                            <div class="order-banner-strong">${order.supplierName || '—'}</div>
+                            <div class="order-banner-divider"></div>
+                            <div class="order-banner-muted">${counterpartAddrC}</div>
+                        </div>
+                    </div>
+                    <div class="order-banner-cell">
+                        <span class="order-banner-label">T/T정보</span>
+                        <div class="order-banner-value">
+                            <div class="order-banner-strong">${ttLineC}</div>
+                            <div class="order-banner-divider"></div>
+                            <div class="order-banner-muted">${driverLineC}</div>
+                            ${emptyReturnNoteC ? `<div class="order-banner-transport-note">${emptyReturnNoteC}</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="order-banner-cell">
+                        <span class="order-banner-label">예상도착(소요)</span>
+                        <div class="order-banner-value">${etaCellInnerC}</div>
+                    </div>
+                    <div class="order-banner-cell">
+                        <span class="order-banner-label">출하</span>
+                        <div class="order-banner-value ${!shipmentDtC ? 'order-banner-muted' : ''}">${shipmentDisplayC}</div>
+                    </div>
+                    <div class="order-banner-cell">
+                        <span class="order-banner-label">회차</span>
+                        <div class="order-banner-value ${!returnDtC ? 'order-banner-muted' : ''}">${returnDisplayC}</div>
+                    </div>
+                    <div class="order-banner-cell order-banner-cell--status">
+                        <span class="order-banner-label">주문상태</span>
+                        <div class="order-banner-value order-banner-status-wrap">
+                            <span class="order-status ${status}">${statusLabelC}</span>
+                            ${isCancelled ? `<button type="button" class="order-remove-cancelled-btn" data-action="remove-cancelled-consumer" data-id="${order.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+        return `
+        <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
+            ${orderBannerConsumer}
+            <div class="order-card-toolbar">
+                <div class="order-card-toolbar-main">
+                    <span class="order-card-order-id">주문번호 ${order.id}</span>
+                </div>
+                ${toolbarActions ? `<div class="order-card-toolbar-actions">${toolbarActions}</div>` : ''}
+            </div>
             ${(changeBadge || cancelBadge) ? `
             <div class="order-item-foot">
                 <div class="order-item-badges"><div class="change-summary">${changeBadge || ''} ${cancelBadge || ''}</div></div>
             </div>
             ` : ''}
-                </div>
-                <div class="order-item-status-column">
-                    <div class="order-item-status-column-inner">
-                        ${statusBadge}
-                        ${isCancelled ? `<button type="button" class="order-remove-cancelled-btn" data-action="remove-cancelled-consumer" data-id="${order.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
-                    </div>
-                </div>
-            </div>
-            <div class="order-card-toolbar">
-                <div class="order-card-toolbar-main">
-                    <span class="order-card-order-id">주문번호 ${order.id}</span>
-                    ${etaToolbarC || ""}
-                </div>
-                ${toolbarActions ? `<div class="order-card-toolbar-actions">${toolbarActions}</div>` : ''}
-            </div>
         </div>
     `}).join('');
 
@@ -2295,32 +2366,18 @@ function renderSupplierOrdersCards() {
         const showConsumerTransportBtn =
             o.supplyCondition === "ex_factory" &&
             normalizeStatus(o.status) === "empty_arrived" &&
-            consumerDeclared &&
-            (consumerDeclared.trailerNumbers.length || consumerDeclared.driverName);
+            hasInboundTransportInfo(o);
 
         const shipmentDt = formatShipmentDateTime(o);
         const returnDt = formatReturnDateTime(o);
         const shipmentDisplay = shipmentDt || '—';
         const returnDisplay = returnDt || '—';
 
-        const ttNumbersText =
-            o.transportInfo && (o.transportInfo.trailerNumbers || []).length
-                ? (o.transportInfo.trailerNumbers || []).join(', ')
-                : '—';
-        const driverNameText =
-            (o.transportInfo && String(o.transportInfo.driverName || '').trim()) || '—';
-
-        const transportExtras = [
-            consumerDeclared
-                ? `수요자(출하도): ${consumerDeclared.trailerNumbers.join(', ') || '—'} · ${consumerDeclared.driverName || '—'}`
-                : '',
+        const { ttLine, driverLine } = getOrderCardTransportDisplay(o);
+        const emptyReturnNoteS =
             o.supplyCondition === 'delivery' && o.emptyLegReturnInfo
                 ? formatTransportInfoLine(o.emptyLegReturnInfo, '공차 회수')
-                : '',
-        ].filter(Boolean);
-        const transportExtrasHtml = transportExtras.length
-            ? `<div class="supplier-transport-extras">${transportExtras.map((t) => `<div class="supplier-transport-extra-line">${t}</div>`).join('')}</div>`
-            : '';
+                : '';
 
         const actionButtons = `
             ${advanceAction ? `<button type="button" class="btn btn-small btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : ''}
@@ -2340,55 +2397,58 @@ function renderSupplierOrdersCards() {
             actionButtons ? `<div class="order-actions order-actions--footer order-actions--supplier">${actionButtons}</div>` : '',
         ].filter(Boolean).join('');
 
+        const orderBannerSupplier = `
+            <div class="order-card-banner">
+                <div class="order-card-banner-grid">
+                    <div class="order-banner-cell">
+                        <span class="order-banner-label">납품일시</span>
+                        <div class="order-banner-value order-banner-datetime">
+                            <span class="order-datetime">${formatOrderDateTime(o)}</span>
+                            <span class="supply-condition-badge ${supplyBadgeClass}">${supplyLabel}</span>
+                        </div>
+                    </div>
+                    <div class="order-banner-cell">
+                        <span class="order-banner-label">수요자</span>
+                        <div class="order-banner-value">
+                            <div class="order-banner-strong">${o.consumerName || '—'}</div>
+                            <div class="order-banner-divider"></div>
+                            <div class="order-banner-muted">${o.address || '—'}</div>
+                        </div>
+                    </div>
+                    <div class="order-banner-cell">
+                        <span class="order-banner-label">T/T정보</span>
+                        <div class="order-banner-value">
+                            <div class="order-banner-strong">${ttLine}</div>
+                            <div class="order-banner-divider"></div>
+                            <div class="order-banner-muted">${driverLine}</div>
+                            ${emptyReturnNoteS ? `<div class="order-banner-transport-note">${emptyReturnNoteS}</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="order-banner-cell">
+                        <span class="order-banner-label">예상도착(소요)</span>
+                        <div class="order-banner-value">${etaCellInner}</div>
+                    </div>
+                    <div class="order-banner-cell">
+                        <span class="order-banner-label">출하</span>
+                        <div class="order-banner-value ${!shipmentDt ? 'order-banner-muted' : ''}">${shipmentDisplay}</div>
+                    </div>
+                    <div class="order-banner-cell">
+                        <span class="order-banner-label">회차</span>
+                        <div class="order-banner-value ${!returnDt ? 'order-banner-muted' : ''}">${returnDisplay}</div>
+                    </div>
+                    <div class="order-banner-cell order-banner-cell--status">
+                        <span class="order-banner-label">주문상태</span>
+                        <div class="order-banner-value order-banner-status-wrap">
+                            <span class="order-status ${status}">${supplierStatus}</span>
+                            ${isCancelled ? `<button type="button" class="order-remove-cancelled-btn" data-action="remove-cancelled-supplier" data-id="${o.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
         return `
         <div class="order-item order-item-supplier order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'has-change-request' : ''}" data-order-id="${o.id}">
-            <div class="order-item-layout order-item-supplier-layout">
-                <div class="order-item-main">
-                    <div class="order-item-supplier-main">
-                        <div class="order-item-supplier-transport" title="튜브트레일러·운송기사">
-                            <div class="order-supplier-tt-line">${ttNumbersText}</div>
-                            <div class="supplier-card-divider" aria-hidden="true"></div>
-                            <div class="order-supplier-driver-line">${driverNameText}</div>
-                            ${transportExtrasHtml}
-                        </div>
-                        <div class="order-item-supplier-timeline">
-                            <div class="order-supplier-timeline-grid">
-                                <div class="supplier-tl-cell supplier-tl-delivery">
-                                    <span class="supplier-tl-label">납품일시</span>
-                                    <div class="order-datetime-with-badge order-datetime-with-badge--supplier-card">
-                                        <span class="order-datetime">${formatOrderDateTime(o)}</span>
-                                        <span class="supply-condition-badge ${supplyBadgeClass}">${supplyLabel}</span>
-                                    </div>
-                                </div>
-                                <div class="supplier-tl-cell supplier-tl-buyer">
-                                    <span class="supplier-tl-label">수요자</span>
-                                    <div class="supplier-buyer-name">${o.consumerName || '-'}</div>
-                                    <div class="supplier-card-divider" aria-hidden="true"></div>
-                                    <div class="supplier-buyer-addr">${o.address || '-'}</div>
-                                </div>
-                                <div class="supplier-tl-cell">
-                                    <span class="supplier-tl-label">예상도착(소요)</span>
-                                    ${etaCellInner}
-                                </div>
-                                <div class="supplier-tl-cell">
-                                    <span class="supplier-tl-label">출하</span>
-                                    <div class="supplier-tl-value ${!shipmentDt ? 'supplier-tl-value--muted' : ''}">${shipmentDisplay}</div>
-                                </div>
-                                <div class="supplier-tl-cell">
-                                    <span class="supplier-tl-label">회차</span>
-                                    <div class="supplier-tl-value ${!returnDt ? 'supplier-tl-value--muted' : ''}">${returnDisplay}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="order-item-status-column">
-                    <div class="order-item-status-column-inner">
-                        <span class="order-status ${status}">${supplierStatus}</span>
-                        ${isCancelled ? `<button type="button" class="order-remove-cancelled-btn" data-action="remove-cancelled-supplier" data-id="${o.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
-                    </div>
-                </div>
-            </div>
+            ${orderBannerSupplier}
             <div class="order-card-toolbar">
                 <div class="order-card-toolbar-main">
                     <span class="order-card-order-id">주문번호 ${o.id}</span>
@@ -2725,13 +2785,19 @@ async function openTransportStartModal(orderId, prefillFromConsumerTransport, mo
     await loadTransportAssetDatalists();
     if (prefillFromConsumerTransport) {
         const ct = order.consumerTransport && typeof order.consumerTransport === "object" ? order.consumerTransport : null;
-        if (ct) {
+        const src =
+            ct && ((Array.isArray(ct.trailerNumbers) && ct.trailerNumbers.length) || String(ct.driverName || "").trim())
+                ? ct
+                : hasInboundTransportInfo(order)
+                  ? order.transportInfo
+                  : null;
+        if (src) {
             const ttEl = document.getElementById("transportTrailerNumbers");
             const drvEl = document.getElementById("transportDriverName");
-            if (ttEl && Array.isArray(ct.trailerNumbers) && ct.trailerNumbers.length) {
-                ttEl.value = ct.trailerNumbers.map((x) => String(x || "").trim()).filter(Boolean).join(", ");
+            if (ttEl && Array.isArray(src.trailerNumbers) && src.trailerNumbers.length) {
+                ttEl.value = src.trailerNumbers.map((x) => String(x || "").trim()).filter(Boolean).join(", ");
             }
-            if (drvEl && ct.driverName) drvEl.value = String(ct.driverName).trim();
+            if (drvEl && src.driverName) drvEl.value = String(src.driverName).trim();
         }
     }
     document.getElementById('transportStartModal').classList.add('active');
@@ -3860,6 +3926,7 @@ document.getElementById('transportStartForm').addEventListener('submit', (e) => 
         const legInfo = { trailerNumbers, driverName };
         if (isExFactoryOrder(order)) {
             order.transportInfo = legInfo;
+            order.consumerTransport = null;
         } else {
             order.emptyLegReturnInfo = legInfo;
         }

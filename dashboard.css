@@ -2286,18 +2286,48 @@ body.theme-light .order-item {
     align-self: flex-end;
 }
 
-/* 주문 카드 상단 배너: 납품일시·수요자·공급자·T/T·ETA·출하·회차·상태 */
-.order-card-banner {
-    margin: -0.55rem -0.65rem 0.45rem;
-    padding: 0.5rem 0.65rem 0.55rem;
-    background: rgba(148, 163, 184, 0.09);
-    border-radius: 9px 9px 0 0;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+/* 주문 목록: 카드 공통 열 헤더(목록 최상단 1회, 스티키) */
+.orders-list-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-width: 0;
 }
 
-body.theme-light .order-card-banner {
-    background: rgba(241, 245, 249, 0.92);
-    border-bottom-color: rgba(100, 116, 139, 0.22);
+.orders-column-header {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    margin: 0 0 0.35rem;
+    padding: 0.38rem 0.5rem;
+    background: rgba(30, 41, 59, 0.96);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 8px;
+    backdrop-filter: blur(6px);
+}
+
+body.theme-light .orders-column-header {
+    background: rgba(248, 250, 252, 0.97);
+    border-color: rgba(100, 116, 139, 0.28);
+}
+
+.orders-column-header-grid .order-banner-label {
+    margin-bottom: 0;
+}
+
+.order-card-data-row {
+    width: 100%;
+    min-width: 0;
+}
+
+.order-row-counterpart-name[title] {
+    cursor: help;
+    text-decoration: underline dotted rgba(148, 163, 184, 0.5);
+    text-underline-offset: 2px;
+}
+
+body.theme-light .order-row-counterpart-name[title] {
+    text-decoration-color: rgba(100, 116, 139, 0.42);
 }
 
 .order-card-banner-grid {

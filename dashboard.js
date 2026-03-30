@@ -293,6 +293,16 @@ function hasInboundTransportInfo(order) {
 }
 
 /** 카드·배너: 운송 시작/공차 출발 후 transportInfo 우선, 없으면 출하도 사전 수요자 입력 */
+/** HTML 속성용 이스케이프 (title 등) */
+function escapeHtmlAttr(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/\r?\n/g, ' ')
+        .trim();
+}
+
 function getOrderCardTransportDisplay(order) {
     if (hasInboundTransportInfo(order)) {
         const ti = order.transportInfo;
@@ -1697,7 +1707,7 @@ const ORDER_STATUSES = [
     { value: 'change_accepted', label: '변경 접수' },
     { value: 'empty_in_transit', label: '공차 운송 중' },
     { value: 'empty_arrived', label: '공차 도착' },
-    { value: 'in_transit', label: '운송 중' },
+    { value: 'in_transit', label: '실차 운송 중' },
     { value: 'arrived', label: '도착' },
     { value: 'collecting', label: '회수 중' },
     { value: 'completed', label: '완료' },
@@ -2025,7 +2035,9 @@ function renderConsumerView() {
     }
     myOrders = applyConsumerDashboardStatFilter(myOrders);
 
+    const consumerColHeader = document.getElementById('consumerOrdersColumnHeader');
     if (myOrders.length === 0) {
+        if (consumerColHeader) consumerColHeader.hidden = true;
         if (!allMyOrders.length) {
             list.innerHTML = '<div class="empty-state"><p>등록된 주문이 없습니다.</p><p>새 주문을 등록하세요.</p></div>';
         } else if (q) {
@@ -2044,6 +2056,8 @@ function renderConsumerView() {
         updateDashboardStats();
         return;
     }
+
+    if (consumerColHeader) consumerColHeader.hidden = false;
 
     list.innerHTML = myOrders.map(order => {
         const cr = order.changeRequest;
@@ -2111,13 +2125,15 @@ function renderConsumerView() {
             order.supplyCondition === 'ex_factory'
                 ? getSupplierShippingAddress(order.supplierName) || '—'
                 : order.address || '—';
+        const supplierAddrTitle =
+            counterpartAddrC && counterpartAddrC !== '—' ? escapeHtmlAttr(counterpartAddrC) : '';
         const etaToolbarC = formatOrderEtaToolbarHtml(order);
         const etaCellInnerC = etaToolbarC
             ? `<div class="supplier-tl-eta-toolbar">${etaToolbarC}</div>`
             : `<div class="supplier-tl-value supplier-tl-eta">${travelTimeTextC}</div>`;
 
         const isCancelled = order.status === 'cancelled';
-        const statusLabelC = getStatusLabel(order.status);
+        const statusLabelC = getStatusLabel(normalizeStatus(order.status));
         const decisionActionsRow = hasDecisionRequest
             ? `<div class="order-actions order-actions--footer order-actions--decision">${decisionButtons}</div>`
             : '';
@@ -2126,26 +2142,21 @@ function renderConsumerView() {
             actionButtons ? `<div class="order-actions order-actions--footer">${actionButtons}</div>` : '',
         ].filter(Boolean).join('');
 
-        const orderBannerConsumer = `
-            <div class="order-card-banner">
+        const orderDataRowConsumer = `
+            <div class="order-card-data-row">
                 <div class="order-card-banner-grid">
                     <div class="order-banner-cell">
-                        <span class="order-banner-label">납품일시</span>
                         <div class="order-banner-value order-banner-datetime">
                             <span class="order-datetime">${formatOrderDateTime(order)}</span>
                             <span class="supply-condition-badge ${supplyBadgeClassC}">${getSupplyConditionLabel(order)}</span>
                         </div>
                     </div>
                     <div class="order-banner-cell">
-                        <span class="order-banner-label">공급자</span>
                         <div class="order-banner-value">
-                            <div class="order-banner-strong">${order.supplierName || '—'}</div>
-                            <div class="order-banner-divider"></div>
-                            <div class="order-banner-muted">${counterpartAddrC}</div>
+                            <div class="order-banner-strong order-row-counterpart-name"${supplierAddrTitle ? ` title="${supplierAddrTitle}"` : ''}>${order.supplierName || '—'}</div>
                         </div>
                     </div>
                     <div class="order-banner-cell">
-                        <span class="order-banner-label">T/T정보</span>
                         <div class="order-banner-value">
                             <div class="order-banner-strong">${ttLineC}</div>
                             <div class="order-banner-divider"></div>
@@ -2154,19 +2165,15 @@ function renderConsumerView() {
                         </div>
                     </div>
                     <div class="order-banner-cell">
-                        <span class="order-banner-label">예상도착(소요)</span>
                         <div class="order-banner-value">${etaCellInnerC}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <span class="order-banner-label">출하</span>
                         <div class="order-banner-value ${!shipmentDtC ? 'order-banner-muted' : ''}">${shipmentDisplayC}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <span class="order-banner-label">회차</span>
                         <div class="order-banner-value ${!returnDtC ? 'order-banner-muted' : ''}">${returnDisplayC}</div>
                     </div>
                     <div class="order-banner-cell order-banner-cell--status">
-                        <span class="order-banner-label">주문상태</span>
                         <div class="order-banner-value order-banner-status-wrap">
                             <span class="order-status ${status}">${statusLabelC}</span>
                             ${isCancelled ? `<button type="button" class="order-remove-cancelled-btn" data-action="remove-cancelled-consumer" data-id="${order.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
@@ -2177,7 +2184,7 @@ function renderConsumerView() {
 
         return `
         <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
-            ${orderBannerConsumer}
+            ${orderDataRowConsumer}
             <div class="order-card-toolbar">
                 <div class="order-card-toolbar-main">
                     <span class="order-card-order-id">주문번호 ${order.id}</span>
@@ -2318,7 +2325,9 @@ function renderSupplierOrdersCards() {
     }
     ordersForView = applySupplierDashboardStatFilter(ordersForView);
 
+    const supplierColHeader = document.getElementById('supplierOrdersColumnHeader');
     if (ordersForView.length === 0) {
+        if (supplierColHeader) supplierColHeader.hidden = true;
         const selected = dashboardStatFilters.supplier || 'all';
         if (sq) {
             listEl.innerHTML = '<div class="empty-state"><p>검색 조건에 맞는 주문이 없습니다.</p><p>검색어를 바꿔 보세요.</p></div>';
@@ -2329,6 +2338,8 @@ function renderSupplierOrdersCards() {
         }
         return;
     }
+
+    if (supplierColHeader) supplierColHeader.hidden = false;
 
     listEl.innerHTML = ordersForView.map(o => {
         const status = normalizeStatus(o.status);
@@ -2362,7 +2373,6 @@ function renderSupplierOrdersCards() {
 
         const isCancelled = o.status === 'cancelled';
 
-        const consumerDeclared = getConsumerDeclaredTransport(o);
         const showConsumerTransportBtn =
             o.supplyCondition === "ex_factory" &&
             normalizeStatus(o.status) === "empty_arrived" &&
@@ -2378,6 +2388,9 @@ function renderSupplierOrdersCards() {
             o.supplyCondition === 'delivery' && o.emptyLegReturnInfo
                 ? formatTransportInfoLine(o.emptyLegReturnInfo, '공차 회수')
                 : '';
+        const consumerAddrRaw = String(o.address || '').trim();
+        const consumerAddrTitleS =
+            consumerAddrRaw && consumerAddrRaw !== '—' ? escapeHtmlAttr(consumerAddrRaw) : '';
 
         const actionButtons = `
             ${advanceAction ? `<button type="button" class="btn btn-small btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : ''}
@@ -2397,26 +2410,21 @@ function renderSupplierOrdersCards() {
             actionButtons ? `<div class="order-actions order-actions--footer order-actions--supplier">${actionButtons}</div>` : '',
         ].filter(Boolean).join('');
 
-        const orderBannerSupplier = `
-            <div class="order-card-banner">
+        const orderDataRowSupplier = `
+            <div class="order-card-data-row">
                 <div class="order-card-banner-grid">
                     <div class="order-banner-cell">
-                        <span class="order-banner-label">납품일시</span>
                         <div class="order-banner-value order-banner-datetime">
                             <span class="order-datetime">${formatOrderDateTime(o)}</span>
                             <span class="supply-condition-badge ${supplyBadgeClass}">${supplyLabel}</span>
                         </div>
                     </div>
                     <div class="order-banner-cell">
-                        <span class="order-banner-label">수요자</span>
                         <div class="order-banner-value">
-                            <div class="order-banner-strong">${o.consumerName || '—'}</div>
-                            <div class="order-banner-divider"></div>
-                            <div class="order-banner-muted">${o.address || '—'}</div>
+                            <div class="order-banner-strong order-row-counterpart-name"${consumerAddrTitleS ? ` title="${consumerAddrTitleS}"` : ''}>${o.consumerName || '—'}</div>
                         </div>
                     </div>
                     <div class="order-banner-cell">
-                        <span class="order-banner-label">T/T정보</span>
                         <div class="order-banner-value">
                             <div class="order-banner-strong">${ttLine}</div>
                             <div class="order-banner-divider"></div>
@@ -2425,19 +2433,15 @@ function renderSupplierOrdersCards() {
                         </div>
                     </div>
                     <div class="order-banner-cell">
-                        <span class="order-banner-label">예상도착(소요)</span>
                         <div class="order-banner-value">${etaCellInner}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <span class="order-banner-label">출하</span>
                         <div class="order-banner-value ${!shipmentDt ? 'order-banner-muted' : ''}">${shipmentDisplay}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <span class="order-banner-label">회차</span>
                         <div class="order-banner-value ${!returnDt ? 'order-banner-muted' : ''}">${returnDisplay}</div>
                     </div>
                     <div class="order-banner-cell order-banner-cell--status">
-                        <span class="order-banner-label">주문상태</span>
                         <div class="order-banner-value order-banner-status-wrap">
                             <span class="order-status ${status}">${supplierStatus}</span>
                             ${isCancelled ? `<button type="button" class="order-remove-cancelled-btn" data-action="remove-cancelled-supplier" data-id="${o.id}" title="취소 주문 목록에서 삭제">&times;</button>` : ''}
@@ -2448,7 +2452,7 @@ function renderSupplierOrdersCards() {
 
         return `
         <div class="order-item order-item-supplier order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'has-change-request' : ''}" data-order-id="${o.id}">
-            ${orderBannerSupplier}
+            ${orderDataRowSupplier}
             <div class="order-card-toolbar">
                 <div class="order-card-toolbar-main">
                     <span class="order-card-order-id">주문번호 ${o.id}</span>

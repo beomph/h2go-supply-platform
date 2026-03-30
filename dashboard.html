@@ -40,9 +40,6 @@
                     <option value="supplier">판매모드</option>
                 </select>
             </li>
-            <li class="nav-fleet-item is-hidden" id="fleetNavItem">
-                <a href="transport-assets.html" class="nav-fleet-link">운송 자원</a>
-            </li>
             <li class="logout-item"><button id="logoutBtn" type="button" class="btn btn-secondary btn-tiny">로그아웃</button></li>
         </ul>
     </nav>
@@ -142,44 +139,6 @@
                                 <input type="text" id="orderAddress" list="orderAddressHistoryList" placeholder="예: 서울시 강남구 테헤란로 123 (도착도: 배달지)" required>
                                 <datalist id="orderAddressHistoryList"></datalist>
                             </div>
-                            <div id="consumerExFactoryTransportGroup" class="form-group is-hidden" aria-live="polite">
-                                <label id="consumerExFactoryTransportLabel">출하도(상차도) — 본인 운송 자원</label>
-                                <p class="form-hint-inline consumer-exfactory-hint">픽업에 투입할 T/T·기사를 입력하세요. 등록된 목록에서 선택하거나 신규로 입력할 수 있습니다.</p>
-                                <div class="consumer-exfactory-grid">
-                                    <div class="form-group consumer-exfactory-field">
-                                        <label for="orderConsumerTtInput">T/T 차량번호</label>
-                                        <div class="consumer-exfactory-input-row">
-                                            <input type="text" id="orderConsumerTtInput" list="orderConsumerTtDatalist" placeholder="목록 선택 또는 직접 입력 (여러 대는 쉼표로)" autocomplete="off">
-                                            <button type="button" class="btn btn-secondary btn-tiny" id="orderConsumerTtPickBtn">목록</button>
-                                        </div>
-                                        <datalist id="orderConsumerTtDatalist"></datalist>
-                                    </div>
-                                    <div class="form-group consumer-exfactory-field">
-                                        <label for="orderConsumerDriverInput">운송기사</label>
-                                        <div class="consumer-exfactory-input-row">
-                                            <input type="text" id="orderConsumerDriverInput" list="orderConsumerDriverDatalist" placeholder="목록 선택 또는 직접 입력" autocomplete="off">
-                                            <button type="button" class="btn btn-secondary btn-tiny" id="orderConsumerDriverPickBtn" type="button">목록</button>
-                                        </div>
-                                        <datalist id="orderConsumerDriverDatalist"></datalist>
-                                    </div>
-                                </div>
-                                <div class="consumer-exfactory-save-row">
-                                    <label class="consumer-exfactory-check">
-                                        <input type="checkbox" id="orderSaveConsumerTt"> 입력한 T/T를 운송 자원에 저장
-                                    </label>
-                                    <label class="consumer-exfactory-check">
-                                        <input type="checkbox" id="orderSaveConsumerDriver"> 입력한 기사를 운송 자원에 저장
-                                    </label>
-                                </div>
-                                <div class="form-group consumer-exfactory-settle-mode is-hidden" id="exFactoryConsumerSettleGroup">
-                                    <label id="exFactoryConsumerSettleLabel">출하도 물량 정산(수요자)</label>
-                                    <p class="form-hint-inline">공급자는 차압(부피)으로 정산합니다. 수요자가 유량계로 질량(kg) 정산을 병행할 경우에만 아래에서 선택하세요.</p>
-                                    <div class="exfactory-settle-radios" role="radiogroup" aria-labelledby="exFactoryConsumerSettleLabel">
-                                        <label class="consumer-exfactory-check"><input type="radio" name="exFactoryConsumerSettlementMode" value="pressure" checked> 차압만 (공급자 입력)</label>
-                                        <label class="consumer-exfactory-check"><input type="radio" name="exFactoryConsumerSettlementMode" value="flow"> 유량계 질량(kg) 병행 (실차 출발 후 수요자 입력)</label>
-                                    </div>
-                                </div>
-                            </div>
                             <div class="form-group">
                                 <label>요청 사항</label>
                                 <textarea id="orderNote" rows="2" placeholder="특별 요청사항을 입력하세요"></textarea>
@@ -189,28 +148,35 @@
 
                     <div class="my-orders-card">
                         <div class="my-orders-header">
-                            <div class="my-orders-header-title-row">
-                                <div class="my-orders-header-title">
-                                    <h3>주문 현황</h3>
+                            <h3>주문 현황</h3>
+                            <div class="orders-filter">
+                                <label for="ordersFromDate">조회기간</label>
+                                <div class="orders-filter-input-wrap">
+                                    <input type="date" id="ordersFromDate" class="orders-date-input">
+                                    <span class="range-separator">~</span>
+                                    <input type="date" id="ordersToDate" class="orders-date-input">
+                                    <button type="button" class="btn btn-tiny btn-secondary" id="ordersDateApplyBtn">조회</button>
                                 </div>
                             </div>
-                            <div class="my-orders-header-toolbar">
-                                <div class="orders-filter">
-                                    <span class="orders-filter-label" id="ordersPeriodLabel">조회기간</span>
-                                    <div class="orders-filter-input-wrap" role="group" aria-labelledby="ordersPeriodLabel">
-                                        <input type="date" id="ordersFromDate" class="orders-date-input" aria-label="조회 시작일">
-                                        <span class="range-separator" aria-hidden="true">~</span>
-                                        <input type="date" id="ordersToDate" class="orders-date-input" aria-label="조회 종료일">
-                                        <button type="button" class="btn btn-tiny btn-secondary orders-date-apply-btn" id="ordersDateApplyBtn">조회</button>
-                                    </div>
-                                </div>
-                                <div class="orders-search-wrap">
-                                    <label class="visually-hidden" for="consumerOrderSearch">주문 검색</label>
-                                    <input type="search" id="consumerOrderSearch" class="orders-search-input" placeholder="주문번호·주소·공급자 검색" autocomplete="off" enterkeyhint="search">
-                                </div>
+                            <div class="orders-search-wrap">
+                                <label class="visually-hidden" for="consumerOrderSearch">주문 검색</label>
+                                <input type="search" id="consumerOrderSearch" class="orders-search-input" placeholder="주문번호·주소·공급자 검색" autocomplete="off" enterkeyhint="search">
                             </div>
                         </div>
-                        <div id="consumerOrdersList" class="orders-list"></div>
+                        <div class="orders-list-stack">
+                            <div id="consumerOrdersColumnHeader" class="orders-column-header" hidden>
+                                <div class="order-card-banner-grid orders-column-header-grid">
+                                    <div class="order-banner-cell"><span class="order-banner-label">납품일시</span></div>
+                                    <div class="order-banner-cell"><span class="order-banner-label">공급자</span></div>
+                                    <div class="order-banner-cell"><span class="order-banner-label">T/T정보</span></div>
+                                    <div class="order-banner-cell"><span class="order-banner-label">예상도착(소요)</span></div>
+                                    <div class="order-banner-cell"><span class="order-banner-label">출하</span></div>
+                                    <div class="order-banner-cell"><span class="order-banner-label">회차</span></div>
+                                    <div class="order-banner-cell order-banner-cell--status"><span class="order-banner-label">주문상태</span></div>
+                                </div>
+                            </div>
+                            <div id="consumerOrdersList" class="orders-list"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -264,7 +230,7 @@
                     <div class="form-group supplier-add-form">
                         <label for="newSupplierName">공급자 추가</label>
                         <div class="supplier-add-row">
-                            <input type="text" id="newSupplierName" placeholder="공급자명" autocomplete="off">
+                            <input type="text" id="newSupplierName" placeholder="공급자명 (예: KOGAS)" autocomplete="off">
                             <input type="text" id="newSupplierAddress" placeholder="출하 주소 (선택)" autocomplete="off">
                             <button type="button" class="btn btn-primary btn-tiny" id="addSupplierBtn">추가</button>
                         </div>
@@ -283,28 +249,35 @@
             <div class="supplier-content">
                 <div class="supplier-orders-card">
                     <div class="my-orders-header supplier-orders-header">
-                        <div class="my-orders-header-title-row">
-                            <div class="my-orders-header-title">
-                                <h3>주문 현황</h3>
+                        <h3>주문 현황</h3>
+                        <div class="orders-filter">
+                            <label for="supplierFromDate">조회기간</label>
+                            <div class="orders-filter-input-wrap supplier-range-inputs">
+                                <input type="date" id="supplierFromDate" class="orders-date-input">
+                                <span class="range-separator">~</span>
+                                <input type="date" id="supplierToDate" class="orders-date-input">
+                                <button type="button" class="btn btn-tiny btn-secondary" id="supplierDateApplyBtn">조회</button>
                             </div>
                         </div>
-                        <div class="my-orders-header-toolbar">
-                            <div class="orders-filter">
-                                <span class="orders-filter-label" id="supplierPeriodLabel">조회기간</span>
-                                <div class="orders-filter-input-wrap" role="group" aria-labelledby="supplierPeriodLabel">
-                                    <input type="date" id="supplierFromDate" class="orders-date-input" aria-label="조회 시작일">
-                                    <span class="range-separator" aria-hidden="true">~</span>
-                                    <input type="date" id="supplierToDate" class="orders-date-input" aria-label="조회 종료일">
-                                    <button type="button" class="btn btn-tiny btn-secondary orders-date-apply-btn" id="supplierDateApplyBtn">조회</button>
-                                </div>
-                            </div>
-                            <div class="orders-search-wrap">
-                                <label class="visually-hidden" for="supplierOrderSearch">주문 검색</label>
-                                <input type="search" id="supplierOrderSearch" class="orders-search-input" placeholder="주문번호·주소·구매자 검색" autocomplete="off" enterkeyhint="search">
-                            </div>
+                        <div class="orders-search-wrap">
+                            <label class="visually-hidden" for="supplierOrderSearch">주문 검색</label>
+                            <input type="search" id="supplierOrderSearch" class="orders-search-input" placeholder="주문번호·주소·구매자 검색" autocomplete="off" enterkeyhint="search">
                         </div>
                     </div>
-                    <div id="supplierOrdersList" class="orders-list"></div>
+                    <div class="orders-list-stack">
+                        <div id="supplierOrdersColumnHeader" class="orders-column-header" hidden>
+                            <div class="order-card-banner-grid orders-column-header-grid">
+                                <div class="order-banner-cell"><span class="order-banner-label">납품일시</span></div>
+                                <div class="order-banner-cell"><span class="order-banner-label">수요자</span></div>
+                                <div class="order-banner-cell"><span class="order-banner-label">T/T정보</span></div>
+                                <div class="order-banner-cell"><span class="order-banner-label">예상도착(소요)</span></div>
+                                <div class="order-banner-cell"><span class="order-banner-label">출하</span></div>
+                                <div class="order-banner-cell"><span class="order-banner-label">회차</span></div>
+                                <div class="order-banner-cell order-banner-cell--status"><span class="order-banner-label">주문상태</span></div>
+                            </div>
+                        </div>
+                        <div id="supplierOrdersList" class="orders-list"></div>
+                    </div>
                 </div>
                 
                 <div class="supplier-bottom-grid">
@@ -356,97 +329,23 @@
         </div>
     </div>
 
-    <!-- 출하도: 수요자 유량계 질량(kg) 병행 입력 -->
-    <div id="exFactoryFlowKgModal" class="modal">
-        <div class="modal-content modal-content--wide">
-            <button type="button" class="modal-close" id="exFactoryFlowKgModalClose" aria-label="닫기">&times;</button>
-            <h3>유량계 질량 정산 (출하도)</h3>
-            <p class="form-hint-inline">T/T별 유량계 기준 입고·출고 지침(kg)을 입력하면 사용 질량(kg)이 계산됩니다. 공급자 차압 정산과 별도로 저장됩니다.</p>
-            <form id="exFactoryFlowKgForm" class="order-form">
-                <input type="hidden" id="exFactoryFlowKgOrderId" value="">
-                <div id="exFactoryFlowKgTrailers" class="delivery-settle-trailers"></div>
-                <button type="submit" class="btn btn-primary">저장</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- 도착도: 실차 도착 후 물량정산 (T/T별) -->
-    <div id="deliverySettlementModal" class="modal">
-        <div class="modal-content modal-content--wide delivery-settlement-modal">
-            <button type="button" class="modal-close" id="deliverySettlementModalClose" aria-label="닫기">&times;</button>
-            <h3>물량 정산 (도착도 · 실차 도착)</h3>
-            <p class="form-hint-inline delivery-settlement-intro">실차 입고 압력과 전입고 공차 잔압을 입력한 뒤, 정산 방식을 선택하고 기준값 대비 현재값을 입력하면 차이가 자동 계산됩니다. T/T마다 별도 저장됩니다.</p>
-            <form id="deliverySettlementForm" class="order-form">
-                <input type="hidden" id="deliverySettleOrderId" value="">
-                <input type="hidden" id="deliverySettleChainPrevId" value="">
-                <div class="form-group">
-                    <label for="deliverySettleVolume">내용적 (m³) — 차압 정산 시 사용</label>
-                    <input type="number" id="deliverySettleVolume" min="0.1" step="0.1" value="22" required>
-                </div>
-                <div id="deliverySettleTrailers" class="delivery-settle-trailers"></div>
-                <button type="submit" class="btn btn-primary">저장 후 공차 회수 진행</button>
-            </form>
-        </div>
-    </div>
-
     <!-- 운송 시작 입력 모달 (T/T 번호, 운송기사) -->
     <div id="transportStartModal" class="modal">
         <div class="modal-content">
             <button class="modal-close" aria-label="닫기">&times;</button>
-            <h3 id="transportStartModalTitle">운송 시작 정보 입력</h3>
+            <h3>운송 시작 정보 입력</h3>
             <form id="transportStartForm" class="order-form">
                 <input type="hidden" id="transportStartOrderId">
-                <input type="hidden" id="transportStartMode" value="delivery">
-                <div class="form-group">
-                    <label for="transportDepartureLocal">실제 출발 일시</label>
-                    <input type="datetime-local" id="transportDepartureLocal" class="order-date-mobile" required>
-                    <p class="form-hint-inline transport-modal-hint">기본값은 이 창을 연 시각입니다. T/T 교체·대기 시간은 약 15분으로 일정에 반영됩니다.</p>
-                </div>
                 <div class="form-group">
                     <label for="transportTrailerNumbers">튜브트레일러(T/T) 번호</label>
-                    <div class="transport-modal-input-row">
-                        <input type="text" id="transportTrailerNumbers" list="transportTrailerDatalist" placeholder="등록 목록에서 선택하거나 직접 입력 (쉼표로 구분)" required autocomplete="off">
-                        <button type="button" class="btn btn-secondary btn-tiny" id="transportTtPickBtn">등록 T/T</button>
-                    </div>
-                    <datalist id="transportTrailerDatalist"></datalist>
-                    <p class="form-hint-inline transport-modal-hint">운송 자원 페이지에서 T/T를 등록하면 여기서 선택할 수 있습니다.</p>
+                    <input type="text" id="transportTrailerNumbers" placeholder="예: T-01, T-02 (쉼표로 구분)" required>
                 </div>
                 <div class="form-group">
                     <label for="transportDriverName">운송기사</label>
-                    <div class="transport-modal-input-row">
-                        <input type="text" id="transportDriverName" list="transportDriverDatalist" placeholder="등록 목록에서 선택하거나 직접 입력" required autocomplete="off">
-                        <button type="button" class="btn btn-secondary btn-tiny" id="transportDriverPickBtn">등록 기사</button>
-                    </div>
-                    <datalist id="transportDriverDatalist"></datalist>
+                    <input type="text" id="transportDriverName" placeholder="예: 홍길동" required>
                 </div>
-                <div id="transportExFactoryChargeGroup" class="is-hidden transport-exfactory-charge-block">
-                    <p class="form-hint-inline transport-modal-hint">충전 시작 시 입고압력 → 실차 출발 시 출고압력을 입력하세요. 차압×내용적으로 부피(m³)가 산정됩니다.</p>
-                    <div class="form-group">
-                        <label for="transportChargeVolumeM3">T/T 내용적 (m³)</label>
-                        <input type="number" id="transportChargeVolumeM3" min="0.1" step="0.1" value="22">
-                    </div>
-                    <div class="form-group">
-                        <label for="transportChargeInPressure">입고 압력 (bar, 충전 시작)</label>
-                        <input type="text" id="transportChargeInPressure" inputmode="decimal" placeholder="예: 45" autocomplete="off">
-                    </div>
-                    <div class="form-group">
-                        <label for="transportChargeOutPressure">출고 압력 (bar, 실차 출발 시)</label>
-                        <input type="text" id="transportChargeOutPressure" inputmode="decimal" placeholder="예: 200" autocomplete="off">
-                    </div>
-                    <p class="form-hint-inline" id="transportChargeVolumePreview"></p>
-                    <div id="transportExFactoryFlowConsumerHint" class="is-hidden form-hint-inline transport-modal-hint">이 주문은 수요자 유량계(kg) 병행입니다. 질량은 실차 출발 후 수요자 화면에서 입력합니다.</div>
-                </div>
-                <button type="submit" id="transportStartSubmitBtn" class="btn btn-primary">운송 시작</button>
+                <button type="submit" class="btn btn-primary">운송 시작</button>
             </form>
-        </div>
-    </div>
-
-    <!-- 운송 자원 목록 선택 (T/T / 기사) -->
-    <div id="transportAssetPickModal" class="modal">
-        <div class="modal-content modal-content--narrow">
-            <button type="button" class="modal-close" aria-label="닫기">&times;</button>
-            <h3 id="transportAssetPickTitle">등록 목록</h3>
-            <div id="transportAssetPickList" class="transport-asset-pick-list" role="listbox"></div>
         </div>
     </div>
 
@@ -560,8 +459,6 @@
         <div id="chatbotStatus" class="chatbot-status" aria-live="polite"></div>
     </section>
 
-    <script src="/h2go-config.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="dashboard.js"></script>
     <script src="chatbot.js"></script>

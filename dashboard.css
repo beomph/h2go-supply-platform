@@ -2345,40 +2345,8 @@ body.theme-light .orders-column-header {
     align-items: center;
 }
 
-.order-tt-stack {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.22rem;
-    min-width: 0;
-}
-
 .order-tt-num {
     line-height: 1.25;
-}
-
-.order-tt-line-solid {
-    display: block;
-    border: none;
-    border-top: 1px solid rgba(148, 163, 184, 0.55);
-    margin: 0.12rem 0 0.06rem;
-    padding: 0;
-    height: 0;
-    width: 100%;
-}
-
-body.theme-light .order-tt-line-solid {
-    border-top-color: rgba(100, 116, 139, 0.5);
-}
-
-.order-driver-below {
-    font-size: 0.76rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    line-height: 1.3;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .order-card-banner-grid {
@@ -2403,6 +2371,11 @@ body.theme-light .order-tt-line-solid {
 
     .order-card-banner-grid {
         grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+
+    /* 납품일시 열이 과도하게 좁아지며 시각 문자열이 깨지는 것 방지 */
+    .order-card-data-row .order-card-banner-grid {
+        grid-template-columns: minmax(11rem, 1.25fr) repeat(6, minmax(0, 1fr));
     }
 }
 
@@ -2459,9 +2432,11 @@ body.theme-light .order-banner-divider {
     min-width: 0;
 }
 
+/* flex에서 min-width:0이면 납품시각 문자열이 세로로 한 글자씩 깨질 수 있음 */
 .order-datetime-with-badge-inline .order-datetime {
-    flex: 0 1 auto;
-    min-width: 0;
+    flex: 0 0 auto;
+    min-width: max-content;
+    white-space: nowrap;
 }
 
 .order-datetime-with-badge-inline .supply-condition-badge {
@@ -2521,6 +2496,24 @@ body.theme-light .order-card-toolbar {
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.01em;
+}
+
+.order-card-toolbar-meta-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.85rem;
+    min-width: 0;
+}
+
+.order-card-toolbar-driver-name {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: min(14rem, 100%);
 }
 
 .order-card-eta {

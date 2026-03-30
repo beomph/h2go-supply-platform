@@ -2138,10 +2138,7 @@ function renderConsumerView() {
                     </div>
                     <div class="order-banner-cell">
                         <div class="order-banner-value">
-                            <div class="order-tt-stack">
-                                <div class="order-banner-strong order-tt-num">${ttLineC}</div>
-                                ${driverLineC && driverLineC !== "—" ? `<hr class="order-tt-line-solid" aria-hidden="true"><div class="order-driver-below">${driverLineC}</div>` : ""}
-                            </div>
+                            <div class="order-banner-strong order-tt-num">${ttLineC}</div>
                             ${emptyReturnNoteC ? `<div class="order-banner-transport-note">${emptyReturnNoteC}</div>` : ''}
                         </div>
                     </div>
@@ -2168,7 +2165,10 @@ function renderConsumerView() {
             ${orderDataRowConsumer}
             <div class="order-card-toolbar">
                 <div class="order-card-toolbar-main">
-                    <span class="order-card-order-id">주문번호 ${order.id}</span>
+                    <div class="order-card-toolbar-meta-inline">
+                        <span class="order-card-order-id">주문번호 ${order.id}</span>
+                        ${driverLineC && driverLineC !== "—" ? `<span class="order-card-toolbar-driver-name">${driverLineC}</span>` : ""}
+                    </div>
                 </div>
                 ${toolbarActions ? `<div class="order-card-toolbar-actions">${toolbarActions}</div>` : ''}
             </div>
@@ -2403,10 +2403,7 @@ function renderSupplierOrdersCards() {
                     </div>
                     <div class="order-banner-cell">
                         <div class="order-banner-value">
-                            <div class="order-tt-stack">
-                                <div class="order-banner-strong order-tt-num">${ttLine}</div>
-                                ${driverLine && driverLine !== "—" ? `<hr class="order-tt-line-solid" aria-hidden="true"><div class="order-driver-below">${driverLine}</div>` : ""}
-                            </div>
+                            <div class="order-banner-strong order-tt-num">${ttLine}</div>
                             ${emptyReturnNoteS ? `<div class="order-banner-transport-note">${emptyReturnNoteS}</div>` : ''}
                         </div>
                     </div>
@@ -2433,7 +2430,10 @@ function renderSupplierOrdersCards() {
             ${orderDataRowSupplier}
             <div class="order-card-toolbar">
                 <div class="order-card-toolbar-main">
-                    <span class="order-card-order-id">주문번호 ${o.id}</span>
+                    <div class="order-card-toolbar-meta-inline">
+                        <span class="order-card-order-id">주문번호 ${o.id}</span>
+                        ${driverLine && driverLine !== "—" ? `<span class="order-card-toolbar-driver-name">${driverLine}</span>` : ""}
+                    </div>
                 </div>
                 ${supplierToolbarActions ? `<div class="order-card-toolbar-actions">${supplierToolbarActions}</div>` : ''}
             </div>

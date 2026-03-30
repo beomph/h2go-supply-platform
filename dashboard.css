@@ -3061,6 +3061,33 @@ body.theme-light .order-item-supplier .order-card-footer-grid .order-footer-cell
     max-width: 100%;
 }
 
+/* 구매: 실선 아래 주문상태 열 — 버튼 전부 한 가로줄(줄바꿈 없음), 열 중앙 */
+.order-item:not(.order-item-supplier) .order-footer-cell--status-actions {
+    align-items: center;
+    justify-content: center;
+}
+
+.order-item:not(.order-item-supplier) .order-footer-status-actions-inner {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.28rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.order-item:not(.order-item-supplier) .order-footer-status-actions-inner .order-actions {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+}
+
+.order-item:not(.order-item-supplier) .order-footer-status-actions-inner .order-actions .btn-small {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
 .order-footer-cell--id .order-card-order-id {
     display: block;
     word-break: break-all;

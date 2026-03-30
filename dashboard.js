@@ -2389,16 +2389,6 @@ function renderConsumerView() {
         const { etaCellTop: etaCellInnerC, etaCellFooter: etaFooterC } = buildOrderCardEtaCells(order, travelTimeTextC, "consumer");
         const shipmentFooterC = formatBannerDateTimeTimeOnlyHtml(shipmentDtC ? shipmentDisplayC : null, { muted: !shipmentDtC });
         const returnFooterC = formatBannerDateTimeTimeOnlyHtml(returnDtC ? returnDisplayC : null, { muted: !returnDtC });
-        const footerGridConsumer = buildOrderCardFooterGridHtml({
-            orderId: order.id,
-            deliveryAddress: order.address,
-            driverLine: driverLineC,
-            transportNoteHtml: emptyReturnNoteFooterC,
-            etaFooterHtml: etaFooterC,
-            shipmentFooterHtml: shipmentFooterC,
-            returnFooterHtml: returnFooterC,
-            variant: "consumer",
-        });
 
         const isCancelled = order.status === 'cancelled';
         const statusLabelC = getConsumerStatusDisplayLabel(order);
@@ -2409,6 +2399,18 @@ function renderConsumerView() {
             decisionActionsRow,
             actionButtons ? `<div class="order-actions order-actions--footer">${actionButtons}</div>` : '',
         ].filter(Boolean).join('');
+
+        const footerGridConsumer = buildOrderCardFooterGridHtml({
+            orderId: order.id,
+            deliveryAddress: order.address,
+            driverLine: driverLineC,
+            transportNoteHtml: emptyReturnNoteFooterC,
+            etaFooterHtml: etaFooterC,
+            shipmentFooterHtml: shipmentFooterC,
+            returnFooterHtml: returnFooterC,
+            variant: "consumer",
+            footerStatusActionsHtml: toolbarActions,
+        });
 
         const orderDataRowConsumer = `
             <div class="order-card-data-row">
@@ -2454,7 +2456,6 @@ function renderConsumerView() {
                 <div class="order-card-toolbar-primary">
                     ${footerGridConsumer}
                 </div>
-                ${toolbarActions ? `<div class="order-card-toolbar-actions">${toolbarActions}</div>` : ""}
             </div>
             ${(changeBadge || cancelBadge) ? `
             <div class="order-item-foot">

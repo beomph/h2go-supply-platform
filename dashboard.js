@@ -313,11 +313,10 @@ function getOrderCardTransportDisplay(order) {
     return { ttLine: "—", driverLine: "—" };
 }
 
-// 주문별 운송시간(분): 출하도는 0(픽업), 도착도는 납품지까지 시간
+// 주문별 운송시간(분): 납품지 주소 기준 편도(출하도·도착도 공통, 예상 소요 표시용)
 function getOrderTravelTimeMinutes(order) {
     if (!order) return 0;
-    if (order.supplyCondition === 'ex_factory') return 0;
-    return getTravelTimeFromAddress(order.address);
+    return getShipmentLegTravelMinutes(order);
 }
 
 /** 출하·회차 일정용 이동시간(분): 도착도·출하도 모두 납품지까지 이동시간으로 간주 */
@@ -1042,6 +1041,8 @@ function formatOrderDateTime(order) {
 }
 
 const TT_SWAP_MINUTES = 15;
+/** 출하도: 공급자 T/T 충전 소요(분) — 예·회차 시각 산출에 사용 */
+const EX_FACTORY_CHARGE_MINUTES = 150;
 const DEFAULT_TT_VOLUME_M3 = 22;
 
 /** @returns {string[]} */
@@ -1183,6 +1184,31 @@ function addMinutesToDate(base, deltaMin) {
     return new Date(base.getTime() + deltaMin * 60 * 1000);
 }
 
+/** 주문 납품 약속 일시 → Date (출하도에서는 실차 납품 도착 목표 시각으로 해석) */
+function orderDateTimeToDate(order) {
+    if (!order) return null;
+    const y = Number(order.year);
+    const m = Number(order.month);
+    const d = Number(order.day);
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+    const [hRaw = "0", mRaw = "0"] = String(order.time || "0:0").split(":");
+    const hh = Math.max(0, Math.min(23, parseInt(hRaw, 10) || 0));
+    const mm = Math.max(0, Math.min(59, parseInt(mRaw, 10) || 0));
+    const dt = new Date(y, m - 1, d, hh, mm, 0, 0);
+    return Number.isFinite(dt.getTime()) ? dt : null;
+}
+
+/**
+ * 출하도·구매자: 공차 미출발 시 — 납품 목표(실차 도착)에서 (편도×2 + 충전)을 빼 역산한 공차 출발 예정
+ */
+function getExFactoryConsumerEmptyDepartEstimate(order) {
+    if (!isExFactoryOrder(order)) return null;
+    const due = orderDateTimeToDate(order);
+    const travel = getShipmentLegTravelMinutes(order);
+    if (!due || travel <= 0) return null;
+    return addMinutesToDate(due, -(travel * 2 + EX_FACTORY_CHARGE_MINUTES));
+}
+
 /** 실차(또는 도착도 본 운송) 기준: 출하=시작 시각, 예상도착=시작+편도, 회차=시작+2*편도+T/T교체 */
 function getLiveTransportScheduleStrings(order) {
     const anchor = getTransportStartedAtDate(order);
@@ -1211,33 +1237,31 @@ function etaFromAnchorIso(iso, travelMin) {
     return formatCalendarDateTimeFromDate(arrive);
 }
 
-/** 출하도·도착도: 운송이 실제로 진행 중일 때만 ETA 1~2줄 (접수만 한 상태에서는 표시 안 함) */
-function getOrderEtaLines(order) {
+/**
+ * 예상도착(소요) 줄 — viewer: 구매/판매 카드에 따라 출하도 일정 해석이 다름
+ * - 출하도·구매: 실차 출고(transportStartedAt) 후에만 납품지 도착 예정
+ * - 출하도·판매: 도착도의 수요자와 유사 — 공차 운송 중이면 공급지 도착 예정, 실차 운송 중이면 납품지 도착 예정
+ */
+function getOrderEtaLines(order, viewer = "consumer") {
     const travelMin = getShipmentLegTravelMinutes(order);
     const st = normalizeStatus(order?.status);
     const lines = [];
     if (isExFactoryOrder(order)) {
-        if (["requested", "accepted", "change_accepted", "empty_arrived"].includes(st)) return lines;
-        if (st === "empty_in_transit" && order.emptyLegStartedAt) {
+        if (viewer === "consumer") {
+            if (st === "in_transit" && order.transportStartedAt && travelMin > 0) {
+                const t = etaFromAnchorIso(order.transportStartedAt, travelMin);
+                if (t) lines.push({ prefix: "", text: t });
+            }
+            return lines;
+        }
+        if (st === "empty_in_transit" && order.emptyLegStartedAt && travelMin > 0) {
             const t = etaFromAnchorIso(order.emptyLegStartedAt, travelMin);
             if (t) lines.push({ prefix: "", text: t });
             return lines;
         }
-        if (st === "in_transit") {
-            if (order.emptyLegStartedAt) {
-                const t1 = etaFromAnchorIso(order.emptyLegStartedAt, travelMin);
-                if (t1) lines.push({ prefix: "", text: t1 });
-            }
-            if (order.transportStartedAt) {
-                const t2 = etaFromAnchorIso(order.transportStartedAt, travelMin);
-                if (t2) {
-                    lines.push({
-                        prefix: "",
-                        text: t2,
-                    });
-                }
-            }
-            return lines;
+        if (st === "in_transit" && order.transportStartedAt && travelMin > 0) {
+            const t = etaFromAnchorIso(order.transportStartedAt, travelMin);
+            if (t) lines.push({ prefix: "", text: t });
         }
         return lines;
     }
@@ -1331,8 +1355,8 @@ function formatOrderBannerTtStackHtml(ttLine, driverLine, extraHtml = "") {
     return `<div class="order-banner-tt-stack"><div class="order-banner-strong order-tt-num">${tt}</div>${driverPart}${extraHtml || ""}</div>`;
 }
 
-function formatOrderEtaToolbarHtml(order) {
-    const lines = getOrderEtaLines(order);
+function formatOrderEtaToolbarHtml(order, viewer = "consumer") {
+    const lines = getOrderEtaLines(order, viewer);
     if (!lines.length) return "";
     const segments = lines
         .filter((l) => l.text)
@@ -1344,8 +1368,8 @@ function formatOrderEtaToolbarHtml(order) {
     return `<div class="order-card-eta-toolbar order-card-eta-toolbar--stacked">${segments.join("")}</div>`;
 }
 
-function formatOrderEtaDateToolbarHtml(order) {
-    const lines = getOrderEtaLines(order).filter((l) => l.text);
+function formatOrderEtaDateToolbarHtml(order, viewer = "consumer") {
+    const lines = getOrderEtaLines(order, viewer).filter((l) => l.text);
     if (!lines.length) return "";
     const segments = lines.map((l) => {
         const stack = formatBannerDateTimeDateOnlyHtml(l.text, { muted: false });
@@ -1354,8 +1378,8 @@ function formatOrderEtaDateToolbarHtml(order) {
     return `<div class="order-card-eta-toolbar order-card-eta-toolbar--stacked order-card-eta-toolbar--dates-only">${segments.join("")}</div>`;
 }
 
-function formatOrderEtaTimeToolbarHtml(order) {
-    const lines = getOrderEtaLines(order).filter((l) => l.text);
+function formatOrderEtaTimeToolbarHtml(order, viewer = "consumer") {
+    const lines = getOrderEtaLines(order, viewer).filter((l) => l.text);
     if (!lines.length) return "";
     const segments = lines.map((l) => {
         const stack = formatBannerDateTimeTimeOnlyHtml(l.text, { muted: false });
@@ -1364,15 +1388,16 @@ function formatOrderEtaTimeToolbarHtml(order) {
     return `<div class="order-card-eta-toolbar order-card-eta-toolbar--stacked order-card-eta-toolbar--times-only">${segments.join("")}</div>`;
 }
 
-function buildOrderCardEtaCells(order, travelTimeText) {
-    const etaLines = getOrderEtaLines(order).filter((l) => l.text);
+function buildOrderCardEtaCells(order, travelTimeText, viewer = "consumer") {
+    const etaLines = getOrderEtaLines(order, viewer).filter((l) => l.text);
     let etaCellTop;
     let etaCellFooter;
     if (etaLines.length) {
         etaCellTop = `<div class="supplier-tl-value supplier-tl-eta"><div class="supplier-tl-eta-toolbar">${formatOrderEtaDateToolbarHtml(
-            order
+            order,
+            viewer
         )}</div></div>`;
-        etaCellFooter = `<div class="order-card-footer-eta-wrap">${formatOrderEtaTimeToolbarHtml(order)}</div>`;
+        etaCellFooter = `<div class="order-card-footer-eta-wrap">${formatOrderEtaTimeToolbarHtml(order, viewer)}</div>`;
     } else {
         etaCellTop = `<div class="supplier-tl-value supplier-tl-eta">${formatBannerDateTimeDateOnlyHtml(null, {
             muted: true,
@@ -1426,11 +1451,19 @@ function buildOrderCardFooterGridHtml({
     </div>`;
 }
 
-// 납품(또는 픽업) 약속 일시 기준, 이동시간을 뺀 출하 일시 (운송 미시작 시)
-function formatShipmentDateTime(order) {
+/**
+ * 출하·회차 표시 일시
+ * opts.viewer: 'consumer' | 'supplier' — 출하도는 공급자 화면에서 출하/회차 열 미사용(null)
+ */
+function formatShipmentDateTime(order, opts = {}) {
+    const viewer = opts.viewer || "consumer";
     if (!order) return null;
-    if (isExFactoryOrder(order) && !getTransportStartedAtDate(order) && getEmptyLegStartedAtDate(order)) {
-        return formatCalendarDateTimeFromDate(getEmptyLegStartedAtDate(order));
+    if (isExFactoryOrder(order)) {
+        if (viewer === "supplier") return null;
+        const emptyAt = getEmptyLegStartedAtDate(order);
+        if (emptyAt) return formatCalendarDateTimeFromDate(emptyAt);
+        const est = getExFactoryConsumerEmptyDepartEstimate(order);
+        return est ? formatCalendarDateTimeFromDate(est) : null;
     }
     const live = getLiveTransportScheduleStrings(order);
     if (live) return live.departStr;
@@ -1452,16 +1485,24 @@ function formatShipmentDateTime(order) {
     return `${year}/${month}/${day} ${timeStr}`;
 }
 
-// 약속 납품일시 + T/T교체 + 편도 (운송 미시작 시)
-function formatReturnDateTime(order) {
+/** 도착도: 약속 납품일시 + T/T교체 + 편도. 출하도·구매: 실차 도착 예정(또는 공차·충전·편도 반영 추정) */
+function formatReturnDateTime(order, opts = {}) {
+    const viewer = opts.viewer || "consumer";
     if (!order) return null;
-    if (isExFactoryOrder(order) && !getTransportStartedAtDate(order) && getEmptyLegStartedAtDate(order)) {
-        const anchor = getEmptyLegStartedAtDate(order);
+    if (isExFactoryOrder(order)) {
+        if (viewer === "supplier") return null;
         const travelMin = getShipmentLegTravelMinutes(order);
+        const loadedAt = getTransportStartedAtDate(order);
+        if (loadedAt && travelMin > 0) {
+            const arrive = addMinutesToDate(loadedAt, travelMin);
+            return formatCalendarDateTimeFromDate(arrive);
+        }
+        const anchor = getEmptyLegStartedAtDate(order) || getExFactoryConsumerEmptyDepartEstimate(order);
         if (anchor && travelMin > 0) {
-            const ret = addMinutesToDate(anchor, travelMin + TT_SWAP_MINUTES + travelMin);
+            const ret = addMinutesToDate(anchor, travelMin + EX_FACTORY_CHARGE_MINUTES + travelMin);
             return formatCalendarDateTimeFromDate(ret);
         }
+        return null;
     }
     const live = getLiveTransportScheduleStrings(order);
     if (live) return live.returnStr;
@@ -1487,7 +1528,7 @@ function formatReturnDateTime(order) {
 
 /** @deprecated 카드는 getOrderEtaLines / formatOrderEtaToolbarHtml 사용 */
 function formatExpectedArrivalDateTime(order) {
-    const lines = getOrderEtaLines(order);
+    const lines = getOrderEtaLines(order, "consumer");
     if (!lines.length) return null;
     return lines.map((l) => `${l.text}`).join(" · ");
 }
@@ -2326,8 +2367,8 @@ function renderConsumerView() {
 
         const travelTimeMinC = getOrderTravelTimeMinutes(order);
         const travelTimeTextC = travelTimeMinC === 0 ? '—' : `${travelTimeMinC}분`;
-        const shipmentDtC = formatShipmentDateTime(order);
-        const returnDtC = formatReturnDateTime(order);
+        const shipmentDtC = formatShipmentDateTime(order, { viewer: "consumer" });
+        const returnDtC = formatReturnDateTime(order, { viewer: "consumer" });
         const shipmentDisplayC = shipmentDtC || '—';
         const returnDisplayC = returnDtC || '—';
         const supplyBadgeClassC =
@@ -2340,7 +2381,7 @@ function renderConsumerView() {
         const emptyReturnNoteFooterC = emptyReturnNoteC
             ? `<div class="order-footer-transport-note">${escapeBannerHtml(emptyReturnNoteC)}</div>`
             : "";
-        const { etaCellTop: etaCellInnerC, etaCellFooter: etaFooterC } = buildOrderCardEtaCells(order, travelTimeTextC);
+        const { etaCellTop: etaCellInnerC, etaCellFooter: etaFooterC } = buildOrderCardEtaCells(order, travelTimeTextC, "consumer");
         const shipmentFooterC = formatBannerDateTimeTimeOnlyHtml(shipmentDtC ? shipmentDisplayC : null, { muted: !shipmentDtC });
         const returnFooterC = formatBannerDateTimeTimeOnlyHtml(returnDtC ? returnDisplayC : null, { muted: !returnDtC });
         const footerGridConsumer = buildOrderCardFooterGridHtml({
@@ -2595,8 +2636,8 @@ function renderSupplierOrdersCards() {
             normalizeStatus(o.status) === "empty_arrived" &&
             hasInboundTransportInfo(o);
 
-        const shipmentDt = formatShipmentDateTime(o);
-        const returnDt = formatReturnDateTime(o);
+        const shipmentDt = formatShipmentDateTime(o, { viewer: "supplier" });
+        const returnDt = formatReturnDateTime(o, { viewer: "supplier" });
         const shipmentDisplay = shipmentDt || '—';
         const returnDisplay = returnDt || '—';
 
@@ -2608,7 +2649,7 @@ function renderSupplierOrdersCards() {
         const emptyReturnNoteFooterS = emptyReturnNoteS
             ? `<div class="order-footer-transport-note">${escapeBannerHtml(emptyReturnNoteS)}</div>`
             : "";
-        const { etaCellTop: etaCellInner, etaCellFooter: etaFooterS } = buildOrderCardEtaCells(o, travelTimeText);
+        const { etaCellTop: etaCellInner, etaCellFooter: etaFooterS } = buildOrderCardEtaCells(o, travelTimeText, "supplier");
         const shipmentFooterS = formatBannerDateTimeTimeOnlyHtml(shipmentDt ? shipmentDisplay : null, { muted: !shipmentDt });
         const returnFooterS = formatBannerDateTimeTimeOnlyHtml(returnDt ? returnDisplay : null, { muted: !returnDt });
         const footerGridSupplier = buildOrderCardFooterGridHtml({
@@ -2819,7 +2860,7 @@ function openOrderMapModal(orderId) {
         <div class="map-info-row"><strong>공급조건:</strong> ${getSupplyConditionLabel(order)}</div>
         <div class="map-info-row"><strong>${isExFactory ? '픽업지' : '납품지'}:</strong> ${order.address}</div>
         <div class="map-info-row"><strong>트레일러:</strong> ${order.tubeTrailers}대</div>
-        <div class="map-info-row"><strong>${isExFactory ? '픽업' : '생산지→수요처 운송시간'}:</strong> ${isExFactory ? '—' : `약 ${travelTimeMin}분`}</div>
+        <div class="map-info-row"><strong>${isExFactory ? "구간당 편도(공차·실차 추정)" : "생산지→수요처 운송시간"}:</strong> 약 ${travelTimeMin}분</div>
     `;
 
     document.getElementById('orderMapModal').classList.add('active');

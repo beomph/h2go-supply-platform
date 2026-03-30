@@ -1188,19 +1188,19 @@ function getOrderEtaLines(order) {
         if (["requested", "accepted", "change_accepted", "empty_arrived"].includes(st)) return lines;
         if (st === "empty_in_transit" && order.emptyLegStartedAt) {
             const t = etaFromAnchorIso(order.emptyLegStartedAt, travelMin);
-            if (t) lines.push({ prefix: "① 공차", text: t });
+            if (t) lines.push({ prefix: "", text: t });
             return lines;
         }
         if (st === "in_transit") {
             if (order.emptyLegStartedAt) {
                 const t1 = etaFromAnchorIso(order.emptyLegStartedAt, travelMin);
-                if (t1) lines.push({ prefix: "① 공차", text: t1 });
+                if (t1) lines.push({ prefix: "", text: t1 });
             }
             if (order.transportStartedAt) {
                 const t2 = etaFromAnchorIso(order.transportStartedAt, travelMin);
                 if (t2) {
                     lines.push({
-                        prefix: order.emptyLegStartedAt ? "② 실차" : "",
+                        prefix: "",
                         text: t2,
                     });
                 }
@@ -1214,12 +1214,12 @@ function getOrderEtaLines(order) {
     }
     if (st === "in_transit" && order.transportStartedAt) {
         const t = etaFromAnchorIso(order.transportStartedAt, travelMin);
-        if (t) lines.push({ prefix: "① 실차", text: t });
+        if (t) lines.push({ prefix: "", text: t });
         return lines;
     }
     if (st === "empty_in_transit" && order.emptyLegStartedAt && !isExFactoryOrder(order)) {
         const t2 = etaFromAnchorIso(order.emptyLegStartedAt, travelMin);
-        if (t2) lines.push({ prefix: "② 공차", text: t2 });
+        if (t2) lines.push({ prefix: "", text: t2 });
         return lines;
     }
     return lines;
@@ -1257,11 +1257,8 @@ function formatOrderEtaToolbarHtml(order) {
     const segments = lines
         .filter((l) => l.text)
         .map((l) => {
-            const prefix = l.prefix
-                ? `<span class="order-card-eta-prefix">${escapeBannerHtml(l.prefix)}</span>`
-                : "";
             const stack = formatBannerDateTimeTwoLinesHtml(l.text, { muted: false });
-            return `<div class="order-card-eta-segment">${prefix}${stack}</div>`;
+            return `<div class="order-card-eta-segment">${stack}</div>`;
         });
     if (!segments.length) return "";
     return `<div class="order-card-eta-toolbar order-card-eta-toolbar--stacked">${segments.join("")}</div>`;
@@ -3516,9 +3513,11 @@ function initSupplierDateFilterDefault() {
     if (!fromInput || !toInput) return;
     if (fromInput.value && toInput.value) return;
     const today = getTodayParts();
-    const val = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
-    fromInput.value = val;
-    toInput.value = val;
+    const fromVal = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
+    const end = new Date(today.year, today.month - 1, today.day + 1);
+    const toVal = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+    fromInput.value = fromVal;
+    toInput.value = toVal;
 }
 
 function syncDateInputFromNumericFields() {

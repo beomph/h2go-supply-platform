@@ -2392,6 +2392,21 @@ body.theme-light .orders-column-header {
             minmax(8.75rem, 0.98fr)
             minmax(7.25rem, 0.82fr);
     }
+
+    /* 판매 카드: 납품일시·수요자·T/T 강조, 시간 열(예상도착·출하·회차)은 촘촘히 */
+    .order-item-supplier .order-card-data-row .order-card-banner-grid,
+    #supplierOrdersColumnHeader .orders-column-header-grid {
+        grid-template-columns:
+            minmax(10.5rem, 1.28fr)
+            minmax(6.75rem, 0.98fr)
+            minmax(6.5rem, 1.05fr)
+            minmax(5rem, 0.58fr)
+            minmax(4.65rem, 0.54fr)
+            minmax(4.65rem, 0.54fr)
+            minmax(5.4rem, 0.68fr);
+        column-gap: 0.32rem;
+        row-gap: 0.3rem;
+    }
 }
 
 .order-banner-label {
@@ -3235,6 +3250,85 @@ td .order-status:not(.order-status--action) {
 /* 판매 대시보드 주문카드: 본문(구매자+일시) | 우측 상태·버튼 */
 .order-item-supplier {
     padding: 0.35rem 0.5rem;
+}
+
+/* 수요자 열: 납품일시+배지와 시각적 분리, 카드마다 동일 정렬 */
+.order-item-supplier .order-banner-cell:nth-child(2) .order-banner-value {
+    padding-left: 0.7rem;
+    margin-left: 0.1rem;
+    border-left: 1px solid rgba(148, 163, 184, 0.28);
+    min-height: 2.25rem;
+    display: flex;
+    align-items: center;
+}
+
+body.theme-light .order-item-supplier .order-banner-cell:nth-child(2) .order-banner-value {
+    border-left-color: rgba(100, 116, 139, 0.32);
+}
+
+.order-item-supplier .order-banner-cell:nth-child(1) .order-datetime {
+    font-size: 1.02rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+}
+
+.order-item-supplier .order-banner-cell:nth-child(1) .supply-condition-badge {
+    flex-shrink: 0;
+}
+
+.order-item-supplier .order-banner-cell:nth-child(2) .order-banner-strong {
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.order-item-supplier .order-banner-cell:nth-child(3) .order-tt-num {
+    font-size: 0.92rem;
+    font-weight: 800;
+}
+
+/* 예상도착·출하·회차: 상대적으로 컴팩트한 두 줄 시각 */
+.order-item-supplier .order-banner-cell:nth-child(4) .order-banner-datetime-stack,
+.order-item-supplier .order-banner-cell:nth-child(5) .order-banner-datetime-stack,
+.order-item-supplier .order-banner-cell:nth-child(6) .order-banner-datetime-stack {
+    gap: 0.06rem;
+}
+
+.order-item-supplier .order-banner-cell:nth-child(4) .order-banner-date-line,
+.order-item-supplier .order-banner-cell:nth-child(5) .order-banner-date-line,
+.order-item-supplier .order-banner-cell:nth-child(6) .order-banner-date-line {
+    font-size: 0.71rem;
+    font-weight: 600;
+}
+
+.order-item-supplier .order-banner-cell:nth-child(4) .order-banner-time-line,
+.order-item-supplier .order-banner-cell:nth-child(5) .order-banner-time-line,
+.order-item-supplier .order-banner-cell:nth-child(6) .order-banner-time-line {
+    font-size: 0.68rem;
+    font-weight: 600;
+}
+
+.order-item-supplier .order-card-eta-toolbar--stacked {
+    gap: 0.26rem;
+}
+
+.order-item-supplier .order-banner-value .supplier-tl-eta-toolbar {
+    font-size: 0.76rem;
+}
+
+.order-item-supplier .order-banner-status-wrap {
+    justify-content: flex-end;
+}
+
+.order-item-supplier .order-banner-status-wrap .order-status:not(.order-status--action) {
+    white-space: nowrap;
+    font-size: 0.67rem;
+    max-width: none;
+}
+
+@media (min-width: 1100px) {
+    .order-item-supplier .order-banner-status-wrap .order-status:not(.order-status--action) {
+        font-size: 0.7rem;
+    }
 }
 
 .order-item-supplier-layout {

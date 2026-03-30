@@ -1228,14 +1228,10 @@ function getOrderEtaLines(order) {
 function formatOrderEtaToolbarHtml(order) {
     const lines = getOrderEtaLines(order);
     if (!lines.length) return "";
-    return lines
-        .map((l) => {
-            const inner = l.prefix
-                ? `<span class="order-card-eta-prefix">${l.prefix}</span> 예상도착 ${l.text}`
-                : `예상도착 ${l.text}`;
-            return `<span class="order-card-eta order-card-eta--dual">${inner}</span>`;
-        })
-        .join("");
+    const texts = lines.map((l) => l.text).filter(Boolean);
+    if (!texts.length) return "";
+    // 카드 열 높이 맞춤: 공차/실차·예상도착 문구 없이 시각만(복수 구간은 · 로 한 줄)
+    return `<span class="order-card-eta order-card-eta--times-only">${texts.join(" · ")}</span>`;
 }
 
 // 납품(또는 픽업) 약속 일시 기준, 이동시간을 뺀 출하 일시 (운송 미시작 시)
@@ -2142,7 +2138,9 @@ function renderConsumerView() {
                     </div>
                     <div class="order-banner-cell">
                         <div class="order-banner-value">
-                            <div class="order-banner-strong">${ttLineC}</div>
+                            <div class="order-tt-driver-row">
+                                <span class="order-banner-strong order-tt-num">${ttLineC}</span>${driverLineC && driverLineC !== "—" ? `<span class="order-tt-sep" aria-hidden="true">·</span><span class="order-driver-only">${driverLineC}</span>` : ""}
+                            </div>
                             ${emptyReturnNoteC ? `<div class="order-banner-transport-note">${emptyReturnNoteC}</div>` : ''}
                         </div>
                     </div>
@@ -2169,10 +2167,7 @@ function renderConsumerView() {
             ${orderDataRowConsumer}
             <div class="order-card-toolbar">
                 <div class="order-card-toolbar-main">
-                    <div class="order-card-toolbar-meta-inline">
-                        <span class="order-card-order-id">주문번호 ${order.id}</span>
-                        <span class="order-card-toolbar-driver">기사 ${driverLineC}</span>
-                    </div>
+                    <span class="order-card-order-id">주문번호 ${order.id}</span>
                 </div>
                 ${toolbarActions ? `<div class="order-card-toolbar-actions">${toolbarActions}</div>` : ''}
             </div>
@@ -2407,7 +2402,9 @@ function renderSupplierOrdersCards() {
                     </div>
                     <div class="order-banner-cell">
                         <div class="order-banner-value">
-                            <div class="order-banner-strong">${ttLine}</div>
+                            <div class="order-tt-driver-row">
+                                <span class="order-banner-strong order-tt-num">${ttLine}</span>${driverLine && driverLine !== "—" ? `<span class="order-tt-sep" aria-hidden="true">·</span><span class="order-driver-only">${driverLine}</span>` : ""}
+                            </div>
                             ${emptyReturnNoteS ? `<div class="order-banner-transport-note">${emptyReturnNoteS}</div>` : ''}
                         </div>
                     </div>
@@ -2434,10 +2431,7 @@ function renderSupplierOrdersCards() {
             ${orderDataRowSupplier}
             <div class="order-card-toolbar">
                 <div class="order-card-toolbar-main">
-                    <div class="order-card-toolbar-meta-inline">
-                        <span class="order-card-order-id">주문번호 ${o.id}</span>
-                        <span class="order-card-toolbar-driver">기사 ${driverLine}</span>
-                    </div>
+                    <span class="order-card-order-id">주문번호 ${o.id}</span>
                 </div>
                 ${supplierToolbarActions ? `<div class="order-card-toolbar-actions">${supplierToolbarActions}</div>` : ''}
             </div>

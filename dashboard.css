@@ -2341,15 +2341,38 @@ body.theme-light .orders-column-header {
     min-width: 0;
 }
 
-.order-card-toolbar-driver {
-    font-size: 0.74rem;
-    font-weight: 600;
+.order-card-data-row .order-card-banner-grid {
+    align-items: center;
+}
+
+.order-tt-driver-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.order-tt-num {
+    flex: 0 1 auto;
+}
+
+.order-tt-sep {
+    flex: 0 0 auto;
     color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
+    font-weight: 700;
+    user-select: none;
+}
+
+.order-driver-only {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-muted);
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: min(100%, 14rem);
+    white-space: nowrap;
 }
 
 .order-card-banner-grid {
@@ -2478,18 +2501,22 @@ body.theme-light .order-card-toolbar {
     letter-spacing: 0.01em;
 }
 
-.order-card-toolbar-meta-inline {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.35rem 0.75rem;
-    min-width: 0;
-}
-
 .order-card-eta {
     font-size: 0.76rem;
     font-weight: 600;
     color: var(--h2-blue-light);
+}
+
+/* 주문 카드 열: 예상도착은 시각만(출하·회차와 톤·한 줄 정렬 맞춤) */
+.order-card-eta--times-only {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: inherit;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
 }
 
 .order-card-eta--dual {
@@ -3206,16 +3233,11 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
 }
 
 .supplier-tl-eta-toolbar {
-    font-size: 0.68rem;
-    line-height: 1.35;
-    color: var(--text-white);
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-}
-
-.supplier-tl-eta-toolbar .order-card-eta {
-    display: block;
+    font-size: 0.88rem;
+    line-height: 1.3;
+    font-weight: 700;
+    color: inherit;
+    min-width: 0;
 }
 
 .order-datetime-with-badge--supplier-card {

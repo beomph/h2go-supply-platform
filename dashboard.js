@@ -1421,6 +1421,7 @@ function buildOrderCardFooterGridHtml({
     shipmentFooterHtml,
     returnFooterHtml,
     variant,
+    footerStatusActionsHtml = "",
 }) {
     const drv = String(driverLine || "").trim();
     const driverInner =
@@ -1438,6 +1439,10 @@ function buildOrderCardFooterGridHtml({
           )}</span></div>`
         : `<div class="order-footer-address-wrap"><span class="order-footer-address order-footer-address--empty">—</span></div>`;
     const gridExtra = variant === "supplier" ? "order-card-footer-grid--supplier" : "order-card-footer-grid--consumer";
+    const statusCol =
+        String(footerStatusActionsHtml || "").trim() !== ""
+            ? `<div class="order-banner-cell order-footer-cell order-footer-cell--status-actions"><div class="order-footer-status-actions-inner">${footerStatusActionsHtml}</div></div>`
+            : `<div class="order-banner-cell order-footer-cell order-footer-cell--status-gap"></div>`;
     return `<div class="order-card-footer-grid ${gridExtra}">
         <div class="order-banner-cell order-footer-cell order-footer-cell--id">
             <span class="order-card-order-id">주문번호 ${escapeBannerHtml(orderId)}</span>
@@ -1447,7 +1452,7 @@ function buildOrderCardFooterGridHtml({
         <div class="order-banner-cell order-footer-cell order-footer-cell--eta">${etaFooterHtml}</div>
         <div class="order-banner-cell order-footer-cell">${shipmentFooterHtml}</div>
         <div class="order-banner-cell order-footer-cell">${returnFooterHtml}</div>
-        <div class="order-banner-cell order-footer-cell order-footer-cell--status-gap"></div>
+        ${statusCol}
     </div>`;
 }
 
@@ -2652,16 +2657,6 @@ function renderSupplierOrdersCards() {
         const { etaCellTop: etaCellInner, etaCellFooter: etaFooterS } = buildOrderCardEtaCells(o, travelTimeText, "supplier");
         const shipmentFooterS = formatBannerDateTimeTimeOnlyHtml(shipmentDt ? shipmentDisplay : null, { muted: !shipmentDt });
         const returnFooterS = formatBannerDateTimeTimeOnlyHtml(returnDt ? returnDisplay : null, { muted: !returnDt });
-        const footerGridSupplier = buildOrderCardFooterGridHtml({
-            orderId: o.id,
-            deliveryAddress: o.address,
-            driverLine,
-            transportNoteHtml: emptyReturnNoteFooterS,
-            etaFooterHtml: etaFooterS,
-            shipmentFooterHtml: shipmentFooterS,
-            returnFooterHtml: returnFooterS,
-            variant: "supplier",
-        });
         const actionButtons = `
             ${advanceAction ? `<button type="button" class="btn btn-small btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : ''}
             ${showConsumerTransportBtn ? `<button type="button" class="btn btn-small btn-secondary" data-action="apply-consumer-transport" data-id="${o.id}">수요자 운송자원 적용</button>` : ''}
@@ -2674,6 +2669,18 @@ function renderSupplierOrdersCards() {
             hasSupplierDecision ? `<div class="order-actions order-actions--footer order-actions--decision">${decisionButtonsSupplier}</div>` : '',
             actionButtons ? `<div class="order-actions order-actions--footer order-actions--supplier">${actionButtons}</div>` : '',
         ].filter(Boolean).join('');
+
+        const footerGridSupplier = buildOrderCardFooterGridHtml({
+            orderId: o.id,
+            deliveryAddress: o.address,
+            driverLine,
+            transportNoteHtml: emptyReturnNoteFooterS,
+            etaFooterHtml: etaFooterS,
+            shipmentFooterHtml: shipmentFooterS,
+            returnFooterHtml: returnFooterS,
+            variant: "supplier",
+            footerStatusActionsHtml: supplierToolbarActions,
+        });
 
         const orderDataRowSupplier = `
             <div class="order-card-data-row">
@@ -2719,7 +2726,6 @@ function renderSupplierOrdersCards() {
                 <div class="order-card-toolbar-primary">
                     ${footerGridSupplier}
                 </div>
-                ${supplierToolbarActions ? `<div class="order-card-toolbar-actions">${supplierToolbarActions}</div>` : ""}
             </div>
             ${(noteText || changeBadge || cancelBadge) ? `
             <div class="order-item-foot">

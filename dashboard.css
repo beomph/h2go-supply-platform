@@ -3036,6 +3036,31 @@ body.theme-light .order-item-supplier .order-card-footer-grid .order-footer-cell
     text-align: center;
 }
 
+/* 판매: 변경·취소 등은 푸터 그리드 7열(상단 주문상태와 동일 열) */
+.order-footer-cell--status-actions {
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+}
+
+.order-footer-status-actions-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.order-item-supplier .order-footer-status-actions-inner .order-actions--footer,
+.order-item-supplier .order-footer-status-actions-inner .order-actions--decision,
+.order-item-supplier .order-footer-status-actions-inner .order-actions--supplier {
+    justify-content: center;
+    width: 100%;
+    max-width: 100%;
+}
+
 .order-footer-cell--id .order-card-order-id {
     display: block;
     word-break: break-all;

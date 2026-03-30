@@ -1389,6 +1389,7 @@ function buildOrderCardEtaCells(order, travelTimeText) {
 
 function buildOrderCardFooterGridHtml({
     orderId,
+    deliveryAddress,
     driverLine,
     transportNoteHtml,
     etaFooterHtml,
@@ -1402,12 +1403,21 @@ function buildOrderCardFooterGridHtml({
             ? `<span class="order-footer-driver">${escapeBannerHtml(drv)}</span>`
             : `<span class="order-footer-driver order-footer-driver--empty">—</span>`;
     const noteBlock = transportNoteHtml || "";
+    const addrRaw = String(deliveryAddress || "").trim();
+    const titleAttr = addrRaw
+        ? ` title="${escapeBannerHtml(addrRaw).replace(/"/g, "&quot;")}"`
+        : "";
+    const addressBlock = addrRaw
+        ? `<div class="order-footer-address-wrap"><span class="order-footer-address"${titleAttr}>${escapeBannerHtml(
+              addrRaw
+          )}</span></div>`
+        : `<div class="order-footer-address-wrap"><span class="order-footer-address order-footer-address--empty">—</span></div>`;
     const gridExtra = variant === "supplier" ? "order-card-footer-grid--supplier" : "order-card-footer-grid--consumer";
     return `<div class="order-card-footer-grid ${gridExtra}">
         <div class="order-banner-cell order-footer-cell order-footer-cell--id">
             <span class="order-card-order-id">주문번호 ${escapeBannerHtml(orderId)}</span>
         </div>
-        <div class="order-banner-cell order-footer-cell order-footer-cell--spacer"></div>
+        <div class="order-banner-cell order-footer-cell order-footer-cell--address">${addressBlock}</div>
         <div class="order-banner-cell order-footer-cell order-footer-cell--tt">${driverInner}${noteBlock}</div>
         <div class="order-banner-cell order-footer-cell order-footer-cell--eta">${etaFooterHtml}</div>
         <div class="order-banner-cell order-footer-cell">${shipmentFooterHtml}</div>
@@ -2335,6 +2345,7 @@ function renderConsumerView() {
         const returnFooterC = formatBannerDateTimeTimeOnlyHtml(returnDtC ? returnDisplayC : null, { muted: !returnDtC });
         const footerGridConsumer = buildOrderCardFooterGridHtml({
             orderId: order.id,
+            deliveryAddress: order.address,
             driverLine: driverLineC,
             transportNoteHtml: emptyReturnNoteFooterC,
             etaFooterHtml: etaFooterC,
@@ -2602,6 +2613,7 @@ function renderSupplierOrdersCards() {
         const returnFooterS = formatBannerDateTimeTimeOnlyHtml(returnDt ? returnDisplay : null, { muted: !returnDt });
         const footerGridSupplier = buildOrderCardFooterGridHtml({
             orderId: o.id,
+            deliveryAddress: o.address,
             driverLine,
             transportNoteHtml: emptyReturnNoteFooterS,
             etaFooterHtml: etaFooterS,

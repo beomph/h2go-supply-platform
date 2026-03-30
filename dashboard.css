@@ -2874,7 +2874,7 @@ body.theme-light .order-banner-divider {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-start;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: 0.5rem 0.65rem;
     margin-top: 0.45rem;
     padding-top: 0.45rem;
@@ -2895,9 +2895,16 @@ body.theme-light .order-card-toolbar {
 .order-card-footer-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(7.25rem, 1fr));
-    gap: 0.28rem 0.65rem;
+    /* 상단 .order-card-banner-grid와 동일 간격(열 정렬) */
+    gap: 0.42rem 0.85rem;
     align-items: start;
     width: 100%;
+}
+
+/* 판매 카드 상단과 동일: 좁은 시간 열 간격 */
+.order-card-footer-grid--supplier {
+    column-gap: 0.32rem;
+    row-gap: 0.3rem;
 }
 
 @media (min-width: 960px) {
@@ -2921,7 +2928,6 @@ body.theme-light .order-card-toolbar {
             minmax(4.65rem, 0.54fr)
             minmax(4.65rem, 0.54fr)
             minmax(5.4rem, 0.68fr);
-        column-gap: 0.32rem;
     }
 }
 
@@ -2933,11 +2939,59 @@ body.theme-light .order-card-toolbar {
     align-items: center;
     justify-content: flex-start;
     gap: 0.12rem;
+    width: 100%;
 }
 
 .order-footer-cell--id {
     align-items: flex-start;
     text-align: left;
+}
+
+.order-footer-cell--address {
+    align-items: stretch;
+}
+
+.order-footer-address-wrap {
+    width: 100%;
+    min-width: 0;
+}
+
+.order-footer-address {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.28;
+    color: var(--text-muted);
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    text-align: center;
+}
+
+.order-footer-address--empty {
+    color: var(--text-muted);
+    opacity: 0.75;
+    -webkit-line-clamp: unset;
+    display: block;
+}
+
+/* 판매: 수요자 열 상단과 동일한 왼쪽 구분(주소·이름 열 정렬) */
+.order-item-supplier .order-card-footer-grid .order-footer-cell--address .order-footer-address-wrap {
+    padding-left: 0.7rem;
+    margin-left: 0.1rem;
+    border-left: 1px solid rgba(148, 163, 184, 0.28);
+    box-sizing: border-box;
+    min-height: 0;
+}
+
+body.theme-light .order-item-supplier .order-card-footer-grid .order-footer-cell--address .order-footer-address-wrap {
+    border-left-color: rgba(100, 116, 139, 0.32);
+}
+
+.order-item-supplier .order-footer-cell--address .order-footer-address {
+    text-align: center;
 }
 
 .order-footer-cell--id .order-card-order-id {
@@ -2982,12 +3036,26 @@ body.theme-light .order-card-toolbar {
 
 .order-card-footer-eta-wrap .order-card-eta-toolbar--times-only {
     align-items: center;
+    width: 100%;
+    min-width: 0;
 }
 
 .order-card-footer-eta-wrap .order-card-eta-segment {
     width: 100%;
+    min-width: 0;
     display: flex;
     justify-content: center;
+}
+
+.order-footer-cell .order-banner-datetime-stack--time-only {
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+}
+
+.order-footer-cell--tt,
+.order-footer-cell--eta {
+    width: 100%;
 }
 
 .order-banner-datetime-stack--date-only .order-banner-date-line,

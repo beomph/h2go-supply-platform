@@ -2610,11 +2610,14 @@ body.theme-light .order-card-toolbar {
     line-height: 1.2;
 }
 
-/* 구매 카드: 우측 상단 상태 배지만 */
-.order-item:not(.order-item-supplier) .order-item-status-column-inner > .order-status {
+/* 구매 카드: 우측 상단 상태는 텍스트만(박스/테두리 없음) */
+.order-item:not(.order-item-supplier) .order-item-status-column-inner > .order-status:not(.order-status--action) {
     font-size: 0.72rem;
-    padding: 0.2rem 0.42rem;
-    min-height: 1.48rem;
+    padding: 0;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
 }
 
 .order-item-head {
@@ -2973,17 +2976,18 @@ body.theme-light .order-card-toolbar {
     font-size: 0.83rem;
 }
 
-.order-item .order-status {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 1.75rem;
-    padding: 0.28rem 0.5rem;
-    border-radius: 6px;
+.order-item .order-status:not(.order-status--action) {
+    display: inline;
+    align-items: unset;
+    justify-content: unset;
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
     font-size: 0.78rem;
     margin-top: 0;
-    white-space: nowrap;
-    border: 1px solid transparent;
+    white-space: normal;
+    border: none;
+    background: transparent;
     font-weight: 700;
 }
 
@@ -3058,10 +3062,10 @@ body.theme-light .order-card-toolbar {
         font-size: 0.78rem;
     }
 
-    .order-item .order-status {
+    .order-item .order-status:not(.order-status--action) {
         font-size: 0.76rem;
-        min-height: 1.75rem;
-        padding: 0.28rem 0.5rem;
+        min-height: 0;
+        padding: 0;
     }
 
     .order-item-badges .change-summary {
@@ -3083,26 +3087,42 @@ body.theme-light .order-card-toolbar {
     }
 }
 
-.order-status.requested { background: rgba(148, 163, 184, 0.22); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.42); }
-.order-status.accepted { background: rgba(34, 197, 94, 0.24); color: #bbf7d0; border-color: rgba(34, 197, 94, 0.45); }
-.order-status.change_requested { background: rgba(245, 158, 11, 0.35); color: #fcd34d; border-color: rgba(245, 158, 11, 0.55); }
-.order-status.change_accepted { background: rgba(250, 204, 21, 0.23); color: #fef08a; border-color: rgba(250, 204, 21, 0.45); }
-.order-status.in_transit { background: rgba(59, 130, 246, 0.26); color: #bfdbfe; border-color: rgba(59, 130, 246, 0.5); }
-.order-status.arrived { background: rgba(16, 185, 129, 0.25); color: #a7f3d0; border-color: rgba(16, 185, 129, 0.5); }
-.order-status.collecting { background: rgba(168, 85, 247, 0.25); color: #e9d5ff; border-color: rgba(168, 85, 247, 0.5); }
-.order-status.completed { background: rgba(107, 114, 128, 0.3); color: #e5e7eb; border-color: rgba(156, 163, 175, 0.55); }
-.order-status.cancel_requested { background: rgba(239, 68, 68, 0.25); color: #fecaca; border-color: rgba(239, 68, 68, 0.55); }
+/* 주문 상태 라벨: 글자색만(배경·테두리 없음). --action 은 아래 별도 박스 유지 */
+.order-status.requested { color: #cbd5e1; }
+.order-status.accepted { color: #bbf7d0; }
+.order-status.change_requested { color: #fcd34d; }
+.order-status.change_accepted { color: #fef08a; }
+.order-status.empty_in_transit { color: #93c5fd; }
+.order-status.empty_arrived { color: #a5b4fc; }
+.order-status.in_transit { color: #bfdbfe; }
+.order-status.arrived { color: #a7f3d0; }
+.order-status.collecting { color: #e9d5ff; }
+.order-status.completed { color: #e5e7eb; }
+.order-status.cancel_requested { color: #fecaca; }
+.order-status.cancelled { color: #f87171; }
 
-/* 라이트 모드에서 상태 배지 대비 강화 */
-body.theme-light .order-status.requested { background: #e2e8f0; color: #334155; border-color: #cbd5e1; }
-body.theme-light .order-status.accepted { background: #dcfce7; color: #166534; border-color: #86efac; }
-body.theme-light .order-status.change_requested { background: #fde68a; color: #92400e; border-color: #fbbf24; }
-body.theme-light .order-status.change_accepted { background: #fef9c3; color: #92400e; border-color: #fde047; }
-body.theme-light .order-status.in_transit { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
-body.theme-light .order-status.arrived { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
-body.theme-light .order-status.collecting { background: #ede9fe; color: #6d28d9; border-color: #c4b5fd; }
-body.theme-light .order-status.completed { background: #e5e7eb; color: #374151; border-color: #d1d5db; }
-body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+body.theme-light .order-status.requested { color: #475569; }
+body.theme-light .order-status.accepted { color: #166534; }
+body.theme-light .order-status.change_requested { color: #92400e; }
+body.theme-light .order-status.change_accepted { color: #854d0e; }
+body.theme-light .order-status.empty_in_transit { color: #1d4ed8; }
+body.theme-light .order-status.empty_arrived { color: #4338ca; }
+body.theme-light .order-status.in_transit { color: #1d4ed8; }
+body.theme-light .order-status.arrived { color: #065f46; }
+body.theme-light .order-status.collecting { color: #6d28d9; }
+body.theme-light .order-status.completed { color: #374151; }
+body.theme-light .order-status.cancel_requested { color: #b91c1c; }
+body.theme-light .order-status.cancelled { color: #b91c1c; }
+
+/* 테이블 등 일반 셀의 상태 스팬: 동일하게 텍스트 강조만 */
+td .order-status:not(.order-status--action) {
+    display: inline;
+    padding: 0;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
 
 /* 생산자 화면 - 구매 대시보드와 동일한 카드 스타일로 통일 */
 .supplier-orders-card {
@@ -3274,10 +3294,13 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     }
 }
 
-.order-item-supplier .order-item-status-column .order-status {
+.order-item-supplier .order-item-status-column .order-status:not(.order-status--action) {
     font-size: 0.72rem;
-    min-height: 1.5rem;
-    padding: 0.2rem 0.45rem;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
 }
 
 .order-actions--supplier.order-actions--stacked {
@@ -3285,10 +3308,89 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     justify-content: flex-end;
 }
 
-.order-item-supplier .order-item-status-column-inner > .order-status {
+.order-item-supplier .order-item-status-column-inner > .order-status:not(.order-status--action) {
     font-size: 0.7rem;
-    padding: 0.18rem 0.4rem;
-    min-height: 1.42rem;
+    padding: 0;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+/* 구매/판매 대시보드 상단 주문 알림 */
+.dashboard-order-notifications-card {
+    margin-bottom: 1rem;
+    padding: 1rem 1.15rem;
+    background: var(--surface-soft, rgba(255, 255, 255, 0.04));
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.dashboard-order-notifications-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.65rem;
+}
+
+.dashboard-order-notifications-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.dashboard-order-notifications-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    max-height: 14rem;
+    overflow-y: auto;
+}
+
+.dashboard-order-notif-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 0.65rem;
+    row-gap: 0.12rem;
+    padding: 0.5rem 0.55rem;
+    border-radius: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    font-size: 0.8rem;
+    line-height: 1.35;
+}
+
+.dashboard-order-notif-time {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    align-self: start;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    padding-top: 0.06rem;
+}
+
+.dashboard-order-notif-title {
+    grid-column: 2;
+    grid-row: 1;
+    font-weight: 700;
+    color: var(--text-white, var(--text-primary));
+}
+
+.dashboard-order-notif-text {
+    grid-column: 2;
+    grid-row: 2;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+}
+
+body.theme-light .dashboard-order-notif-title {
+    color: var(--text-primary);
 }
 
 .order-actions--supplier .btn-small {

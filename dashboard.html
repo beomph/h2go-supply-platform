@@ -65,6 +65,13 @@
             <div class="consumer-content">
                 <!-- 왼쪽: 새 주문 + 주문 현황 -->
                 <div class="consumer-left consumer-order-stack--compact">
+                    <div id="consumerOrderNotificationsCard" class="dashboard-order-notifications-card" hidden>
+                        <div class="dashboard-order-notifications-header">
+                            <h3>주문 알림</h3>
+                            <button type="button" class="btn btn-tiny btn-secondary" id="consumerOrderNotificationsAck">모두 확인</button>
+                        </div>
+                        <ul id="consumerOrderNotificationsList" class="dashboard-order-notifications-list" role="list"></ul>
+                    </div>
                     <div class="order-form-card order-form-card--compact">
                         <div class="order-form-card-header">
                             <h3>새 주문</h3>
@@ -250,6 +257,13 @@
             
             <div class="supplier-content">
                 <div class="supplier-orders-card">
+                    <div id="supplierOrderNotificationsCard" class="dashboard-order-notifications-card" hidden>
+                        <div class="dashboard-order-notifications-header">
+                            <h3>주문 알림</h3>
+                            <button type="button" class="btn btn-tiny btn-secondary" id="supplierOrderNotificationsAck">모두 확인</button>
+                        </div>
+                        <ul id="supplierOrderNotificationsList" class="dashboard-order-notifications-list" role="list"></ul>
+                    </div>
                     <div class="my-orders-header supplier-orders-header">
                         <h3>주문 현황</h3>
                         <div class="my-orders-header-toolbar">

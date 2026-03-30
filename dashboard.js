@@ -2040,6 +2040,7 @@ function renderConsumerView() {
         }
         renderInventoryPanel();
         updateDashboardStats();
+        renderOrderNotificationPanels();
         return;
     }
 
@@ -2190,6 +2191,7 @@ function renderConsumerView() {
 
     renderInventoryPanel();
     updateDashboardStats();
+    renderOrderNotificationPanels();
 }
 
 function renderOrdersTable(tbodyId, showActions) {
@@ -2556,6 +2558,7 @@ function renderSupplierView() {
         }
     }
     updateDashboardStats();
+    renderOrderNotificationPanels();
 }
 
 // ========== 주문 지도 모달 ==========
@@ -3198,6 +3201,164 @@ function appendOrderChangeHistory(order, eventType, actor, details = {}) {
         details,
         at: new Date().toISOString(),
     });
+}
+
+const ORDER_NOTIF_SEEN_PREFIX = "h2go_order_notif_seen_v1_";
+
+function escapeNotificationText(s) {
+    return String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+function getOrderNotifSeenKey(role) {
+    const user = String(currentUser?.name || "").trim();
+    return ORDER_NOTIF_SEEN_PREFIX + role + "_" + encodeURIComponent(user || "anon");
+}
+
+function getOrderNotifSeenTs(role) {
+    const key = getOrderNotifSeenKey(role);
+    try {
+        const v = localStorage.getItem(key);
+        if (v == null) {
+            const n = Date.now();
+            localStorage.setItem(key, String(n));
+            return n;
+        }
+        const n = parseInt(v, 10);
+        return Number.isFinite(n) ? n : Date.now();
+    } catch (_) {
+        return Date.now();
+    }
+}
+
+function setOrderNotifSeenNow(role) {
+    try {
+        localStorage.setItem(getOrderNotifSeenKey(role), String(Date.now()));
+    } catch (_) {}
+}
+
+function formatNotifListTime(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (!Number.isFinite(d.getTime())) return "";
+    return d.toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function formatHistoryNotification(order, h, viewerRole) {
+    const et = h.eventType;
+    const d = h.details || {};
+    const oid = order.id || "";
+    const otherParty =
+        viewerRole === "consumer" ? order.supplierName || "공급자" : order.consumerName || "수요자";
+
+    switch (et) {
+        case "created":
+            return { title: "새 주문", text: `${oid} · ${otherParty}에게 주문이 전달되었습니다.` };
+        case "status_changed": {
+            const toLab = d.to ? getStatusLabel(normalizeStatus(d.to)) : "상태 변경";
+            return { title: "주문 상태 변경", text: `${oid} · ${toLab}` };
+        }
+        case "change_requested": {
+            const by = h.actor === "supplier" ? "공급자" : "수요자";
+            let extra = "";
+            if (d.proposed && order) {
+                try {
+                    extra = summarizeChange(order, d.proposed);
+                } catch (_) {}
+            }
+            return { title: "납품 변경 요청", text: `${oid} · ${by} 요청${extra ? ` · ${extra}` : ""}` };
+        }
+        case "change_approved":
+            return { title: "변경 요청 승인", text: `${oid} · 변경이 반영되었습니다.` };
+        case "change_rejected":
+            return { title: "변경 요청 거절", text: `${oid} · 변경이 거절되었습니다.` };
+        case "change_request_cancelled":
+            return { title: "변경 요청 취소", text: `${oid} · 대기 중이던 변경 요청이 취소되었습니다.` };
+        case "cancel_requested":
+            return { title: "취소 요청", text: `${oid} · 상대방이 주문 취소를 요청했습니다.` };
+        case "cancel_approved":
+            return { title: "취소 승인", text: `${oid} · 주문이 취소되었습니다.` };
+        case "cancel_rejected": {
+            const r = d.reason ? ` (${d.reason})` : "";
+            return { title: "취소 요청 거절", text: `${oid} · 취소 요청이 거절되었습니다.${r}` };
+        }
+        case "cancelled_immediately":
+            return { title: "즉시 취소", text: `${oid} · 주문이 즉시 취소되었습니다.` };
+        case "transport_started": {
+            const drv = d.driverName ? ` · 기사 ${d.driverName}` : "";
+            return { title: "실차 운송 시작", text: `${oid} · 실차 운송이 시작되었습니다.${drv}` };
+        }
+        case "empty_leg_started":
+            return { title: "공차 운송 시작", text: `${oid} · 공차 운송이 시작되었습니다.` };
+        case "delivery_qty_settled":
+            return { title: "물량 정산", text: `${oid} · 실차 도착 물량이 정산되었습니다.` };
+        case "ex_factory_consumer_flow":
+            return { title: "유량계 질량 입력", text: `${oid} · 출하도 유량 정보가 반영되었습니다.` };
+        case "delivery_chain_prev_updated":
+            return { title: "연속 납품 연계", text: `${oid} · 직전 주문과 물량이 연계되었습니다.` };
+        case "tt_outbound_confirmed":
+            return { title: "T/T 출고 확인", text: `${oid} · 출고 물량·서명이 확인되었습니다.` };
+        default:
+            return { title: "주문 이벤트", text: `${oid} · ${et}` };
+    }
+}
+
+function collectNotificationsForRole(role) {
+    const me = String(currentUser?.name || "").trim();
+    if (!me) return [];
+    const seen = getOrderNotifSeenTs(role);
+    const out = [];
+    for (const order of orders) {
+        if (!order?.id) continue;
+        if (role === "consumer" && String(order.consumerName || "").trim() !== me) continue;
+        if (role === "supplier" && String(order.supplierName || "").trim() !== me) continue;
+        const hist = Array.isArray(order.changeHistory) ? order.changeHistory : [];
+        for (const h of hist) {
+            const ts = new Date(h.at).getTime();
+            if (!Number.isFinite(ts) || ts <= seen) continue;
+            const formatted = formatHistoryNotification(order, h, role);
+            if (!formatted) continue;
+            out.push({
+                ...formatted,
+                ts,
+                atIso: h.at,
+                orderId: order.id,
+            });
+        }
+    }
+    out.sort((a, b) => b.ts - a.ts);
+    return out.slice(0, 50);
+}
+
+function renderOneOrderNotifPanel(role, cardId, listId) {
+    const card = document.getElementById(cardId);
+    const list = document.getElementById(listId);
+    if (!card || !list) return;
+    const items = collectNotificationsForRole(role);
+    if (!items.length) {
+        card.hidden = true;
+        list.innerHTML = "";
+        return;
+    }
+    card.hidden = false;
+    list.innerHTML = items
+        .map(
+            (it) => `
+        <li class="dashboard-order-notif-item">
+            <span class="dashboard-order-notif-time">${escapeNotificationText(formatNotifListTime(it.atIso))}</span>
+            <span class="dashboard-order-notif-title">${escapeNotificationText(it.title)}</span>
+            <span class="dashboard-order-notif-text">${escapeNotificationText(it.text)}</span>
+        </li>`
+        )
+        .join("");
+}
+
+function renderOrderNotificationPanels() {
+    renderOneOrderNotifPanel("consumer", "consumerOrderNotificationsCard", "consumerOrderNotificationsList");
+    renderOneOrderNotifPanel("supplier", "supplierOrderNotificationsCard", "supplierOrderNotificationsList");
 }
 
 function findPreviousInboundOrder(currentOrder) {
@@ -4396,6 +4557,15 @@ async function bootstrapOrderViews() {
     if (r === 'supplier') renderSupplierView();
 }
 bootstrapOrderViews();
+
+document.getElementById("consumerOrderNotificationsAck")?.addEventListener("click", () => {
+    setOrderNotifSeenNow("consumer");
+    renderOrderNotificationPanels();
+});
+document.getElementById("supplierOrderNotificationsAck")?.addEventListener("click", () => {
+    setOrderNotifSeenNow("supplier");
+    renderOrderNotificationPanels();
+});
 
 // 다른 탭/창에서 주문이 갱신되면 현재 화면도 즉시 반영 + 결정 알림(거절/승인)
 window.addEventListener('storage', (e) => {

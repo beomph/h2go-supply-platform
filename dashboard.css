@@ -291,6 +291,52 @@
     color: var(--h2-blue-light);
 }
 
+.insight-stat--banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+    min-width: 8.5rem;
+    padding: 0.55rem 0.9rem;
+}
+
+.insight-stat--readonly {
+    cursor: default;
+}
+
+.insight-stat--banner .insight-stat-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+
+.insight-stat-values-triple {
+    display: inline-flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.2rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.insight-stat-triple-sep {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    user-select: none;
+}
+
+.insight-stat-sub.hint {
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+}
+
+.insight-stat-value--solo {
+    font-size: 1.1rem;
+    line-height: 1.2;
+}
+
 .view-header--hero h1 {
     letter-spacing: -0.02em;
     line-height: 1.25;
@@ -2336,6 +2382,9 @@ body.theme-light .orders-column-header {
 
 .orders-column-header-grid .order-banner-label {
     margin-bottom: 0;
+    font-size: 0.72rem;
+    text-align: center;
+    width: 100%;
 }
 
 .order-card-data-row {
@@ -2355,11 +2404,31 @@ body.theme-light .orders-column-header {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(7.25rem, 1fr));
     gap: 0.42rem 0.85rem;
-    align-items: start;
+    align-items: center;
 }
 
 .order-banner-cell {
     min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.order-item .order-banner-cell > .order-banner-value {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.order-item .order-banner-cell > .order-banner-value.order-banner-datetime.order-datetime-with-badge-inline {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem 0.55rem;
 }
 
 .order-banner-cell--status {
@@ -2419,10 +2488,14 @@ body.theme-light .orders-column-header {
 }
 
 .order-banner-value {
-    font-size: 0.8rem;
+    font-size: 0.88rem;
     line-height: 1.35;
     color: var(--text-white);
     min-width: 0;
+}
+
+.order-item .order-banner-label {
+    font-size: 0.72rem;
 }
 
 body.theme-light .order-banner-value {
@@ -2431,9 +2504,53 @@ body.theme-light .order-banner-value {
 
 .order-banner-strong {
     font-weight: 700;
-    font-size: 0.88rem;
+    font-size: 0.95rem;
     word-break: keep-all;
     overflow-wrap: anywhere;
+}
+
+.order-item .order-banner-tt-stack .order-tt-num {
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.order-banner-tt-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.12rem;
+    width: 100%;
+    min-width: 0;
+    text-align: center;
+}
+
+.order-banner-tt-driver {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.order-banner-tt-divider,
+.order-banner-datetime-divider {
+    display: block;
+    width: 100%;
+    max-width: 9.5rem;
+    height: 0;
+    border: 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.5);
+    margin: 0.22rem 0;
+    flex-shrink: 0;
+    align-self: center;
+}
+
+body.theme-light .order-banner-tt-divider,
+body.theme-light .order-banner-datetime-divider {
+    border-top-color: rgba(100, 116, 139, 0.45);
 }
 
 .order-banner-muted {
@@ -2443,14 +2560,15 @@ body.theme-light .order-banner-value {
     overflow-wrap: anywhere;
 }
 
-/* 주문 카드: 연월일 / 시각 두 줄 · 줄 안에서 날짜·시각 분리되지 않도록 */
+/* 주문 카드: 연월일 — 실선 — 시각 (세로 스택, 칸 중앙 정렬) */
 .order-banner-datetime-stack {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.1rem;
+    align-items: center;
+    gap: 0;
     min-width: 0;
     line-height: 1.22;
+    width: 100%;
 }
 
 .order-banner-datetime-stack--muted .order-banner-date-line,
@@ -2465,20 +2583,20 @@ body.theme-light .order-banner-value {
 }
 
 .order-banner-date-line {
-    font-size: 0.76rem;
-    font-weight: 600;
+    font-size: 0.84rem;
+    font-weight: 700;
 }
 
 .order-banner-time-line {
-    font-size: 0.74rem;
-    font-weight: 600;
+    font-size: 0.82rem;
+    font-weight: 700;
 }
 
 .order-card-eta-toolbar--stacked {
     display: flex;
     flex-direction: column;
     gap: 0.45rem;
-    align-items: flex-start;
+    align-items: center;
     min-width: 0;
     width: 100%;
 }
@@ -2486,9 +2604,11 @@ body.theme-light .order-banner-value {
 .order-card-eta-segment {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: center;
+    justify-content: center;
     gap: 0.2rem 0.35rem;
     min-width: 0;
+    width: 100%;
 }
 
 .order-card-eta-segment .order-banner-datetime-stack {
@@ -2498,32 +2618,34 @@ body.theme-light .order-banner-value {
 .order-banner-value .supplier-tl-eta-toolbar {
     width: 100%;
     min-width: 0;
-    font-size: 0.78rem;
-    font-weight: 600;
+    font-size: 0.86rem;
+    font-weight: 700;
     line-height: 1.25;
     word-break: normal;
     overflow-wrap: normal;
 }
 
-/* 주문상태: 한 줄 · 카드에서 열 폭 확보 */
+/* 주문상태: 한 줄 · 칸 중앙 */
 .order-banner-status-wrap {
     display: flex;
     align-items: center;
     gap: 0.35rem;
     flex-wrap: nowrap;
     min-width: 0;
-    justify-content: flex-end;
+    justify-content: center;
+    width: 100%;
 }
 
 .order-banner-status-wrap .order-status:not(.order-status--action) {
     white-space: nowrap;
-    font-size: 0.7rem;
+    font-size: 0.78rem;
     flex-shrink: 0;
+    text-align: center;
 }
 
 @media (min-width: 1100px) {
     .order-banner-status-wrap .order-status:not(.order-status--action) {
-        font-size: 0.72rem;
+        font-size: 0.82rem;
     }
 }
 
@@ -3281,54 +3403,19 @@ body.theme-light .order-item-supplier .order-banner-cell:nth-child(2) .order-ban
     font-weight: 800;
 }
 
+/* T/T 스택 내 차량번호 — 글로벌 .order-banner-tt-stack 규칙과 동일 계열 유지 */
 .order-item-supplier .order-banner-cell:nth-child(3) .order-tt-num {
-    font-size: 0.92rem;
+    font-size: 1rem;
     font-weight: 800;
 }
 
-/* 예상도착·출하·회차: 상대적으로 컴팩트한 두 줄 시각 */
-.order-item-supplier .order-banner-cell:nth-child(4) .order-banner-datetime-stack,
-.order-item-supplier .order-banner-cell:nth-child(5) .order-banner-datetime-stack,
-.order-item-supplier .order-banner-cell:nth-child(6) .order-banner-datetime-stack {
-    gap: 0.06rem;
-}
-
-.order-item-supplier .order-banner-cell:nth-child(4) .order-banner-date-line,
-.order-item-supplier .order-banner-cell:nth-child(5) .order-banner-date-line,
-.order-item-supplier .order-banner-cell:nth-child(6) .order-banner-date-line {
-    font-size: 0.71rem;
-    font-weight: 600;
-}
-
-.order-item-supplier .order-banner-cell:nth-child(4) .order-banner-time-line,
-.order-item-supplier .order-banner-cell:nth-child(5) .order-banner-time-line,
-.order-item-supplier .order-banner-cell:nth-child(6) .order-banner-time-line {
-    font-size: 0.68rem;
-    font-weight: 600;
-}
-
+/* 예상도착·출하·회차: 구매 카드와 동일한 시인성(글로벌 스타일 상속) */
 .order-item-supplier .order-card-eta-toolbar--stacked {
-    gap: 0.26rem;
-}
-
-.order-item-supplier .order-banner-value .supplier-tl-eta-toolbar {
-    font-size: 0.76rem;
+    gap: 0.4rem;
 }
 
 .order-item-supplier .order-banner-status-wrap {
-    justify-content: flex-end;
-}
-
-.order-item-supplier .order-banner-status-wrap .order-status:not(.order-status--action) {
-    white-space: nowrap;
-    font-size: 0.67rem;
-    max-width: none;
-}
-
-@media (min-width: 1100px) {
-    .order-item-supplier .order-banner-status-wrap .order-status:not(.order-status--action) {
-        font-size: 0.7rem;
-    }
+    justify-content: center;
 }
 
 .order-item-supplier-layout {
@@ -3425,6 +3512,14 @@ body.theme-light .order-item-supplier .order-banner-cell:nth-child(2) .order-ban
     color: var(--text-white);
     line-height: 1.35;
     word-break: break-all;
+}
+
+.order-item .supplier-tl-value {
+    font-size: 0.86rem;
+    font-weight: 600;
+    text-align: center;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
 }
 
 .supplier-tl-value--muted {

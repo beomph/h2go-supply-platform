@@ -2637,11 +2637,6 @@ function renderSupplierOrdersCards() {
 
         const isCancelled = o.status === 'cancelled';
 
-        const showConsumerTransportBtn =
-            o.supplyCondition === "ex_factory" &&
-            normalizeStatus(o.status) === "empty_arrived" &&
-            hasInboundTransportInfo(o);
-
         const shipmentDt = formatShipmentDateTime(o, { viewer: "supplier" });
         const returnDt = formatReturnDateTime(o, { viewer: "supplier" });
         const shipmentDisplay = shipmentDt || '—';
@@ -2660,7 +2655,6 @@ function renderSupplierOrdersCards() {
         const returnFooterS = formatBannerDateTimeTimeOnlyHtml(returnDt ? returnDisplay : null, { muted: !returnDt });
         const actionButtons = `
             ${advanceAction ? `<button type="button" class="btn btn-small btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : ''}
-            ${showConsumerTransportBtn ? `<button type="button" class="btn btn-small btn-secondary" data-action="apply-consumer-transport" data-id="${o.id}">수요자 운송자원 적용</button>` : ''}
             ${canCancelChangeRequest ? `<button type="button" class="btn btn-small btn-secondary" data-action="cancel-change-request" data-id="${o.id}">변경요청 취소</button>` : ''}
             ${canProposeChange ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${o.id}">변경</button>` : ''}
             ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${o.id}">취소</button>` : ''}
@@ -4662,12 +4656,6 @@ document.addEventListener('click', (e) => {
             applyChange(orderId, false);
             alert('변경 요청이 거절되었습니다.');
         }
-    } else if (action === 'apply-consumer-transport') {
-        if (!order) return;
-        if (getActorForOrder(order) !== "supplier") return;
-        openTransportStartModal(orderId, true, "loaded_ex_factory").catch((err) =>
-            console.warn("[h2go] transport start modal:", err?.message || err)
-        );
     } else if (action === 'open-delivery-settlement') {
         if (!order) return;
         if (getActorForOrder(order) !== 'consumer') return;
@@ -4687,7 +4675,7 @@ document.addEventListener('click', (e) => {
         if (actor === 'supplier') {
             if (nextStatus === 'in_transit') {
                 const mode = isExFactoryOrder(order) && st === 'empty_arrived' ? 'loaded_ex_factory' : 'delivery';
-                openTransportStartModal(orderId, false, mode).catch((err) =>
+                openTransportStartModal(orderId, mode === 'loaded_ex_factory', mode).catch((err) =>
                     console.warn("[h2go] transport start modal:", err?.message || err)
                 );
                 return;

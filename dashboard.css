@@ -1423,7 +1423,8 @@ body.theme-dark .transport-schedule-card {
 }
 
 .consumer-order-stack--compact .orders-list {
-    max-height: min(520px, 52vh);
+    /* 주문 카드(상단 배너+푸터 버튼) 높이 증가에 맞춰 세로 스크롤 여유 */
+    max-height: min(600px, 58vh);
 }
 
 .consumer-order-stack--compact .order-item {
@@ -2548,9 +2549,9 @@ body.theme-light .order-item {
 }
 
 @media (min-width: 960px) {
-    /* 7열 그리드 minmax 최솟값 합에 맞춰 좁은 좌측 칸에서도 스크롤로 전체 열 유지 */
+    /* 7열 그리드 minmax·gap 합(구매 카드 ≈64.35rem) 이상 — 짧게 잡히면 .orders-list overflow-x:hidden에 주문상태 열이 잘림 */
     .orders-table-hscroll-track {
-        min-width: 59.5rem;
+        min-width: 65rem;
     }
 }
 
@@ -3057,8 +3058,24 @@ body.theme-light .order-item-supplier .order-card-footer-grid .order-footer-cell
 .order-item-supplier .order-footer-status-actions-inner .order-actions--decision,
 .order-item-supplier .order-footer-status-actions-inner .order-actions--supplier {
     justify-content: center;
-    width: 100%;
-    max-width: 100%;
+    width: auto;
+    max-width: none;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+}
+
+/* 판매: 주문변경·실차 출발 등을 한 가로줄(구매와 동일) */
+.order-item-supplier .order-footer-status-actions-inner {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.28rem;
+}
+
+.order-item-supplier .order-footer-status-actions-inner .order-actions .btn-small {
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 /* 구매: 실선 아래 주문상태 열 — 버튼 전부 한 가로줄(줄바꿈 없음), 열 중앙 */

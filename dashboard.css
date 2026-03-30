@@ -2224,6 +2224,18 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
     .order-item-supplier .order-item-status-column {
         max-width: 7.5rem;
     }
+
+    .order-item-supplier-main {
+        gap: 0.6rem;
+    }
+
+    .order-item-supplier-transport {
+        max-width: 40%;
+    }
+
+    .order-supplier-timeline-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .order-item {
@@ -2909,6 +2921,15 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     min-width: 0;
 }
 
+.order-item-supplier-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+    width: 100%;
+    min-width: 0;
+}
+
 .order-item-supplier .order-item-status-column {
     max-width: 9.25rem;
 }
@@ -2923,55 +2944,132 @@ body.theme-light .order-status.cancel_requested { background: #fee2e2; color: #b
     min-width: 0;
 }
 
-.order-item-supplier-buyer {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
+.order-item-supplier-transport {
+    flex: 0 0 auto;
+    min-width: 5.5rem;
+    max-width: 28%;
 }
 
-.order-item-supplier-buyer .order-party-name {
+.order-supplier-tt-line {
     font-size: 0.88rem;
     font-weight: 600;
-    margin-bottom: 0.08rem;
+    color: var(--text-white);
+    line-height: 1.25;
+    word-break: break-all;
 }
 
-.order-item-supplier-buyer .order-party-addr {
+.order-supplier-driver-line {
     font-size: 0.75rem;
     color: var(--text-muted);
+    line-height: 1.3;
+    word-break: keep-all;
 }
 
-.order-item-supplier-datetimes {
-    width: 100%;
+.supplier-card-divider {
+    height: 0;
+    margin: 0.28rem 0;
+    border: 0;
+    border-top: 1px solid var(--border-color);
+}
+
+.order-item-supplier-timeline {
+    flex: 1 1 auto;
     min-width: 0;
+}
+
+.order-supplier-timeline-grid {
     display: grid;
-    grid-template-rows: auto auto;
-    gap: 0.12rem;
+    grid-template-columns: minmax(5.5rem, 0.95fr) minmax(5rem, 1.15fr) minmax(4rem, 0.75fr) minmax(4.5rem, 0.95fr) minmax(4.5rem, 0.95fr);
+    gap: 0.35rem 0.65rem;
+    align-items: start;
 }
 
-.order-item-supplier-datetimes .order-datetime-with-badge {
-    margin-bottom: 0;
+.supplier-tl-cell {
+    min-width: 0;
 }
 
-.order-item-supplier-datetimes .order-shipment-return-row {
+.supplier-tl-label {
+    display: block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    color: var(--text-muted);
+    margin-bottom: 0.12rem;
+    line-height: 1.2;
+}
+
+.supplier-tl-value {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-white);
+    line-height: 1.35;
+    word-break: break-all;
+}
+
+.supplier-tl-value--muted {
+    color: var(--go-gray);
+    font-weight: 400;
+}
+
+.supplier-buyer-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-white);
+    line-height: 1.25;
+}
+
+.supplier-buyer-addr {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+    word-break: keep-all;
+}
+
+.supplier-transport-extras {
+    margin-top: 0.35rem;
     display: flex;
-    gap: 1rem;
-    min-height: 1.1em;
+    flex-direction: column;
+    gap: 0.2rem;
 }
 
-.order-item-supplier-datetimes .shipment-datetime--empty,
-.order-item-supplier-datetimes .return-datetime--empty {
-    visibility: hidden;
+.supplier-transport-extra-line {
+    font-size: 0.65rem;
+    color: var(--go-gray);
+    line-height: 1.3;
+    word-break: break-all;
 }
 
-.order-item-supplier-datetimes .order-datetime {
+.supplier-tl-eta-toolbar {
+    font-size: 0.68rem;
+    line-height: 1.35;
+    color: var(--text-white);
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.supplier-tl-eta-toolbar .order-card-eta {
+    display: block;
+}
+
+.order-datetime-with-badge--supplier-card {
+    flex-wrap: wrap;
+    gap: 0.25rem 0.45rem;
+}
+
+.order-datetime-with-badge--supplier-card .order-datetime {
     font-size: 0.95rem;
 }
 
-.order-item-supplier-datetimes .supply-condition-badge,
-.order-item-supplier-datetimes .travel-time,
-.order-item-supplier-datetimes .shipment-datetime,
-.order-item-supplier-datetimes .return-datetime {
-    font-size: 0.72rem;
+.order-datetime-with-badge--supplier-card .supply-condition-badge {
+    font-size: 0.7rem;
+}
+
+@media (max-width: 1100px) {
+    .order-supplier-timeline-grid {
+        grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+    }
 }
 
 .order-item-supplier .order-item-status-column .order-status {

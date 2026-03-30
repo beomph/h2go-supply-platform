@@ -1671,7 +1671,7 @@ function getConsumerAdvanceAction(order) {
             }
             return null;
         case 'arrived':
-            return { label: '공차 출발', next: 'empty_in_transit' };
+            return { label: '공차 출고(회수)', next: 'empty_in_transit' };
         default:
             return null;
     }
@@ -2356,7 +2356,7 @@ function renderConsumerView() {
             order.exFactoryConsumerSettlementMode === 'flow' &&
             !order.qtySettlement?.exFactoryConsumerFlowDone;
         const actionButtons = `
-            ${showDeliverySettle ? `<button type="button" class="btn btn-small btn-primary" data-action="open-delivery-settlement" data-id="${order.id}">실차 도착 · 물량정산</button>` : ''}
+            ${showDeliverySettle ? `<button type="button" class="btn btn-small btn-primary" data-action="open-delivery-settlement" data-id="${order.id}">실차 도착</button>` : ''}
             ${showExFactoryFlowKg ? `<button type="button" class="btn btn-small btn-primary" data-action="open-exfactory-flow-kg" data-id="${order.id}">유량계 질량(kg) 입력</button>` : ''}
             ${consumerAdvanceAction ? `<button type="button" class="btn btn-small btn-primary" data-action="advance-status" data-next-status="${consumerAdvanceAction.next}" data-id="${order.id}">${consumerAdvanceAction.label}</button>` : ''}
             ${canCancelChangeRequest ? `<button type="button" class="btn btn-small btn-secondary" data-action="cancel-change-request" data-id="${order.id}">변경요청 취소</button>` : ''}
@@ -3621,12 +3621,6 @@ function renderOneOrderNotifPanel(role, cardId, listId) {
     const card = document.getElementById(cardId);
     const list = document.getElementById(listId);
     if (!card || !list) return;
-    const activeRole = currentUser?.type === "supplier" ? "supplier" : "consumer";
-    if (activeRole !== role) {
-        card.hidden = true;
-        list.innerHTML = "";
-        return;
-    }
     const items = collectNotificationsForRole(role);
     if (!items.length) {
         card.hidden = true;
@@ -3647,8 +3641,8 @@ function renderOneOrderNotifPanel(role, cardId, listId) {
 }
 
 function renderOrderNotificationPanels() {
-    renderOneOrderNotifPanel("consumer", "consumerOrderNotificationsCard", "consumerOrderNotificationsList");
-    renderOneOrderNotifPanel("supplier", "supplierOrderNotificationsCard", "supplierOrderNotificationsList");
+    const role = currentUser?.type === "supplier" ? "supplier" : "consumer";
+    renderOneOrderNotifPanel(role, "dashboardOrderNotificationsCard", "dashboardOrderNotificationsList");
 }
 
 function findPreviousInboundOrder(currentOrder) {
@@ -4031,6 +4025,8 @@ document.getElementById('roleSelect').addEventListener('change', (e) => {
     } catch (_) {}
     showView(role);
     syncFleetNavVisibility();
+    updateDashboardStats();
+    renderOrderNotificationPanels();
     if (role === 'consumer') renderConsumerView();
     if (role === 'supplier') renderSupplierView();
 });
@@ -4665,7 +4661,14 @@ document.addEventListener('click', (e) => {
     } else if (action === 'open-delivery-settlement') {
         if (!order) return;
         if (getActorForOrder(order) !== 'consumer') return;
-        if (order.supplyCondition !== 'delivery' || normalizeStatus(order.status) !== 'in_transit') return;
+        if (order.supplyCondition !== 'delivery' || normalizeStatus(order.status) !== 'in_transit') {
+            alert('도착도 주문이 실차 입고 중일 때만 물량 정산을 진행할 수 있습니다.');
+            return;
+        }
+        if (!document.getElementById('deliverySettlementModal')) {
+            alert('물량 정산 창을 불러올 수 없습니다. 페이지를 새로고침해 주세요.');
+            return;
+        }
         openDeliverySettlementModal(orderId);
     } else if (action === 'open-exfactory-flow-kg') {
         if (!order) return;
@@ -4891,12 +4894,9 @@ async function bootstrapOrderViews() {
 }
 bootstrapOrderViews();
 
-document.getElementById("consumerOrderNotificationsAck")?.addEventListener("click", () => {
-    setOrderNotifSeenNow("consumer");
-    renderOrderNotificationPanels();
-});
-document.getElementById("supplierOrderNotificationsAck")?.addEventListener("click", () => {
-    setOrderNotifSeenNow("supplier");
+document.getElementById("dashboardOrderNotificationsAck")?.addEventListener("click", () => {
+    const role = currentUser?.type === "supplier" ? "supplier" : "consumer";
+    setOrderNotifSeenNow(role);
     renderOrderNotificationPanels();
 });
 

@@ -207,50 +207,56 @@
 .dashboard-insight-inner {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 1rem 1.25rem;
 }
 
-/* 로컬 시각(좌) · 통계 배너(중앙) · 주문 알림(우) */
-.insight-strip-zone--clock {
-    flex: 0 0 auto;
+/* 최상단 한 줄: 로컬 시각 | 통계(중앙) | 주문 알림(우측) — 구매·판매 공통 */
+.dashboard-insight-inner--three-col {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) minmax(12rem, 21rem);
+    align-items: start;
+    gap: 0.75rem 1.25rem;
 }
 
-.insight-strip-zone--stats {
-    flex: 1 1 280px;
+.insight-strip-left {
+    flex-shrink: 0;
+}
+
+.insight-strip-center {
     min-width: 0;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
 }
 
-.insight-strip-zone--stats .insight-stats {
-    flex: 0 1 auto;
+.insight-strip-right {
+    min-width: 0;
+    justify-self: end;
+    width: 100%;
+    max-width: 21rem;
+}
+
+.insight-stats--center {
     justify-content: center;
+    flex-wrap: wrap;
+    flex: none;
     width: 100%;
 }
 
-.insight-strip-zone--notif {
-    flex: 0 1 24rem;
-    min-width: min(100%, 15rem);
-    max-width: 26rem;
-}
-
-@media (max-width: 720px) {
-    .insight-strip-zone--stats {
-        flex-basis: 100%;
-        order: 2;
+@media (max-width: 960px) {
+    .dashboard-insight-inner--three-col {
+        grid-template-columns: 1fr;
     }
 
-    .insight-strip-zone--notif {
-        flex-basis: 100%;
+    .insight-strip-center {
+        justify-content: flex-start;
+    }
+
+    .insight-strip-right {
+        justify-self: stretch;
         max-width: none;
-        order: 3;
-    }
-
-    .insight-strip-zone--clock {
-        order: 1;
     }
 }
 
@@ -281,7 +287,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    justify-content: center;
+    justify-content: flex-end;
     flex: 1;
     min-width: 0;
 }
@@ -1071,18 +1077,60 @@ body.theme-dark .transport-schedule-card {
     overflow-wrap: anywhere; /* 긴 토큰(주소/ID)이 있으면 적절히 줄바꿈 */
 }
 
-/* 수요자 화면: 주문 현황 단일 열(재고·예측 패널은 추후 복구 가능) */
+/* 수요자 화면 레이아웃
+   - 좌측: 주문현황(세로 2행 통합) · 새 주문은 모달
+   - 우측: 재고현황 + 발주예측 */
 .consumer-content {
+    display: grid;
+    grid-template-columns: 1.55fr 1fr;
+    grid-template-areas:
+        "orders inventory"
+        "orders prediction";
+    gap: 1.5rem;
+    align-items: start;
+}
+
+/* 재고·예측 패널 제거 후: 주문 현황만 전폭 */
+.consumer-content.consumer-content--orders-only {
     display: block;
+}
+
+.consumer-content.consumer-content--orders-only .my-orders-card {
+    grid-area: unset;
+    grid-row: unset;
     max-width: 100%;
 }
 
 .consumer-left {
-    display: block;
+    display: contents;
 }
 
-.my-orders-card {
-    min-width: 0;
+.consumer-right {
+    display: contents;
+}
+
+.my-orders-card { grid-area: orders; min-width: 0; grid-row: span 2; }
+.inventory-card { grid-area: inventory; min-width: 0; }
+.prediction-card { grid-area: prediction; min-width: 0; }
+
+@media (max-width: 1200px) {
+    .consumer-content {
+        grid-template-columns: 1.35fr 1fr;
+    }
+}
+
+@media (max-width: 900px) {
+    .consumer-content {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "orders"
+            "inventory"
+            "prediction";
+    }
+
+    .my-orders-card {
+        grid-row: auto;
+    }
 }
 
 /* 납품 시각 컴팩트 */
@@ -4099,32 +4147,6 @@ body.theme-light .order-item-supplier .order-banner-cell:nth-child(2) .order-ban
     border-radius: 12px;
 }
 
-/* 최상단 인사이트 스트립 우측 슬롯(컴팩트) */
-.dashboard-order-notifications-card--strip {
-    margin-bottom: 0;
-    width: 100%;
-    padding: 0.65rem 0.75rem;
-    box-sizing: border-box;
-}
-
-.dashboard-order-notifications-card--strip .dashboard-order-notifications-header {
-    margin-bottom: 0.45rem;
-}
-
-.dashboard-order-notifications-card--strip .dashboard-order-notifications-header h3 {
-    font-size: 0.88rem;
-}
-
-.dashboard-order-notifications-card--strip .dashboard-order-notifications-list {
-    max-height: 11rem;
-    gap: 0.4rem;
-}
-
-.dashboard-order-notifications-card--strip .dashboard-order-notif-item {
-    padding: 0.42rem 0.48rem;
-    font-size: 0.76rem;
-}
-
 .dashboard-order-notifications-header {
     display: flex;
     align-items: center;
@@ -4148,6 +4170,46 @@ body.theme-light .order-item-supplier .order-banner-cell:nth-child(2) .order-ban
     gap: 0.55rem;
     max-height: 14rem;
     overflow-y: auto;
+}
+
+/* 상단 스트립 우측: 컴팩트 알림(주문 카드와 동일 orders·changeHistory 소스) */
+.dashboard-order-notifications-strip {
+    margin-bottom: 0;
+    padding: 0.5rem 0.65rem;
+    max-height: none;
+}
+
+.dashboard-order-notifications-strip-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+}
+
+.dashboard-order-notifications-strip-title {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.dashboard-order-notifications-list--compact {
+    max-height: 10.5rem;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+}
+
+.dashboard-order-notifications-list--compact .dashboard-order-notif-item {
+    padding: 0.4rem 0.45rem;
+}
+
+.dashboard-order-notifications-list--compact .dashboard-order-notif-title {
+    font-size: 0.7rem;
+}
+
+.dashboard-order-notifications-list--compact .dashboard-order-notif-text {
+    font-size: 0.68rem;
 }
 
 .dashboard-order-notif-item {

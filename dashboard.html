@@ -149,18 +149,20 @@
                     <div class="my-orders-card">
                         <div class="my-orders-header">
                             <h3>주문 현황</h3>
-                            <div class="orders-filter">
-                                <label for="ordersFromDate">조회기간</label>
-                                <div class="orders-filter-input-wrap">
-                                    <input type="date" id="ordersFromDate" class="orders-date-input">
-                                    <span class="range-separator">~</span>
-                                    <input type="date" id="ordersToDate" class="orders-date-input">
-                                    <button type="button" class="btn btn-tiny btn-secondary" id="ordersDateApplyBtn">조회</button>
+                            <div class="my-orders-header-toolbar">
+                                <div class="orders-filter">
+                                    <label for="ordersFromDate">조회기간</label>
+                                    <div class="orders-filter-input-wrap">
+                                        <input type="date" id="ordersFromDate" class="orders-date-input">
+                                        <span class="range-separator">~</span>
+                                        <input type="date" id="ordersToDate" class="orders-date-input">
+                                        <button type="button" class="btn btn-tiny btn-secondary" id="ordersDateApplyBtn">조회</button>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="orders-search-wrap">
-                                <label class="visually-hidden" for="consumerOrderSearch">주문 검색</label>
-                                <input type="search" id="consumerOrderSearch" class="orders-search-input" placeholder="주문번호·주소·공급자 검색" autocomplete="off" enterkeyhint="search">
+                                <div class="orders-search-wrap">
+                                    <label class="visually-hidden" for="consumerOrderSearch">주문 검색</label>
+                                    <input type="search" id="consumerOrderSearch" class="orders-search-input" placeholder="주문번호·주소·공급자 검색" autocomplete="off" enterkeyhint="search">
+                                </div>
                             </div>
                         </div>
                         <div class="orders-list-stack">
@@ -250,18 +252,20 @@
                 <div class="supplier-orders-card">
                     <div class="my-orders-header supplier-orders-header">
                         <h3>주문 현황</h3>
-                        <div class="orders-filter">
-                            <label for="supplierFromDate">조회기간</label>
-                            <div class="orders-filter-input-wrap supplier-range-inputs">
-                                <input type="date" id="supplierFromDate" class="orders-date-input">
-                                <span class="range-separator">~</span>
-                                <input type="date" id="supplierToDate" class="orders-date-input">
-                                <button type="button" class="btn btn-tiny btn-secondary" id="supplierDateApplyBtn">조회</button>
+                        <div class="my-orders-header-toolbar">
+                            <div class="orders-filter">
+                                <label for="supplierFromDate">조회기간</label>
+                                <div class="orders-filter-input-wrap supplier-range-inputs">
+                                    <input type="date" id="supplierFromDate" class="orders-date-input">
+                                    <span class="range-separator">~</span>
+                                    <input type="date" id="supplierToDate" class="orders-date-input">
+                                    <button type="button" class="btn btn-tiny btn-secondary" id="supplierDateApplyBtn">조회</button>
+                                </div>
                             </div>
-                        </div>
-                        <div class="orders-search-wrap">
-                            <label class="visually-hidden" for="supplierOrderSearch">주문 검색</label>
-                            <input type="search" id="supplierOrderSearch" class="orders-search-input" placeholder="주문번호·주소·구매자 검색" autocomplete="off" enterkeyhint="search">
+                            <div class="orders-search-wrap">
+                                <label class="visually-hidden" for="supplierOrderSearch">주문 검색</label>
+                                <input type="search" id="supplierOrderSearch" class="orders-search-input" placeholder="주문번호·주소·구매자 검색" autocomplete="off" enterkeyhint="search">
+                            </div>
                         </div>
                     </div>
                     <div class="orders-list-stack">

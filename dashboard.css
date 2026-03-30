@@ -2110,6 +2110,27 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
     }
 }
 
+/* 판매·구매 공통: 조회 블록 내 라벨·날짜를 한 줄(좁은 화면 제외) */
+@media (min-width: 640px) {
+    .my-orders-header-toolbar .orders-filter {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 0.45rem;
+    }
+
+    .my-orders-header-toolbar .orders-filter > label {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    .my-orders-header-toolbar .orders-filter-input-wrap {
+        flex: 1 1 auto;
+        min-width: 0;
+        flex-wrap: nowrap;
+    }
+}
+
 /* 구매 대시보드(웹): 조회기간 라벨·날짜·조회·검색을 한 가로 행 (라벨을 인라인으로 두어 두 줄 줄바꿈 방지) */
 @media (min-width: 640px) {
     #consumerView .my-orders-header-toolbar {
@@ -2320,14 +2341,15 @@ body.theme-light .orders-column-header {
     min-width: 0;
 }
 
-.order-row-counterpart-name[title] {
-    cursor: help;
-    text-decoration: underline dotted rgba(148, 163, 184, 0.5);
-    text-underline-offset: 2px;
-}
-
-body.theme-light .order-row-counterpart-name[title] {
-    text-decoration-color: rgba(100, 116, 139, 0.42);
+.order-card-toolbar-driver {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: min(100%, 14rem);
 }
 
 .order-card-banner-grid {
@@ -2454,6 +2476,14 @@ body.theme-light .order-card-toolbar {
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.01em;
+}
+
+.order-card-toolbar-meta-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.75rem;
+    min-width: 0;
 }
 
 .order-card-eta {

@@ -293,16 +293,6 @@ function hasInboundTransportInfo(order) {
 }
 
 /** 카드·배너: 운송 시작/공차 출발 후 transportInfo 우선, 없으면 출하도 사전 수요자 입력 */
-/** HTML 속성용 이스케이프 (title 등) */
-function escapeHtmlAttr(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/</g, '&lt;')
-        .replace(/\r?\n/g, ' ')
-        .trim();
-}
-
 function getOrderCardTransportDisplay(order) {
     if (hasInboundTransportInfo(order)) {
         const ti = order.transportInfo;
@@ -2121,12 +2111,6 @@ function renderConsumerView() {
             order.supplyCondition === 'delivery' && order.emptyLegReturnInfo
                 ? formatTransportInfoLine(order.emptyLegReturnInfo, '공차 회수')
                 : '';
-        const counterpartAddrC =
-            order.supplyCondition === 'ex_factory'
-                ? getSupplierShippingAddress(order.supplierName) || '—'
-                : order.address || '—';
-        const supplierAddrTitle =
-            counterpartAddrC && counterpartAddrC !== '—' ? escapeHtmlAttr(counterpartAddrC) : '';
         const etaToolbarC = formatOrderEtaToolbarHtml(order);
         const etaCellInnerC = etaToolbarC
             ? `<div class="supplier-tl-eta-toolbar">${etaToolbarC}</div>`
@@ -2153,14 +2137,12 @@ function renderConsumerView() {
                     </div>
                     <div class="order-banner-cell">
                         <div class="order-banner-value">
-                            <div class="order-banner-strong order-row-counterpart-name"${supplierAddrTitle ? ` title="${supplierAddrTitle}"` : ''}>${order.supplierName || '—'}</div>
+                            <div class="order-banner-strong">${order.supplierName || '—'}</div>
                         </div>
                     </div>
                     <div class="order-banner-cell">
                         <div class="order-banner-value">
                             <div class="order-banner-strong">${ttLineC}</div>
-                            <div class="order-banner-divider"></div>
-                            <div class="order-banner-muted">${driverLineC}</div>
                             ${emptyReturnNoteC ? `<div class="order-banner-transport-note">${emptyReturnNoteC}</div>` : ''}
                         </div>
                     </div>
@@ -2187,7 +2169,10 @@ function renderConsumerView() {
             ${orderDataRowConsumer}
             <div class="order-card-toolbar">
                 <div class="order-card-toolbar-main">
-                    <span class="order-card-order-id">주문번호 ${order.id}</span>
+                    <div class="order-card-toolbar-meta-inline">
+                        <span class="order-card-order-id">주문번호 ${order.id}</span>
+                        <span class="order-card-toolbar-driver">기사 ${driverLineC}</span>
+                    </div>
                 </div>
                 ${toolbarActions ? `<div class="order-card-toolbar-actions">${toolbarActions}</div>` : ''}
             </div>
@@ -2388,10 +2373,6 @@ function renderSupplierOrdersCards() {
             o.supplyCondition === 'delivery' && o.emptyLegReturnInfo
                 ? formatTransportInfoLine(o.emptyLegReturnInfo, '공차 회수')
                 : '';
-        const consumerAddrRaw = String(o.address || '').trim();
-        const consumerAddrTitleS =
-            consumerAddrRaw && consumerAddrRaw !== '—' ? escapeHtmlAttr(consumerAddrRaw) : '';
-
         const actionButtons = `
             ${advanceAction ? `<button type="button" class="btn btn-small btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : ''}
             ${showConsumerTransportBtn ? `<button type="button" class="btn btn-small btn-secondary" data-action="apply-consumer-transport" data-id="${o.id}">수요자 운송자원 적용</button>` : ''}
@@ -2421,14 +2402,12 @@ function renderSupplierOrdersCards() {
                     </div>
                     <div class="order-banner-cell">
                         <div class="order-banner-value">
-                            <div class="order-banner-strong order-row-counterpart-name"${consumerAddrTitleS ? ` title="${consumerAddrTitleS}"` : ''}>${o.consumerName || '—'}</div>
+                            <div class="order-banner-strong">${o.consumerName || '—'}</div>
                         </div>
                     </div>
                     <div class="order-banner-cell">
                         <div class="order-banner-value">
                             <div class="order-banner-strong">${ttLine}</div>
-                            <div class="order-banner-divider"></div>
-                            <div class="order-banner-muted">${driverLine}</div>
                             ${emptyReturnNoteS ? `<div class="order-banner-transport-note">${emptyReturnNoteS}</div>` : ''}
                         </div>
                     </div>
@@ -2455,7 +2434,10 @@ function renderSupplierOrdersCards() {
             ${orderDataRowSupplier}
             <div class="order-card-toolbar">
                 <div class="order-card-toolbar-main">
-                    <span class="order-card-order-id">주문번호 ${o.id}</span>
+                    <div class="order-card-toolbar-meta-inline">
+                        <span class="order-card-order-id">주문번호 ${o.id}</span>
+                        <span class="order-card-toolbar-driver">기사 ${driverLine}</span>
+                    </div>
                 </div>
                 ${supplierToolbarActions ? `<div class="order-card-toolbar-actions">${supplierToolbarActions}</div>` : ''}
             </div>

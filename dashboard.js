@@ -3700,9 +3700,11 @@ function initOrdersDateFilterDefault() {
     if (!fromInput || !toInput) return;
     if (fromInput.value && toInput.value) return;
     const today = getTodayParts();
-    const val = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
-    fromInput.value = val;
-    toInput.value = val;
+    const fromVal = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
+    const end = new Date(today.year, today.month - 1, today.day + 1);
+    const toVal = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+    fromInput.value = fromVal;
+    toInput.value = toVal;
 }
 
 function initSupplierDateFilterDefault() {

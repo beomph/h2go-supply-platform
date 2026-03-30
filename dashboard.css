@@ -2440,7 +2440,7 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
     .orders-list {
         max-height: 48vh;
         padding-right: 0;
-        overflow-x: hidden;
+        overflow-x: visible;
         overflow-y: auto;
     }
 
@@ -2531,6 +2531,27 @@ body.theme-light .order-item {
     flex-direction: column;
     gap: 0;
     min-width: 0;
+}
+
+/* 헤더 배너 + 주문 카드 목록을 같은 가로 스크롤에 묶어 열이 항상 일치 */
+.orders-table-hscroll {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: clip;
+    -webkit-overflow-scrolling: touch;
+}
+
+.orders-table-hscroll-track {
+    min-width: 0;
+    width: 100%;
+}
+
+@media (min-width: 960px) {
+    /* 7열 그리드 minmax 최솟값 합에 맞춰 좁은 좌측 칸에서도 스크롤로 전체 열 유지 */
+    .orders-table-hscroll-track {
+        min-width: 59.5rem;
+    }
 }
 
 .orders-column-header {
@@ -2800,7 +2821,7 @@ body.theme-light .order-banner-datetime-divider {
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     min-width: 0;
     justify-content: center;
     width: 100%;
@@ -2862,20 +2883,14 @@ body.theme-light .order-banner-divider {
     line-height: 1.3;
 }
 
-.order-banner-status-wrap {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.35rem;
-}
-
 /* 카드 하단 툴바: 회색 실선 + 주문번호·기사·시각(열 정렬) + 버튼 */
 .order-card-toolbar {
     display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.5rem 0.65rem;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.45rem 0.65rem;
     margin-top: 0.45rem;
     padding-top: 0.45rem;
     border-top: 1px solid rgba(148, 163, 184, 0.28);
@@ -2888,7 +2903,8 @@ body.theme-light .order-card-toolbar {
 }
 
 .order-card-toolbar-primary {
-    flex: 1 1 0;
+    flex: 0 0 auto;
+    width: 100%;
     min-width: 0;
 }
 
@@ -2897,7 +2913,7 @@ body.theme-light .order-card-toolbar {
     grid-template-columns: repeat(auto-fit, minmax(7.25rem, 1fr));
     /* 상단 .order-card-banner-grid와 동일 간격(열 정렬) */
     gap: 0.42rem 0.85rem;
-    align-items: start;
+    align-items: center;
     width: 100%;
 }
 
@@ -2943,6 +2959,11 @@ body.theme-light .order-card-toolbar {
 }
 
 .order-footer-cell--id {
+    align-items: center;
+    text-align: center;
+}
+
+.order-item:not(.order-item-supplier) .order-footer-cell--id {
     align-items: flex-start;
     text-align: left;
 }
@@ -3149,7 +3170,8 @@ body.theme-light .order-item-supplier .order-card-footer-grid .order-footer-cell
     align-items: center;
     justify-content: flex-end;
     gap: 0.35rem 0.45rem;
-    flex: 0 1 auto;
+    flex: 0 0 auto;
+    width: 100%;
     min-width: 0;
 }
 
@@ -3731,7 +3753,9 @@ td .order-status:not(.order-status--action) {
     border-left: 1px solid rgba(148, 163, 184, 0.28);
     min-height: 2.25rem;
     display: flex;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
 }
 
 body.theme-light .order-item-supplier .order-banner-cell:nth-child(2) .order-banner-value {
@@ -3765,6 +3789,16 @@ body.theme-light .order-item-supplier .order-banner-cell:nth-child(2) .order-ban
 }
 
 .order-item-supplier .order-banner-status-wrap {
+    justify-content: center;
+}
+
+.order-item-supplier .order-card-toolbar-actions {
+    justify-content: center;
+}
+
+.order-item-supplier .order-card-toolbar-actions .order-actions--footer,
+.order-item-supplier .order-card-toolbar-actions .order-actions--decision,
+.order-item-supplier .order-card-toolbar-actions .order-actions--supplier {
     justify-content: center;
 }
 

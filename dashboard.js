@@ -3621,6 +3621,12 @@ function renderOneOrderNotifPanel(role, cardId, listId) {
     const card = document.getElementById(cardId);
     const list = document.getElementById(listId);
     if (!card || !list) return;
+    const activeRole = currentUser?.type === "supplier" ? "supplier" : "consumer";
+    if (activeRole !== role) {
+        card.hidden = true;
+        list.innerHTML = "";
+        return;
+    }
     const items = collectNotificationsForRole(role);
     if (!items.length) {
         card.hidden = true;

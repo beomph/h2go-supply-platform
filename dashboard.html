@@ -47,11 +47,31 @@
     <main class="dashboard-main">
         <div id="dashboardInsightStrip" class="dashboard-insight-strip" aria-label="현황 요약">
             <div class="dashboard-insight-inner">
-                <div class="insight-clock-block">
-                    <span class="insight-clock-label">로컬 시각</span>
-                    <time id="dashboardClock" class="insight-clock" datetime=""></time>
+                <div class="insight-strip-zone insight-strip-zone--clock">
+                    <div class="insight-clock-block">
+                        <span class="insight-clock-label">로컬 시각</span>
+                        <time id="dashboardClock" class="insight-clock" datetime=""></time>
+                    </div>
                 </div>
-                <div id="dashboardStats" class="insight-stats" role="list" aria-live="polite"></div>
+                <div class="insight-strip-zone insight-strip-zone--stats">
+                    <div id="dashboardStats" class="insight-stats" role="list" aria-live="polite"></div>
+                </div>
+                <div class="insight-strip-zone insight-strip-zone--notif">
+                    <div id="consumerOrderNotificationsCard" class="dashboard-order-notifications-card dashboard-order-notifications-card--strip" hidden>
+                        <div class="dashboard-order-notifications-header">
+                            <h3>주문 알림</h3>
+                            <button type="button" class="btn btn-tiny btn-secondary" id="consumerOrderNotificationsAck">모두 확인</button>
+                        </div>
+                        <ul id="consumerOrderNotificationsList" class="dashboard-order-notifications-list" role="list"></ul>
+                    </div>
+                    <div id="supplierOrderNotificationsCard" class="dashboard-order-notifications-card dashboard-order-notifications-card--strip" hidden>
+                        <div class="dashboard-order-notifications-header">
+                            <h3>주문 알림</h3>
+                            <button type="button" class="btn btn-tiny btn-secondary" id="supplierOrderNotificationsAck">모두 확인</button>
+                        </div>
+                        <ul id="supplierOrderNotificationsList" class="dashboard-order-notifications-list" role="list"></ul>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -59,20 +79,12 @@
         <section id="consumerView" class="dashboard-view active">
             <div class="view-header view-header--hero">
                 <h1>구매 대시보드</h1>
-                <p>주문·납품 일정·재고를 한눈에 확인하고, 필요 시 AI 챗봇으로 빠르게 문의하세요.</p>
+                <p>주문·납품 일정을 한눈에 확인하고, 필요 시 AI 챗봇으로 빠르게 문의하세요.</p>
             </div>
 
             <div class="consumer-content">
                 <!-- 왼쪽: 주문 알림 + 주문 현황 (새 주문은 모달) -->
                 <div class="consumer-left consumer-order-stack--compact">
-                    <div id="consumerOrderNotificationsCard" class="dashboard-order-notifications-card" hidden>
-                        <div class="dashboard-order-notifications-header">
-                            <h3>주문 알림</h3>
-                            <button type="button" class="btn btn-tiny btn-secondary" id="consumerOrderNotificationsAck">모두 확인</button>
-                        </div>
-                        <ul id="consumerOrderNotificationsList" class="dashboard-order-notifications-list" role="list"></ul>
-                    </div>
-
                     <div class="my-orders-card">
                         <div class="my-orders-header">
                             <div class="my-orders-header-title-row">
@@ -115,40 +127,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- 오른쪽: 재고 현황 & 발주 예측 -->
-                <div class="consumer-right">
-                    <div class="inventory-card">
-                        <h3>🔋 수소 재고 현황</h3>
-                        <div class="trailer-header-row">
-                            <span class="inv-section-label">튜브트레일러 잔압</span>
-                            <button type="button" class="btn btn-tiny" id="addTrailerBtn">+ 추가</button>
-                        </div>
-                        <div id="trailerStatusList" class="trailer-list"></div>
-                        <div class="inv-settings">
-                            <div class="inv-setting-row">
-                                <label>충전 대기 고객</label>
-                                <div class="inv-setting-input">
-                                    <input type="number" id="waitingCustomers" min="0" max="99" value="0">
-                                    <span>대</span>
-                                </div>
-                                <span class="inv-setting-hint">현재 충전 대기 중인 수소차</span>
-                            </div>
-                            <div class="inv-setting-row">
-                                <label>납품 소요 시간</label>
-                                <span id="leadTimeDisplay" class="inv-lead-display">—</span>
-                                <span class="inv-setting-hint" id="leadTimeHint"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="prediction-card">
-                        <h3>📊 발주 예측 &amp; 권고</h3>
-                        <div id="predictionDisplay" class="prediction-content">
-                            <div class="empty-state"><p>재고 정보를 입력하면 예측이 표시됩니다.</p></div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </section>
 
@@ -184,13 +162,6 @@
             
             <div class="supplier-content">
                 <div class="supplier-orders-card">
-                    <div id="supplierOrderNotificationsCard" class="dashboard-order-notifications-card" hidden>
-                        <div class="dashboard-order-notifications-header">
-                            <h3>주문 알림</h3>
-                            <button type="button" class="btn btn-tiny btn-secondary" id="supplierOrderNotificationsAck">모두 확인</button>
-                        </div>
-                        <ul id="supplierOrderNotificationsList" class="dashboard-order-notifications-list" role="list"></ul>
-                    </div>
                     <div class="my-orders-header supplier-orders-header">
                         <h3>주문 현황</h3>
                         <div class="my-orders-header-toolbar">

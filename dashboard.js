@@ -46,7 +46,6 @@ function rolesFromBusinessPartiesDash(parties, preferredActive) {
     if (!roles.includes(active)) active = roles[0];
     return { roles, activeRole: active };
 }
-const USERS_KEY = "h2go_users";
 const THEME_KEY = "h2go_theme";
 const ORDER_ADDRESS_HISTORY_PREFIX = "h2go_order_address_history_v1";
 const DEFAULT_SUPABASE_URL = "https://zbihunanzjgyceqfegka.supabase.co";
@@ -65,11 +64,6 @@ function safeJsonParse(raw, fallback) {
     } catch (_) {
         return fallback;
     }
-}
-
-function readUsers() {
-    const users = safeJsonParse(localStorage.getItem(USERS_KEY) || "[]", []);
-    return Array.isArray(users) ? users : [];
 }
 
 function uniqueNames(arr) {
@@ -105,15 +99,18 @@ function writeRegisteredSuppliers(list) {
     } catch (_) {}
 }
 
-function getSupplierCandidates(currentBizName) {
-    // 수요자가 등록한 공급자 우선, 없으면 가입된 사업자명
-    const registered = readRegisteredSuppliers().map(s => (typeof s === 'string' ? s : s?.name)).filter(Boolean);
-    if (registered.length > 0) {
-        return uniqueNames([currentBizName, ...registered]);
+/** Supabase: 승인된 프로필 중 사업자분류에 공급자(supplier)가 포함된 계정의 표시명 */
+async function fetchApprovedSupplierDirectoryUsernames() {
+    if (!supabaseClient || !isSupabaseOrdersEnabled) return [];
+    const { data, error } = await supabaseClient.rpc("list_approved_supplier_directory");
+    if (error) {
+        console.warn("[h2go] list_approved_supplier_directory:", error.message || error);
+        return [];
     }
-    const users = readUsers();
-    const names = users.map(u => u?.name).filter(Boolean);
-    return uniqueNames([currentBizName, ...names]);
+    if (!Array.isArray(data)) return [];
+    return uniqueNames(
+        data.map((row) => (row && typeof row.username === "string" ? row.username.trim() : "")),
+    );
 }
 
 function getAddressHistoryStorageKey() {
@@ -3928,6 +3925,10 @@ function toggleOrderAddressBySupplyCondition() {
 }
 
 function openSupplierSelectModal() {
+    void openSupplierSelectModalAsync();
+}
+
+async function openSupplierSelectModalAsync() {
     const modal = document.getElementById("supplierSelectModal");
     const listEl = document.getElementById("supplierList");
     const addressDisplay = document.getElementById("supplierShippingAddressDisplay");
@@ -3942,17 +3943,29 @@ function openSupplierSelectModal() {
             : "공급자를 선택하면 출하 주소가 표시됩니다.";
     }
 
-    const candidates = getSupplierCandidates(currentUser.name);
-    if (candidates.length === 0) {
-        listEl.innerHTML = '<p class="supplier-list-empty">등록된 공급자가 없습니다. 공급자 등록 메뉴에서 추가하거나 아래 직접 입력을 이용하세요.</p>';
-    } else {
-        listEl.innerHTML = candidates.map(n => {
-            const addr = getSupplierShippingAddress(n);
-            return `<button type="button" data-supplier="${String(n).replace(/"/g, "&quot;")}" data-address="${String(addr).replace(/"/g, "&quot;")}">${n}</button>`;
-        }).join("");
+    listEl.innerHTML =
+        '<p class="supplier-list-empty supplier-list-loading" role="status">공급자 목록을 불러오는 중…</p>';
+
+    let candidates = [];
+    try {
+        candidates = await fetchApprovedSupplierDirectoryUsernames();
+    } catch (err) {
+        console.warn("[h2go] supplier directory:", err?.message || err);
     }
 
-    listEl.querySelectorAll("button[data-supplier]").forEach(btn => {
+    if (candidates.length === 0) {
+        listEl.innerHTML =
+            '<p class="supplier-list-empty">등록된 공급자(플랫폼에 공급자로 등록·승인된 계정)가 없습니다. 아래 직접 입력으로 신규 공급자를 지정하세요.</p>';
+    } else {
+        listEl.innerHTML = candidates
+            .map((n) => {
+                const addr = getSupplierShippingAddress(n);
+                return `<button type="button" data-supplier="${String(n).replace(/"/g, "&quot;")}" data-address="${String(addr).replace(/"/g, "&quot;")}">${n}</button>`;
+            })
+            .join("");
+    }
+
+    listEl.querySelectorAll("button[data-supplier]").forEach((btn) => {
         btn.addEventListener("click", () => {
             setSupplierName(btn.dataset.supplier);
             if (addressDisplay && btn.dataset.address) addressDisplay.textContent = btn.dataset.address;

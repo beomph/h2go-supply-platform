@@ -1075,8 +1075,26 @@ function countOrdersByConsumerName(orderList) {
     return map;
 }
 
+function countOrdersBySupplierName(orderList) {
+    const map = new Map();
+    for (const o of orderList) {
+        const name = String(o.supplierName || "").trim() || "—";
+        map.set(name, (map.get(name) || 0) + 1);
+    }
+    return map;
+}
+
 function formatSupplierInsightTooltipPanelHtml(heading, orderList) {
     const by = countOrdersByConsumerName(orderList);
+    const lines = Array.from(by.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ko"));
+    const lis = lines.length
+        ? lines.map(([k, v]) => `<li><span class="insight-tooltip-name">${escapeBannerHtml(k)}</span> <span class="insight-tooltip-count">${v}건</span></li>`).join("")
+        : '<li class="insight-tooltip-empty">해당 없음</li>';
+    return `<div class="insight-tooltip-title">${escapeBannerHtml(heading)}</div><ul class="insight-tooltip-list">${lis}</ul>`;
+}
+
+function formatConsumerInsightTooltipPanelHtml(heading, orderList) {
+    const by = countOrdersBySupplierName(orderList);
     const lines = Array.from(by.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ko"));
     const lis = lines.length
         ? lines.map(([k, v]) => `<li><span class="insight-tooltip-name">${escapeBannerHtml(k)}</span> <span class="insight-tooltip-count">${v}건</span></li>`).join("")
@@ -1905,38 +1923,46 @@ function updateDashboardStats() {
     if (role === 'consumer') {
         const hidden = new Set(readHiddenConsumerIds());
         const mine = getConsumerOrders(currentUser.name).filter((o) => !hidden.has(o.id));
-        const active = mine.filter((o) => isConsumerInProgressStatus(normalizeStatus(o.status)));
-        const pending = mine.filter((o) => isConsumerPendingApprovalStatus(normalizeStatus(o.status)));
-        const selected = dashboardStatFilters.consumer || 'all';
-        const stats = [
-            { key: 'all', k: '내 주문', v: mine.length },
-            { key: 'active', k: '진행 중', v: active.length },
-            { key: 'pending', k: '결재 대기', v: pending.length },
-        ];
-        const consumerTipCopy = {
-            all: "이번 달 납품일 기준 주문 수입니다. 클릭하면 목록이 필터됩니다.",
-            active: "완료·취소를 제외한 진행 중인 주문입니다.",
-            pending: "변경 요청·변경 접수 등 상대방 확인이 필요한 건입니다.",
-        };
-        container.innerHTML = stats
-            .map(
-                ({ key, k, v }) =>
-                    `<div class="insight-stat-wrap insight-stat--tip">
-                        <button type="button" class="insight-stat insight-stat--btn ${selected === key ? "is-active" : ""}" data-stat-filter="${key}" role="listitem" aria-describedby="insight-consumer-tip-${key}">
-                            <span class="insight-stat-label">${k}</span><span class="insight-stat-value">${v}</span>
-                        </button>
-                        <div id="insight-consumer-tip-${key}" class="insight-tooltip-panel insight-tooltip-panel--hint" role="tooltip">
-                            <p class="insight-tooltip-hint">${consumerTipCopy[key]}</p>
-                        </div>
-                    </div>`
-            )
-            .join("");
-        container.querySelectorAll('[data-stat-filter]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                setDashboardStatFilter(btn.dataset.statFilter || 'all');
-                renderConsumerView();
-            });
+        const todayP = getTodayParts();
+        const tomorrowP = getTomorrowParts();
+
+        const todayDelivery = mine.filter((o) => {
+            const st = normalizeStatus(o.status);
+            return st !== "cancelled" && isOrderDeliveryOnLocalDay(o, todayP.year, todayP.month, todayP.day);
         });
+        const todayAccepted = todayDelivery.filter((o) => normalizeStatus(o.status) !== "requested");
+        const todayCompleted = todayDelivery.filter((o) => normalizeStatus(o.status) === "completed");
+        const todayIncomplete = todayAccepted.filter((o) => normalizeStatus(o.status) !== "completed");
+
+        const tomorrowDelivery = mine.filter((o) => {
+            const st = normalizeStatus(o.status);
+            return st !== "cancelled" && isOrderDeliveryOnLocalDay(o, tomorrowP.year, tomorrowP.month, tomorrowP.day);
+        });
+        const tomorrowCount = tomorrowDelivery.length;
+
+        const tipTodayInner = formatConsumerInsightTooltipPanelHtml("납품일 오늘 · 공급자별", todayDelivery);
+        const tipTomorrowInner = formatConsumerInsightTooltipPanelHtml("납품일 내일 · 공급자별", tomorrowDelivery);
+
+        container.innerHTML = `
+            <div class="insight-stat insight-stat--banner insight-stat--readonly insight-stat--tip" role="listitem" tabindex="0" aria-describedby="insight-consumer-tip-today">
+                <span class="insight-stat-label">오늘 주문</span>
+                <span class="insight-stat-values-triple" aria-label="접수 완료, 완료, 미완료 순">
+                    <span class="insight-stat-value">${todayAccepted.length}</span>
+                    <span class="insight-stat-triple-sep">/</span>
+                    <span class="insight-stat-value">${todayCompleted.length}</span>
+                    <span class="insight-stat-triple-sep">/</span>
+                    <span class="insight-stat-value">${todayIncomplete.length}</span>
+                </span>
+                <span class="insight-stat-sub hint">접수·완료·미완료 · 납품일 기준</span>
+                <div id="insight-consumer-tip-today" class="insight-tooltip-panel" role="tooltip">${tipTodayInner}</div>
+            </div>
+            <div class="insight-stat insight-stat--banner insight-stat--readonly insight-stat--tip" role="listitem" tabindex="0" aria-describedby="insight-consumer-tip-tomorrow">
+                <span class="insight-stat-label">내일 주문</span>
+                <span class="insight-stat-value insight-stat-value--solo">${tomorrowCount}</span>
+                <span class="insight-stat-sub hint">납품 예정(건) · 납품일 기준</span>
+                <div id="insight-consumer-tip-tomorrow" class="insight-tooltip-panel" role="tooltip">${tipTomorrowInner}</div>
+            </div>
+        `;
     } else {
         const hidden = new Set(readHiddenSupplierIds());
         const mine = getAllOrders().filter((o) => !hidden.has(o.id));
@@ -1984,22 +2010,7 @@ function updateDashboardStats() {
 }
 
 function applyConsumerDashboardStatFilter(list) {
-    const selected = dashboardStatFilters.consumer || 'all';
-    const now = new Date();
-    if (selected === 'active') {
-        return list.filter((o) => isConsumerInProgressStatus(normalizeStatus(o.status)));
-    }
-    if (selected === 'pending') {
-        return list.filter((o) => isConsumerPendingApprovalStatus(normalizeStatus(o.status)));
-    }
-    // "내 주문": 현재 월에 속하는 주문 전체
-    return list.filter((o) => {
-        const key = getOrderDateTimeSortKey(o);
-        const t = new Date(key.replace(' ', 'T')).getTime();
-        if (!Number.isFinite(t)) return false;
-        const d = new Date(t);
-        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    });
+    return list;
 }
 
 function applySupplierDashboardStatFilter(list) {
@@ -2382,13 +2393,8 @@ function renderConsumerView() {
             list.innerHTML =
                 '<div class="empty-state"><p>검색 조건에 맞는 주문이 없습니다.</p><p>검색어를 바꿔 보세요.</p></div>';
         } else {
-            const selected = dashboardStatFilters.consumer || 'all';
-            if (selected !== 'all') {
-                list.innerHTML = '<div class="empty-state"><p>선택한 상태 배너에 해당하는 주문이 없습니다.</p><p>상단 배너를 다시 눌러 전체 보기를 이용해 보세요.</p></div>';
-            } else {
-                const label = fromVal && toVal ? `${fromVal} ~ ${toVal}` : '선택한 기간';
-                list.innerHTML = `<div class="empty-state"><p>${label}에는 주문 이력이 없습니다.</p><p>다른 기간을 선택하거나 전체 보기를 이용해 보세요.</p></div>`;
-            }
+            const label = fromVal && toVal ? `${fromVal} ~ ${toVal}` : '선택한 기간';
+            list.innerHTML = `<div class="empty-state"><p>${label}에는 주문 이력이 없습니다.</p><p>다른 기간을 선택해 보세요.</p></div>`;
         }
         renderInventoryPanel();
         updateDashboardStats();
@@ -2528,11 +2534,13 @@ function renderConsumerView() {
 
         return `
         <div class="order-item order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasRejectedChange || hasPendingCancel || hasRejectedCancel) ? 'has-change-request' : ''}" data-order-id="${order.id}">
+            <div class="order-card-flat-scroll">
             ${orderDataRowConsumer}
             <div class="order-card-toolbar">
                 <div class="order-card-toolbar-primary">
                     ${footerGridConsumer}
                 </div>
+            </div>
             </div>
             ${(changeBadge || cancelBadge) ? `
             <div class="order-item-foot">
@@ -2793,11 +2801,13 @@ function renderSupplierOrdersCards() {
 
         return `
         <div class="order-item order-item-supplier order-item-clickable ${isCancelled ? 'order-item--cancelled' : ''} ${(hasPendingChange || hasPendingCancel) ? 'has-change-request' : ''}" data-order-id="${o.id}">
+            <div class="order-card-flat-scroll">
             ${orderDataRowSupplier}
             <div class="order-card-toolbar">
                 <div class="order-card-toolbar-primary">
                     ${footerGridSupplier}
                 </div>
+            </div>
             </div>
             ${(noteText || changeBadge || cancelBadge) ? `
             <div class="order-item-foot">

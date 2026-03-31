@@ -2645,9 +2645,70 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
         font-size: 0.84rem;
     }
 
-    /* ---------- 가로 스크롤: 헤더 배너 + 카드 본문을 동일 7열 한 줄로 (세로 두께 완화) ---------- */
+    /* ---------- 가로 스크롤: 카드 높이 단일 띠 — 배너(7열) | 푸터(7열) 나란히 ---------- */
     .orders-table-hscroll-track {
-        min-width: 46.5rem;
+        min-width: 0;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .orders-table-hscroll {
+        overflow-x: hidden;
+    }
+
+    .order-card-flat-scroll {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        gap: 0;
+        width: 100%;
+        min-width: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x proximity;
+        padding-bottom: 0.12rem;
+        margin-left: -0.15rem;
+        margin-right: -0.15rem;
+        padding-left: 0.15rem;
+        padding-right: 0.15rem;
+        box-sizing: border-box;
+    }
+
+    .order-card-flat-scroll .order-card-data-row {
+        flex: 0 0 auto;
+        scroll-snap-align: start;
+        width: auto;
+        min-width: 47.5rem;
+        max-width: none;
+    }
+
+    .order-card-flat-scroll .order-card-toolbar {
+        flex: 0 0 auto;
+        scroll-snap-align: start;
+        width: auto;
+        min-width: 47.5rem;
+        max-width: none;
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+        border-left: 1px solid rgba(148, 163, 184, 0.38);
+        padding-left: 0.42rem;
+        margin-left: 0;
+        align-self: stretch;
+        display: flex;
+        align-items: center;
+        gap: 0.28rem;
+    }
+
+    body.theme-light .order-card-flat-scroll .order-card-toolbar {
+        border-left-color: rgba(100, 116, 139, 0.38);
+    }
+
+    .order-card-flat-scroll .order-card-toolbar-primary {
+        width: 100%;
+        align-self: center;
     }
 
     .order-card-banner-grid,
@@ -2655,23 +2716,23 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
     .order-card-footer-grid {
         display: grid;
         grid-template-columns:
-            minmax(5.75rem, 6.5rem)
-            minmax(5rem, 5.75rem)
-            minmax(4.75rem, 5.35rem)
-            minmax(5.25rem, 6rem)
-            minmax(4.35rem, 5rem)
-            minmax(4.35rem, 5rem)
-            minmax(4.85rem, 5.5rem);
-        gap: 0.26rem 0.3rem;
-        align-items: start;
+            minmax(5.5rem, 6.35rem)
+            minmax(4.85rem, 5.65rem)
+            minmax(4.65rem, 5.25rem)
+            minmax(5.1rem, 5.85rem)
+            minmax(4.2rem, 4.95rem)
+            minmax(4.2rem, 4.95rem)
+            minmax(4.75rem, 5.4rem);
+        gap: 0.22rem 0.26rem;
+        align-items: center;
         width: 100%;
         min-width: 0;
     }
 
     .order-card-footer-grid--consumer,
     .order-card-footer-grid--supplier {
-        column-gap: 0.3rem;
-        row-gap: 0.26rem;
+        column-gap: 0.26rem;
+        row-gap: 0.22rem;
     }
 
     .order-banner-cell--status {
@@ -2681,17 +2742,18 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
     .orders-column-header {
         margin-bottom: 0.28rem;
         padding: 0.32rem 0.4rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+    }
+
+    .orders-column-header-grid {
+        min-width: 47.5rem;
     }
 
     .orders-column-header-grid .order-banner-label {
         font-size: 0.65rem;
         line-height: 1.2;
-    }
-
-    .order-card-toolbar {
-        margin-top: 0.3rem;
-        padding-top: 0.3rem;
-        gap: 0.28rem;
     }
 
     .order-banner-value {
@@ -2755,6 +2817,30 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
     .order-footer-driver {
         font-size: 0.76rem;
     }
+
+    /* 납품일시 한 띠로 유지(날짜·실선·시각 가로) */
+    .order-banner-datetime-stack {
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: nowrap;
+        gap: 0.18rem 0.28rem;
+        line-height: 1.15;
+    }
+
+    .order-banner-datetime-stack .order-banner-datetime-divider {
+        width: auto;
+        max-width: 2rem;
+        margin: 0 0.06rem;
+        border-top: none;
+        border-left: 1px solid rgba(148, 163, 184, 0.55);
+        height: 0.85rem;
+        align-self: center;
+    }
+
+    body.theme-light .order-banner-datetime-stack .order-banner-datetime-divider {
+        border-left-color: rgba(100, 116, 139, 0.45);
+    }
 }
 
 .order-item {
@@ -2765,6 +2851,11 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
     border: 1px solid rgba(148, 163, 184, 0.12);
     border-left: 3px solid var(--h2-blue);
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+}
+
+/* 데스크톱·태블릿: 래퍼는 레이아웃 박스 없음(배너·푸터 세로 스택 유지) */
+.order-card-flat-scroll {
+    display: contents;
 }
 
 body.theme-light .order-item {

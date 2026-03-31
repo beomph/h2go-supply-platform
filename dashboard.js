@@ -3434,10 +3434,131 @@ function getOrderNotifSeenTs(role) {
     }
 }
 
+function getOrderNotifAckKey(role) {
+    const user = String(currentUser?.name || "").trim();
+    return "h2go_order_notif_ack_v1_" + role + "_" + encodeURIComponent(user || "anon");
+}
+
+function getOrderNotifAckSet(role) {
+    try {
+        const raw = localStorage.getItem(getOrderNotifAckKey(role));
+        if (!raw) return new Set();
+        const arr = JSON.parse(raw);
+        return new Set(Array.isArray(arr) ? arr.filter(Boolean) : []);
+    } catch (_) {
+        return new Set();
+    }
+}
+
+function setOrderNotifAckSet(role, set) {
+    try {
+        const arr = [...set].slice(-400);
+        localStorage.setItem(getOrderNotifAckKey(role), JSON.stringify(arr));
+    } catch (_) {}
+}
+
+/** 알림 건별 읽음(클릭) 키 — 주문 ID + 이력 시각 */
+function notifStableItemKey(orderId, atIso) {
+    return String(orderId ?? "") + "\t" + String(atIso ?? "");
+}
+
+function ackOrderNotifItem(role, orderId, atIso) {
+    const set = getOrderNotifAckSet(role);
+    set.add(notifStableItemKey(orderId, atIso));
+    setOrderNotifAckSet(role, set);
+}
+
+function clearOrderNotifAckSet(role) {
+    try {
+        localStorage.removeItem(getOrderNotifAckKey(role));
+    } catch (_) {}
+}
+
 function setOrderNotifSeenNow(role) {
     try {
         localStorage.setItem(getOrderNotifSeenKey(role), String(Date.now()));
+        clearOrderNotifAckSet(role);
     } catch (_) {}
+}
+
+function isOrderNotifEntryUnread(role, it, seenTs, ackSet) {
+    if (it.ts <= seenTs) return false;
+    return !ackSet.has(notifStableItemKey(it.orderId, it.atIso));
+}
+
+function isOrderInDashboardDateRange(order, role) {
+    const fromId = role === "consumer" ? "ordersFromDate" : "supplierFromDate";
+    const toId = role === "consumer" ? "ordersToDate" : "supplierToDate";
+    const fromVal = document.getElementById(fromId)?.value;
+    const toVal = document.getElementById(toId)?.value;
+    if (!fromVal || !toVal || !order) return true;
+    const fromTime = new Date(fromVal + "T00:00:00").getTime();
+    const toTime = new Date(toVal + "T23:59:59").getTime();
+    if (!Number.isFinite(fromTime) || !Number.isFinite(toTime) || fromTime > toTime) return true;
+    const key = getOrderDateTimeSortKey(order);
+    const t = new Date(String(key).replace(" ", "T")).getTime();
+    return Number.isFinite(t) && t >= fromTime && t <= toTime;
+}
+
+function focusDashboardOrderFromNotif(role, orderId) {
+    if (orderId == null || String(orderId) === "") return;
+    const order = orders.find((o) => o && String(o.id) === String(orderId));
+    if (!order) {
+        alert("주문을 찾을 수 없습니다.");
+        return;
+    }
+
+    const run = () => {
+        if (!isOrderInDashboardDateRange(order, role)) {
+            alert(
+                "해당 주문이 현재 조회기간에 포함되어 있지 않습니다. 조회기간 상자에서 기간을 조정한 뒤 다시 시도해 주세요."
+            );
+            return;
+        }
+        if (role === "consumer") renderConsumerView();
+        else renderSupplierView();
+
+        requestAnimationFrame(() => {
+            const listSel = role === "consumer" ? "#consumerOrdersList" : "#supplierOrdersList";
+            const el = document.querySelector(
+                `${listSel} .order-item[data-order-id="${cssEscapeForSelector(orderId)}"]`
+            );
+            if (!el) {
+                alert(
+                    "주문이 목록에 표시되지 않습니다. 검색어를 지우거나 조회기간·필터를 확인해 주세요."
+                );
+                return;
+            }
+            const scrollWrap = el.closest(".orders-table-hscroll") || el.closest(".orders-list");
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            if (scrollWrap && scrollWrap !== el.parentElement) {
+                const er = el.getBoundingClientRect();
+                const wr = scrollWrap.getBoundingClientRect();
+                if (er.left < wr.left || er.right > wr.right) {
+                    el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                }
+            }
+            el.classList.remove("order-item--notif-focus");
+            void el.offsetWidth;
+            el.classList.add("order-item--notif-focus");
+            window.setTimeout(() => el.classList.remove("order-item--notif-focus"), 2600);
+        });
+    };
+
+    const rs = document.getElementById("roleSelect");
+    if (rs && rs.value !== role) {
+        rs.value = role;
+        rs.dispatchEvent(new Event("change", { bubbles: true }));
+        window.setTimeout(run, 80);
+    } else {
+        run();
+    }
+}
+
+function cssEscapeForSelector(val) {
+    const s = String(val ?? "");
+    if (typeof CSS !== "undefined" && typeof CSS.escape === "function") return CSS.escape(s);
+    return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
 function formatNotifListTime(iso) {
@@ -3541,6 +3662,7 @@ function renderOneOrderNotifPanel(role, cardId, listId) {
     const list = document.getElementById(listId);
     if (!card || !list) return;
     const seen = getOrderNotifSeenTs(role);
+    const ack = getOrderNotifAckSet(role);
     const allItems = collectAllOrderNotificationsForRole(role);
     if (!allItems.length) {
         card.hidden = true;
@@ -3549,17 +3671,25 @@ function renderOneOrderNotifPanel(role, cardId, listId) {
         return;
     }
     card.hidden = false;
-    const hasUnread = allItems.some((it) => it.ts > seen);
+    const hasUnread = allItems.some((it) => isOrderNotifEntryUnread(role, it, seen, ack));
     card.classList.toggle("dashboard-order-notifications--has-unread", hasUnread);
     list.innerHTML = allItems
-        .map(
-            (it) => `
-        <li class="dashboard-order-notif-item${it.ts > seen ? " dashboard-order-notif-item--unread" : ""}">
+        .map((it) => {
+            const unread = isOrderNotifEntryUnread(role, it, seen, ack);
+            const unreadClass = unread ? " dashboard-order-notif-item--unread" : "";
+            const dot = unread
+                ? '<span class="dashboard-order-notif-new-indicator" aria-hidden="true"></span>'
+                : "";
+            const oid = escapeNotificationText(String(it.orderId ?? ""));
+            const oAt = escapeNotificationText(String(it.atIso ?? ""));
+            return `
+        <li class="dashboard-order-notif-item${unreadClass}" data-order-id="${oid}" data-notif-at="${oAt}" tabindex="0" role="button" aria-label="${escapeNotificationText(it.title)} 상세로 이동">
+            ${dot}
             <span class="dashboard-order-notif-time">${escapeNotificationText(formatNotifListTime(it.atIso))}</span>
             <span class="dashboard-order-notif-title">${escapeNotificationText(it.title)}</span>
             <span class="dashboard-order-notif-text">${escapeNotificationText(it.text)}</span>
-        </li>`
-        )
+        </li>`;
+        })
         .join("");
 }
 
@@ -4837,6 +4967,36 @@ function wireOrderNotificationAck(buttonId, role) {
 }
 wireOrderNotificationAck("consumerOrderNotificationsAck", "consumer");
 wireOrderNotificationAck("supplierOrderNotificationsAck", "supplier");
+
+(function wireOrderNotificationItemClicks() {
+    const bind = (cardId) => {
+        const card = document.getElementById(cardId);
+        if (!card || card.dataset.notifItemClickBound === "1") return;
+        card.dataset.notifItemClickBound = "1";
+        const role = cardId === "consumerOrderNotificationsCard" ? "consumer" : "supplier";
+        card.addEventListener("click", (e) => {
+            if (e.target.closest(".dashboard-order-notifications-strip-header button")) return;
+            const item = e.target.closest(".dashboard-order-notif-item");
+            if (!item) return;
+            e.preventDefault();
+            const orderId = item.getAttribute("data-order-id");
+            const atIso = item.getAttribute("data-notif-at");
+            if (!orderId || !atIso) return;
+            ackOrderNotifItem(role, orderId, atIso);
+            renderOrderNotificationPanels();
+            focusDashboardOrderFromNotif(role, orderId);
+        });
+        card.addEventListener("keydown", (e) => {
+            if (e.key !== "Enter" && e.key !== " ") return;
+            const item = e.target.closest(".dashboard-order-notif-item");
+            if (!item || e.target !== item) return;
+            e.preventDefault();
+            item.click();
+        });
+    };
+    bind("consumerOrderNotificationsCard");
+    bind("supplierOrderNotificationsCard");
+})();
 
 // 다른 탭/창에서 주문이 갱신되면 현재 화면도 즉시 반영 + 결정 알림(거절/승인)
 window.addEventListener('storage', (e) => {

@@ -1791,112 +1791,36 @@ function canImmediateCancelOrder(order, actorType) {
     return false;
 }
 
-// 주문 수량 계산 (트레일러 대수 * 용량)
-function getOrderQuantity(order) {
-    return (order.tubeTrailers || 0) * TRAILER_CAPACITY_KG;
-}
-
-// ========== AI 운송계획 ==========
-function calculateTransportPlan() {
-    const activeStatuses = ['requested', 'accepted', 'change_accepted', 'empty_in_transit', 'empty_arrived', 'in_transit', 'arrived', 'collecting'];
-    const activeOrders = getAllOrders().filter(o => activeStatuses.includes(normalizeStatus(o.status)));
-    if (activeOrders.length === 0) return null;
-
-    const drivers = parseInt(document.getElementById('availableDrivers')?.value || 5, 10);
-    const trailers = parseInt(document.getElementById('availableTrailers')?.value || 3, 10);
-    const trailerCapacity = parseInt(document.getElementById('trailerCapacity')?.value || 400, 10);
-
-    const ordersByAddress = {};
-    activeOrders.forEach(order => {
-        const key = order.address;
-        const qty = (order.tubeTrailers || 0) * trailerCapacity;
-        if (!ordersByAddress[key]) {
-            ordersByAddress[key] = { address: order.address, quantity: 0, tubeTrailers: 0, orders: [], deliveryDate: formatOrderDate(order), time: order.time };
-        }
-        ordersByAddress[key].quantity += qty;
-        ordersByAddress[key].tubeTrailers += (order.tubeTrailers || 0);
-        ordersByAddress[key].orders.push(order);
-    });
-
-    const destinations = Object.values(ordersByAddress);
-    const totalQuantity = destinations.reduce((sum, d) => sum + d.quantity, 0);
-    const totalTrailers = destinations.reduce((sum, d) => sum + d.tubeTrailers, 0);
-
-    // 도착도만 운송시간 반영, 출하도는 픽업(0분)
-    function getDestTravelTime(d) {
-        const hasDelivery = (d.orders || []).some(o => o.supplyCondition !== 'ex_factory');
-        return hasDelivery ? getTravelTimeFromAddress(d.address) : 0;
-    }
-    const isExFactoryDest = (d) => (d.orders || []).every(o => o.supplyCondition === 'ex_factory');
-
-    const trailersNeeded = totalTrailers;
-    const trailersToUse = Math.min(trailersNeeded, trailers);
-    const totalTrips = destinations.length;
-    const totalDriveTime = destinations.reduce((sum, d) => sum + getDestTravelTime(d) * 2, 0);
-    const hoursPerTrip = 2.5;
-    const maxTripsPerDriver = Math.floor(8 / hoursPerTrip);
-    const driversNeeded = Math.ceil(totalTrips / maxTripsPerDriver);
-    const driversToUse = Math.min(driversNeeded, drivers);
-
-    const schedule = [];
-    let currentTime = 8;
-    destinations.forEach((dest, i) => {
-        const driverNum = (i % driversToUse) + 1;
-        const duration = getDestTravelTime(dest);
-        const isPickup = isExFactoryDest(dest);
-        schedule.push({
-            time: `${Math.floor(currentTime)}:${((currentTime % 1) * 60).toString().padStart(2, '0')}`,
-            route: isPickup ? `출하지 픽업 (${(dest.address || '').substring(0, 16)}...)` : `생산지 → ${(dest.address || '').substring(0, 20)}...`,
-            quantity: dest.tubeTrailers + '대 (' + dest.quantity + ' kg)',
-            trailer: `트레일러 ${Math.min(dest.tubeTrailers, trailersToUse)}대`,
-            driver: isPickup ? '—' : `기사 ${driverNum}`,
-            duration: duration
-        });
-        currentTime += hoursPerTrip;
-    });
-
-    return {
-        totalQuantity,
-        totalTrailers,
-        trailersNeeded,
-        trailersToUse,
-        trailersAvailable: trailers,
-        driversNeeded,
-        driversToUse,
-        driversAvailable: drivers,
-        totalTrips,
-        totalDriveTime,
-        schedule,
-        destinations,
-        hasShortage: trailersNeeded > trailers || driversNeeded > drivers
-    };
-}
-
 // ========== 뷰 렌더링 ==========
 function showView(viewId) {
     document.querySelectorAll('.dashboard-view').forEach(v => v.classList.remove('active'));
     const el = document.getElementById((viewId || '') + 'View');
     if (el) el.classList.add('active');
-    const strip = document.getElementById('dashboardInsightStrip');
-    if (strip) strip.classList.toggle('dashboard-insight-strip--hidden', viewId === 'supplierRegistration');
 }
 
 function tickDashboardClock() {
-    const el = document.getElementById('dashboardClock');
-    if (!el) return;
     const now = new Date();
+    let text;
     try {
-        el.dateTime = now.toISOString();
-    } catch (_) {}
-    el.textContent = new Intl.DateTimeFormat('ko-KR', {
-        weekday: 'short',
-        month: 'numeric',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-    }).format(now);
+        text = new Intl.DateTimeFormat('ko-KR', {
+            weekday: 'short',
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+        }).format(now);
+    } catch (_) {
+        return;
+    }
+    const iso = now.toISOString();
+    document.querySelectorAll('.dashboard-live-clock').forEach((el) => {
+        try {
+            el.dateTime = iso;
+        } catch (_) {}
+        el.textContent = text;
+    });
 }
 
 function setDashboardStatFilter(filterKey) {
@@ -1917,10 +1841,11 @@ function isConsumerPendingApprovalStatus(status) {
 }
 
 function updateDashboardStats() {
-    const container = document.getElementById('dashboardStats');
-    if (!container) return;
-    const role = currentUser?.type === 'supplier' ? 'supplier' : 'consumer';
-    if (role === 'consumer') {
+    const consumerContainer = document.getElementById('consumerDashboardStats');
+    const supplierContainer = document.getElementById('supplierDashboardStats');
+    const me = String(currentUser?.name || '').trim();
+
+    if (consumerContainer && me) {
         const hidden = new Set(readHiddenConsumerIds());
         const mine = getConsumerOrders(currentUser.name).filter((o) => !hidden.has(o.id));
         const todayP = getTodayParts();
@@ -1943,7 +1868,7 @@ function updateDashboardStats() {
         const tipTodayInner = formatConsumerInsightTooltipPanelHtml("납품일 오늘 · 공급자별", todayDelivery);
         const tipTomorrowInner = formatConsumerInsightTooltipPanelHtml("납품일 내일 · 공급자별", tomorrowDelivery);
 
-        container.innerHTML = `
+        consumerContainer.innerHTML = `
             <div class="insight-stat insight-stat--banner insight-stat--readonly insight-stat--tip" role="listitem" tabindex="0" aria-describedby="insight-consumer-tip-today">
                 <span class="insight-stat-label">오늘 주문</span>
                 <span class="insight-stat-values-triple" aria-label="접수 완료, 완료, 미완료 순">
@@ -1963,7 +1888,11 @@ function updateDashboardStats() {
                 <div id="insight-consumer-tip-tomorrow" class="insight-tooltip-panel" role="tooltip">${tipTomorrowInner}</div>
             </div>
         `;
-    } else {
+    } else if (consumerContainer) {
+        consumerContainer.innerHTML = '';
+    }
+
+    if (supplierContainer && me) {
         const hidden = new Set(readHiddenSupplierIds());
         const mine = getAllOrders().filter((o) => !hidden.has(o.id));
         const todayP = getTodayParts();
@@ -1986,7 +1915,7 @@ function updateDashboardStats() {
         const tipTodayInner = formatSupplierInsightTooltipPanelHtml("납품일 오늘 · 수요처별", todayDelivery);
         const tipTomorrowInner = formatSupplierInsightTooltipPanelHtml("납품일 내일 · 수요처별", tomorrowDelivery);
 
-        container.innerHTML = `
+        supplierContainer.innerHTML = `
             <div class="insight-stat insight-stat--banner insight-stat--readonly insight-stat--tip" role="listitem" tabindex="0" aria-describedby="insight-supplier-tip-today">
                 <span class="insight-stat-label">오늘 주문</span>
                 <span class="insight-stat-values-triple" aria-label="접수 완료, 완료, 미완료 순">
@@ -2006,6 +1935,8 @@ function updateDashboardStats() {
                 <div id="insight-supplier-tip-tomorrow" class="insight-tooltip-panel" role="tooltip">${tipTomorrowInner}</div>
             </div>
         `;
+    } else if (supplierContainer) {
+        supplierContainer.innerHTML = '';
     }
 }
 
@@ -2858,75 +2789,7 @@ function closeQtyConfirmModal() {
 }
 
 function renderSupplierView() {
-    const allOrders = getAllOrders();
-    const activeOrders = allOrders.filter(o => o.status !== 'cancelled');
-    const totalTrailers = activeOrders.reduce((s, o) => s + (o.tubeTrailers || 0), 0);
-    const totalQty = activeOrders.reduce((s, o) => s + getOrderQuantity(o), 0);
-    const planEl = document.getElementById('productionPlanSummary');
-    if (planEl) {
-        planEl.innerHTML = `
-            <div class="plan-item"><span>총 트레일러 필요</span><strong>${totalTrailers}대</strong></div>
-            <div class="plan-item"><span>예상 수소량 (400kg/대)</span><strong>${totalQty.toLocaleString()} kg</strong></div>
-            <div class="plan-item"><span>주문 수요처 수</span><strong>${new Set(activeOrders.map(o => o.address)).size}곳</strong></div>
-        `;
-    }
-
-    // 공급자 주문 현황 카드 렌더링
     renderSupplierOrdersCards();
-
-    // AI 운송계획 (통합)
-    const transportPlan = calculateTransportPlan();
-    const aiPlanEl = document.getElementById('aiTransportPlan');
-    const scheduleEl = document.getElementById('transportSchedule');
-
-    if (!transportPlan) {
-        if (aiPlanEl) aiPlanEl.innerHTML = '<div class="empty-state"><p>주문이 없습니다.</p></div>';
-        if (scheduleEl) scheduleEl.innerHTML = '';
-    } else {
-        if (aiPlanEl) {
-            aiPlanEl.innerHTML = `
-                <div class="ai-plan-item highlight">
-                    <span class="label">총 트레일러</span>
-                    <span class="value">${transportPlan.totalTrailers}대 (${transportPlan.totalQuantity.toLocaleString()} kg)</span>
-                </div>
-                <div class="ai-plan-item">
-                    <span class="label">필요 트레일러 수</span>
-                    <span class="value">${transportPlan.trailersNeeded}대 ${transportPlan.trailersNeeded > transportPlan.trailersAvailable ? '(⚠ 부족)' : ''}</span>
-                </div>
-                <div class="ai-plan-item">
-                    <span class="label">가용 트레일러</span>
-                    <span class="value">${transportPlan.trailersAvailable}대</span>
-                </div>
-                <div class="ai-plan-item">
-                    <span class="label">필요 운송기사 수</span>
-                    <span class="value">${transportPlan.driversNeeded}명 ${transportPlan.driversNeeded > transportPlan.driversAvailable ? '(⚠ 부족)' : ''}</span>
-                </div>
-                <div class="ai-plan-item">
-                    <span class="label">가용 운송기사</span>
-                    <span class="value">${transportPlan.driversAvailable}명</span>
-                </div>
-                <div class="ai-plan-item">
-                    <span class="label">총 배송 횟수</span>
-                    <span class="value">${transportPlan.totalTrips}회</span>
-                </div>
-                <div class="ai-plan-item">
-                    <span class="label">예상 총 운송시간</span>
-                    <span class="value">약 ${Math.round(transportPlan.totalDriveTime)}분 (왕복)</span>
-                </div>
-                ${transportPlan.hasShortage ? '<div class="ai-plan-item" style="border-left:4px solid #f59e0b;"><span class="label">⚠ 권장</span><span class="value">트레일러 또는 기사 추가 필요</span></div>' : ''}
-            `;
-        }
-        if (scheduleEl) {
-            scheduleEl.innerHTML = transportPlan.schedule.map(s => `
-                <div class="schedule-item">
-                    <span class="time">${s.time}</span>
-                    <span class="route">${s.route}</span>
-                    <span class="quantity">${s.quantity}</span>
-                    <span class="trailer">${s.trailer} · ${s.driver}</span>
-                </div>
-            `).join('');
-        }
-    }
     updateDashboardStats();
     renderOrderNotificationPanels();
 }
@@ -3728,8 +3591,8 @@ function renderOneOrderNotifPanel(role, cardId, listId) {
 }
 
 function renderOrderNotificationPanels() {
-    const role = currentUser?.type === "supplier" ? "supplier" : "consumer";
-    renderOneOrderNotifPanel(role, "dashboardOrderNotificationsCard", "dashboardOrderNotificationsList");
+    renderOneOrderNotifPanel("consumer", "consumerOrderNotificationsCard", "consumerOrderNotificationsList");
+    renderOneOrderNotifPanel("supplier", "supplierOrderNotificationsCard", "supplierOrderNotificationsList");
 }
 
 function findPreviousInboundOrder(currentOrder) {
@@ -4870,8 +4733,6 @@ document.addEventListener('click', (e) => {
     }
 });
 
-document.getElementById('recalculateBtn')?.addEventListener('click', () => renderSupplierView());
-
 // ========== 재고 패널 이벤트 ==========
 document.getElementById('addTrailerBtn')?.addEventListener('click', () => {
     const inv = readInventory();
@@ -4981,11 +4842,14 @@ async function bootstrapOrderViews() {
 }
 bootstrapOrderViews();
 
-document.getElementById("dashboardOrderNotificationsAck")?.addEventListener("click", () => {
-    const role = currentUser?.type === "supplier" ? "supplier" : "consumer";
-    setOrderNotifSeenNow(role);
-    renderOrderNotificationPanels();
-});
+function wireOrderNotificationAck(buttonId, role) {
+    document.getElementById(buttonId)?.addEventListener("click", () => {
+        setOrderNotifSeenNow(role);
+        renderOrderNotificationPanels();
+    });
+}
+wireOrderNotificationAck("consumerOrderNotificationsAck", "consumer");
+wireOrderNotificationAck("supplierOrderNotificationsAck", "supplier");
 
 // 다른 탭/창에서 주문이 갱신되면 현재 화면도 즉시 반영 + 결정 알림(거절/승인)
 window.addEventListener('storage', (e) => {

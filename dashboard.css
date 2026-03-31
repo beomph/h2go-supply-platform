@@ -188,77 +188,7 @@
     margin: 0 auto;
 }
 
-/* ------------------------------------------------------------
-   상단 인사이트 스트립 (시각 + 주문 요약)
------------------------------------------------------------- */
-.dashboard-insight-strip {
-    margin-bottom: 1.75rem;
-    padding: 1rem 1.2rem;
-    border-radius: var(--radius-lg, 14px);
-    border: 1px solid var(--border-color);
-    background: var(--bg-card);
-    box-shadow: var(--shadow-card, 0 8px 28px rgba(0, 0, 0, 0.08));
-}
-
-.dashboard-insight-strip--hidden {
-    display: none !important;
-}
-
-.dashboard-insight-inner {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem 1.25rem;
-}
-
-/* 최상단 한 줄: 로컬 시각 | 통계(중앙) | 주문 알림(우측) — 구매·판매 공통 */
-.dashboard-insight-inner--three-col {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) minmax(12rem, 21rem);
-    align-items: start;
-    gap: 0.75rem 1.25rem;
-}
-
-.insight-strip-left {
-    flex-shrink: 0;
-}
-
-.insight-strip-center {
-    min-width: 0;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-}
-
-.insight-strip-right {
-    min-width: 0;
-    justify-self: end;
-    width: 100%;
-    max-width: 21rem;
-}
-
-.insight-stats--center {
-    justify-content: center;
-    flex-wrap: wrap;
-    flex: none;
-    width: 100%;
-}
-
-@media (max-width: 960px) {
-    .dashboard-insight-inner--three-col {
-        grid-template-columns: 1fr;
-    }
-
-    .insight-strip-center {
-        justify-content: flex-start;
-    }
-
-    .insight-strip-right {
-        justify-self: stretch;
-        max-width: none;
-    }
-}
+/* 로컬 시각·납품일 배너는 주문 현황 카드 헤더(`order-card-insight-row`) 안에 표시 */
 
 .insight-clock-block {
     display: flex;
@@ -499,6 +429,136 @@ body.theme-light .insight-tooltip-panel {
     color: var(--text-muted);
 }
 
+/* 구매/판매: 페이지 상단 제목 + 우측 주문 알림 */
+.view-header--dashboard-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+    flex-wrap: wrap;
+}
+
+.view-header-text-block {
+    flex: 1 1 12rem;
+    min-width: 0;
+}
+
+.dashboard-order-notifications--beside-title {
+    flex: 0 1 min(20rem, 42vw);
+    max-width: 22rem;
+    max-height: 12.5rem;
+    display: flex;
+    flex-direction: column;
+    min-width: 12rem;
+    margin-bottom: 0;
+    overflow: hidden;
+}
+
+.dashboard-order-notifications--beside-title .dashboard-order-notifications-list--scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 주문 현황 제목 오른쪽: 로컬 시각 + 오늘/내일 배너 */
+.my-orders-header-title-row--with-inline-insights {
+    align-items: flex-start;
+}
+
+.my-orders-header-title-cluster {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem 1.25rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.order-card-insight-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.5rem 0.65rem;
+    min-width: 0;
+}
+
+.insight-clock-block--inline {
+    flex: 0 0 auto;
+    padding: 0.35rem 0.65rem;
+    border-radius: 10px;
+    background: var(--surface-soft);
+    border: 1px solid var(--surface-soft-border, var(--border-color));
+}
+
+.insight-clock-block--inline .insight-clock-label {
+    font-size: 0.62rem;
+}
+
+.insight-clock-block--inline .insight-clock {
+    font-size: 0.98rem;
+}
+
+.order-card-insight-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    justify-content: flex-start;
+    align-items: flex-start;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.order-card-insight-stats .insight-stat--banner {
+    min-width: 7.5rem;
+}
+
+.supplier-orders-header-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem 1.25rem;
+    padding-bottom: 0.65rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.supplier-orders-header-top h3 {
+    margin: 0;
+    flex: 0 0 auto;
+    font-size: 1.125rem;
+    line-height: 1.3;
+    font-weight: 700;
+}
+
+.supplier-orders-header-top .order-card-insight-row {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+@media (max-width: 720px) {
+    .view-header--dashboard-top {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .dashboard-order-notifications--beside-title {
+        flex: 1 1 auto;
+        max-width: none;
+        width: 100%;
+    }
+
+    .my-orders-header-title-row--with-inline-insights {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .my-orders-header-title-row--with-inline-insights .btn-primary {
+        align-self: flex-end;
+    }
+}
+
 /* 주문 검색 (.my-orders-header 안에서는 한 줄 레이아웃용) */
 .orders-search-wrap {
     width: 100%;
@@ -538,11 +598,7 @@ body.theme-light .insight-tooltip-panel {
 .my-orders-card,
 .inventory-card,
 .prediction-card,
-.supplier-orders-card,
-.production-plan-card,
-.transport-resources-card,
-.ai-plan-card,
-.transport-schedule-card {
+.supplier-orders-card {
     box-shadow: var(--shadow-card, 0 4px 24px rgba(0, 0, 0, 0.08));
 }
 
@@ -550,11 +606,7 @@ body.theme-dark .order-form-card,
 body.theme-dark .my-orders-card,
 body.theme-dark .inventory-card,
 body.theme-dark .prediction-card,
-body.theme-dark .supplier-orders-card,
-body.theme-dark .production-plan-card,
-body.theme-dark .transport-resources-card,
-body.theme-dark .ai-plan-card,
-body.theme-dark .transport-schedule-card {
+body.theme-dark .supplier-orders-card {
     box-shadow: var(--shadow-card, 0 8px 32px rgba(0, 0, 0, 0.35));
 }
 
@@ -1393,11 +1445,7 @@ body.theme-dark .transport-schedule-card {
 
 .order-form-card,
 .my-orders-card,
-.orders-table-card,
-.production-plan-card,
-.transport-resources-card,
-.ai-plan-card,
-.transport-schedule-card {
+.orders-table-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg, 14px);
@@ -1538,15 +1586,17 @@ body.theme-dark .transport-schedule-card {
 
 .my-orders-card h3,
 .supplier-orders-card h3,
-.orders-table-card h3,
-.production-plan-card h3,
-.transport-resources-card h3,
-.ai-plan-card h3,
-.transport-schedule-card h3 {
+.orders-table-card h3 {
     font-size: 1.125rem;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
+}
+
+.supplier-orders-card .supplier-orders-header-top h3 {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
 }
 
 .order-form .form-row {
@@ -4858,47 +4908,6 @@ body.theme-light .dashboard-order-notif-title {
     font-size: 0.95rem;
 }
 
-.plan-summary {
-    padding: 1rem;
-    background: var(--bg-dark);
-    border-radius: 8px;
-    line-height: 1.8;
-}
-
-.plan-summary .plan-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.5rem 0;
-}
-
-/* 공급자 하단 그리드 (생산+운송) */
-.supplier-bottom-grid {
-    display: grid;
-    grid-template-columns: 1fr 1.5fr;
-    gap: 2rem;
-    margin-top: 2rem;
-}
-
-/* PC에서 창 폭을 줄였을 때(또는 작은 노트북) 2열이 과도하게 좁아지는 문제 방지
-   - 사용처: 공급모드 하단 `.supplier-bottom-grid` */
-@media (max-width: 1280px) {
-    .supplier-bottom-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 1024px) {
-    .supplier-bottom-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-.transport-section {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
 /* 상태 토글 스위치 */
 .status-toggle {
     padding: 0.35rem 0.6rem;
@@ -4918,41 +4927,6 @@ body.theme-light .dashboard-order-notif-title {
     border-color: var(--h2-blue);
 }
 
-/* 운송자 화면 */
-.resources-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-
-@media (max-width: 768px) {
-    .resources-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-.resource-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.resource-item label {
-    font-size: 0.9rem;
-    color: var(--text-muted);
-}
-
-.resource-item input {
-    width: 100%;
-    padding: 0.75rem;
-    background: var(--bg-black);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    color: var(--text-white);
-    font-size: 1.25rem;
-}
-
 .btn-secondary {
     background: var(--go-gray);
     color: white;
@@ -4960,79 +4934,6 @@ body.theme-light .dashboard-order-notif-title {
 
 .btn-secondary:hover {
     background: var(--go-gray-dark);
-}
-
-.ai-plan-card {
-    margin-top: 2rem;
-    border: 1px solid color-mix(in srgb, var(--h2-blue) 35%, var(--border-color));
-}
-
-.ai-plan-content {
-    padding: 1rem 0;
-}
-
-.ai-plan-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    background: var(--bg-dark);
-    border-radius: 8px;
-    margin-bottom: 0.75rem;
-}
-
-.ai-plan-item.highlight {
-    background: rgba(59, 130, 246, 0.15);
-    border-left: 4px solid var(--h2-blue);
-}
-
-.ai-plan-item .label {
-    color: var(--text-muted);
-}
-
-.ai-plan-item .value {
-    font-weight: 600;
-    color: var(--h2-blue-light);
-}
-
-.schedule-list {
-    margin-top: 1rem;
-}
-
-.schedule-item {
-    display: grid;
-    grid-template-columns: 80px 1fr 1fr 100px;
-    gap: 1rem;
-    padding: 1rem;
-    background: var(--bg-dark);
-    border-radius: 8px;
-    margin-bottom: 0.75rem;
-    align-items: center;
-}
-
-@media (max-width: 768px) {
-    .schedule-item {
-        grid-template-columns: 1fr;
-    }
-}
-
-.schedule-item .time {
-    font-weight: 600;
-    color: var(--h2-blue-light);
-}
-
-.schedule-item .route {
-    font-size: 0.95rem;
-}
-
-.schedule-item .quantity {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-}
-
-.schedule-item .trailer {
-    font-size: 0.85rem;
-    color: var(--go-gray);
 }
 
 .empty-state {

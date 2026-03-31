@@ -45,42 +45,37 @@
     </nav>
 
     <main class="dashboard-main">
-        <div id="dashboardInsightStrip" class="dashboard-insight-strip" aria-label="현황 요약">
-            <div class="dashboard-insight-inner dashboard-insight-inner--three-col">
-                <div class="insight-strip-left">
-                    <div class="insight-clock-block">
-                        <span class="insight-clock-label">로컬 시각</span>
-                        <time id="dashboardClock" class="insight-clock" datetime=""></time>
-                    </div>
-                </div>
-                <div class="insight-strip-center">
-                    <div id="dashboardStats" class="insight-stats insight-stats--center" role="list" aria-live="polite"></div>
-                </div>
-                <div class="insight-strip-right">
-                    <div id="dashboardOrderNotificationsCard" class="dashboard-order-notifications-card dashboard-order-notifications-strip" hidden>
-                        <div class="dashboard-order-notifications-strip-header">
-                            <h3 class="dashboard-order-notifications-strip-title">주문 알림</h3>
-                            <button type="button" class="btn btn-tiny btn-secondary" id="dashboardOrderNotificationsAck">모두 확인</button>
-                        </div>
-                        <ul id="dashboardOrderNotificationsList" class="dashboard-order-notifications-list dashboard-order-notifications-list--compact" role="list"></ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- ========== 수요자 화면 ========== -->
         <section id="consumerView" class="dashboard-view active">
-            <div class="view-header view-header--hero">
-                <h1>구매 대시보드</h1>
-                <p>주문·납품 일정을 한눈에 확인하고, 필요 시 AI 챗봇으로 빠르게 문의하세요.</p>
+            <div class="view-header view-header--hero view-header--dashboard-top">
+                <div class="view-header-text-block">
+                    <h1>구매 대시보드</h1>
+                    <p>주문·납품 일정을 한눈에 확인하고, 필요 시 AI 챗봇으로 빠르게 문의하세요.</p>
+                </div>
+                <div id="consumerOrderNotificationsCard" class="dashboard-order-notifications-card dashboard-order-notifications--beside-title" hidden>
+                    <div class="dashboard-order-notifications-strip-header">
+                        <h3 class="dashboard-order-notifications-strip-title">주문 알림</h3>
+                        <button type="button" class="btn btn-tiny btn-secondary" id="consumerOrderNotificationsAck">모두 확인</button>
+                    </div>
+                    <ul id="consumerOrderNotificationsList" class="dashboard-order-notifications-list dashboard-order-notifications-list--compact dashboard-order-notifications-list--scroll" role="list"></ul>
+                </div>
             </div>
 
             <div class="consumer-content consumer-content--orders-only">
                 <div class="consumer-order-stack--compact consumer-orders-main">
                     <div class="my-orders-card">
                         <div class="my-orders-header">
-                            <div class="my-orders-header-title-row">
-                                <div class="my-orders-header-title"><h3>주문 현황</h3></div>
+                            <div class="my-orders-header-title-row my-orders-header-title-row--with-inline-insights">
+                                <div class="my-orders-header-title-cluster">
+                                    <div class="my-orders-header-title"><h3>주문 현황</h3></div>
+                                    <div class="order-card-insight-row" aria-label="로컬 시각 및 납품일 요약">
+                                        <div class="insight-clock-block insight-clock-block--inline">
+                                            <span class="insight-clock-label">로컬 시각</span>
+                                            <time class="insight-clock dashboard-live-clock" datetime="" aria-live="polite"></time>
+                                        </div>
+                                        <div id="consumerDashboardStats" class="insight-stats order-card-insight-stats" role="list" aria-live="polite"></div>
+                                    </div>
+                                </div>
                                 <button type="button" class="btn btn-primary btn-tiny" id="openNewOrderModalBtn">새 주문</button>
                             </div>
                             <div class="my-orders-header-toolbar">
@@ -145,17 +140,35 @@
             </div>
         </section>
 
-        <!-- ========== 공급자 화면 (생산+운송 통합) ========== -->
+        <!-- ========== 공급자 화면 (판매 대시보드 · 주문 현황) ========== -->
         <section id="supplierView" class="dashboard-view">
-            <div class="view-header view-header--hero">
-                <h1>판매 대시보드</h1>
-                <p>주문 취합, 생산 요약, AI 운송 제안까지 한 화면에서 운영하세요.</p>
+            <div class="view-header view-header--hero view-header--dashboard-top">
+                <div class="view-header-text-block">
+                    <h1>판매 대시보드</h1>
+                    <p>주문 현황을 한 화면에서 확인하고 운영하세요.</p>
+                </div>
+                <div id="supplierOrderNotificationsCard" class="dashboard-order-notifications-card dashboard-order-notifications--beside-title" hidden>
+                    <div class="dashboard-order-notifications-strip-header">
+                        <h3 class="dashboard-order-notifications-strip-title">주문 알림</h3>
+                        <button type="button" class="btn btn-tiny btn-secondary" id="supplierOrderNotificationsAck">모두 확인</button>
+                    </div>
+                    <ul id="supplierOrderNotificationsList" class="dashboard-order-notifications-list dashboard-order-notifications-list--compact dashboard-order-notifications-list--scroll" role="list"></ul>
+                </div>
             </div>
             
             <div class="supplier-content">
                 <div class="supplier-orders-card">
                     <div class="my-orders-header supplier-orders-header">
-                        <h3>주문 현황</h3>
+                        <div class="supplier-orders-header-top">
+                            <h3>주문 현황</h3>
+                            <div class="order-card-insight-row" aria-label="로컬 시각 및 납품일 요약">
+                                <div class="insight-clock-block insight-clock-block--inline">
+                                    <span class="insight-clock-label">로컬 시각</span>
+                                    <time class="insight-clock dashboard-live-clock" datetime="" aria-live="polite"></time>
+                                </div>
+                                <div id="supplierDashboardStats" class="insight-stats order-card-insight-stats" role="list" aria-live="polite"></div>
+                            </div>
+                        </div>
                         <div class="my-orders-header-toolbar">
                             <div class="orders-filter">
                                 <label for="supplierFromDate">조회기간</label>
@@ -188,44 +201,6 @@
                                 </div>
                                 <div id="supplierOrdersList" class="orders-list"></div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="supplier-bottom-grid">
-                    <div class="production-plan-card">
-                        <h3>생산계획 요약</h3>
-                        <div id="productionPlanSummary" class="plan-summary"></div>
-                    </div>
-                    <div class="transport-section">
-                        <div class="transport-resources-card">
-                            <h3>운송 자원 현황</h3>
-                            <div class="resources-grid">
-                                <div class="resource-item">
-                                    <label>가용 운송기사</label>
-                                    <input type="number" id="availableDrivers" value="5" min="1" max="20">
-                                    <span>명</span>
-                                </div>
-                                <div class="resource-item">
-                                    <label>가용 수소튜브트레일러</label>
-                                    <input type="number" id="availableTrailers" value="3" min="1" max="15">
-                                    <span>대</span>
-                                </div>
-                                <div class="resource-item">
-                                    <label>트레일러 1대당 용량</label>
-                                    <input type="number" id="trailerCapacity" value="400" min="200" max="600">
-                                    <span>kg</span>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-secondary" id="recalculateBtn">운송계획 재계산</button>
-                        </div>
-                        <div class="ai-plan-card">
-                            <h3>🤖 AI 운송계획 제안</h3>
-                            <div id="aiTransportPlan" class="ai-plan-content"></div>
-                        </div>
-                        <div class="transport-schedule-card">
-                            <h3>배송 스케줄</h3>
-                            <div id="transportSchedule" class="schedule-list"></div>
                         </div>
                     </div>
                 </div>

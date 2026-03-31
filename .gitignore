@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+# 로컬 anon 키 (supabase-config.example.js 는 예시만 커밋)
+js/supabase-config.js
 
 # Python
 __pycache__/

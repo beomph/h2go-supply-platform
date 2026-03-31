@@ -48,9 +48,20 @@
         <!-- ========== 수요자 화면 ========== -->
         <section id="consumerView" class="dashboard-view active">
             <div class="view-header view-header--hero view-header--dashboard-top">
-                <div class="view-header-text-block">
-                    <h1>구매 대시보드</h1>
-                    <p>주문·납품 일정을 한눈에 확인하고, 필요 시 AI 챗봇으로 빠르게 문의하세요.</p>
+                <div class="view-header-main-col">
+                    <div class="view-header-text-block">
+                        <h1>구매 대시보드</h1>
+                        <p>주문·납품 일정을 한눈에 확인하고, 필요 시 AI 챗봇으로 빠르게 문의하세요.</p>
+                    </div>
+                    <div class="dashboard-hero-insights" aria-label="로컬 시각 및 납품일 요약">
+                        <div class="order-card-insight-row order-card-insight-tiles dashboard-hero-insight-tiles">
+                            <div class="insight-clock-block insight-clock-block--inline order-card-insight-tile">
+                                <span class="insight-clock-label">로컬 시각</span>
+                                <time class="insight-clock dashboard-live-clock" datetime="" aria-live="polite"></time>
+                            </div>
+                            <div id="consumerDashboardStats" class="insight-stats order-card-insight-stats order-card-insight-stats--tiles" role="list" aria-live="polite"></div>
+                        </div>
+                    </div>
                 </div>
                 <div id="consumerOrderNotificationsCard" class="dashboard-order-notifications-card dashboard-order-notifications--beside-title" hidden>
                     <div class="dashboard-order-notifications-strip-header">
@@ -65,34 +76,25 @@
                 <div class="consumer-order-stack--compact consumer-orders-main">
                     <div class="my-orders-card">
                         <div class="my-orders-header">
-                            <div class="my-orders-header-title-row my-orders-header-title-row--with-inline-insights">
-                                <div class="my-orders-header-title-cluster">
-                                    <div class="my-orders-header-title"><h3>주문 현황</h3></div>
-                                    <div class="order-card-insight-row order-card-insight-tiles" aria-label="로컬 시각 및 납품일 요약">
-                                        <div class="insight-clock-block insight-clock-block--inline order-card-insight-tile">
-                                            <span class="insight-clock-label">로컬 시각</span>
-                                            <time class="insight-clock dashboard-live-clock" datetime="" aria-live="polite"></time>
+                            <div class="my-orders-header-title-row my-orders-header-title-row--toolbar-inline">
+                                <div class="my-orders-header-title"><h3>주문 현황</h3></div>
+                                <div class="my-orders-header-toolbar my-orders-header-toolbar--inline">
+                                    <div class="orders-filter">
+                                        <label for="ordersFromDate">조회기간</label>
+                                        <div class="orders-filter-input-wrap">
+                                            <input type="date" id="ordersFromDate" class="orders-date-input">
+                                            <span class="range-separator">~</span>
+                                            <input type="date" id="ordersToDate" class="orders-date-input">
+                                            <button type="button" class="btn btn-tiny btn-secondary" id="ordersDateApplyBtn">조회</button>
                                         </div>
-                                        <div id="consumerDashboardStats" class="insight-stats order-card-insight-stats order-card-insight-stats--tiles" role="list" aria-live="polite"></div>
+                                    </div>
+                                    <div class="orders-search-wrap">
+                                        <label class="visually-hidden" for="consumerOrderSearch">주문 검색</label>
+                                        <input type="search" id="consumerOrderSearch" class="orders-search-input" placeholder="주문번호·주소·공급자 검색" autocomplete="off" enterkeyhint="search">
                                     </div>
                                 </div>
                                 <div class="my-orders-header-actions">
                                     <button type="button" class="btn btn-primary btn-tiny" id="openNewOrderModalBtn">새 주문</button>
-                                </div>
-                            </div>
-                            <div class="my-orders-header-toolbar">
-                                <div class="orders-filter">
-                                    <label for="ordersFromDate">조회기간</label>
-                                    <div class="orders-filter-input-wrap">
-                                        <input type="date" id="ordersFromDate" class="orders-date-input">
-                                        <span class="range-separator">~</span>
-                                        <input type="date" id="ordersToDate" class="orders-date-input">
-                                        <button type="button" class="btn btn-tiny btn-secondary" id="ordersDateApplyBtn">조회</button>
-                                    </div>
-                                </div>
-                                <div class="orders-search-wrap">
-                                    <label class="visually-hidden" for="consumerOrderSearch">주문 검색</label>
-                                    <input type="search" id="consumerOrderSearch" class="orders-search-input" placeholder="주문번호·주소·공급자 검색" autocomplete="off" enterkeyhint="search">
                                 </div>
                             </div>
                         </div>
@@ -145,9 +147,20 @@
         <!-- ========== 공급자 화면 (판매 대시보드 · 주문 현황) ========== -->
         <section id="supplierView" class="dashboard-view">
             <div class="view-header view-header--hero view-header--dashboard-top">
-                <div class="view-header-text-block">
-                    <h1>판매 대시보드</h1>
-                    <p>주문 현황을 한 화면에서 확인하고 운영하세요.</p>
+                <div class="view-header-main-col">
+                    <div class="view-header-text-block">
+                        <h1>판매 대시보드</h1>
+                        <p>주문 현황을 한 화면에서 확인하고 운영하세요.</p>
+                    </div>
+                    <div class="dashboard-hero-insights" aria-label="로컬 시각 및 납품일 요약">
+                        <div class="order-card-insight-row order-card-insight-tiles dashboard-hero-insight-tiles">
+                            <div class="insight-clock-block insight-clock-block--inline order-card-insight-tile">
+                                <span class="insight-clock-label">로컬 시각</span>
+                                <time class="insight-clock dashboard-live-clock" datetime="" aria-live="polite"></time>
+                            </div>
+                            <div id="supplierDashboardStats" class="insight-stats order-card-insight-stats order-card-insight-stats--tiles" role="list" aria-live="polite"></div>
+                        </div>
+                    </div>
                 </div>
                 <div id="supplierOrderNotificationsCard" class="dashboard-order-notifications-card dashboard-order-notifications--beside-title" hidden>
                     <div class="dashboard-order-notifications-strip-header">
@@ -162,33 +175,24 @@
                 <div class="consumer-order-stack--compact consumer-orders-main">
                     <div class="my-orders-card supplier-orders-card">
                         <div class="my-orders-header supplier-orders-header">
-                            <div class="my-orders-header-title-row my-orders-header-title-row--with-inline-insights">
-                                <div class="my-orders-header-title-cluster">
-                                    <div class="my-orders-header-title"><h3>주문 현황</h3></div>
-                                    <div class="order-card-insight-row order-card-insight-tiles" aria-label="로컬 시각 및 납품일 요약">
-                                        <div class="insight-clock-block insight-clock-block--inline order-card-insight-tile">
-                                            <span class="insight-clock-label">로컬 시각</span>
-                                            <time class="insight-clock dashboard-live-clock" datetime="" aria-live="polite"></time>
+                            <div class="my-orders-header-title-row my-orders-header-title-row--toolbar-inline">
+                                <div class="my-orders-header-title"><h3>주문 현황</h3></div>
+                                <div class="my-orders-header-toolbar my-orders-header-toolbar--inline">
+                                    <div class="orders-filter">
+                                        <label for="supplierFromDate">조회기간</label>
+                                        <div class="orders-filter-input-wrap supplier-range-inputs">
+                                            <input type="date" id="supplierFromDate" class="orders-date-input">
+                                            <span class="range-separator">~</span>
+                                            <input type="date" id="supplierToDate" class="orders-date-input">
+                                            <button type="button" class="btn btn-tiny btn-secondary" id="supplierDateApplyBtn">조회</button>
                                         </div>
-                                        <div id="supplierDashboardStats" class="insight-stats order-card-insight-stats order-card-insight-stats--tiles" role="list" aria-live="polite"></div>
+                                    </div>
+                                    <div class="orders-search-wrap">
+                                        <label class="visually-hidden" for="supplierOrderSearch">주문 검색</label>
+                                        <input type="search" id="supplierOrderSearch" class="orders-search-input" placeholder="주문번호·주소·구매자 검색" autocomplete="off" enterkeyhint="search">
                                     </div>
                                 </div>
                                 <div class="my-orders-header-actions my-orders-header-actions--placeholder" aria-hidden="true"></div>
-                            </div>
-                            <div class="my-orders-header-toolbar">
-                                <div class="orders-filter">
-                                    <label for="supplierFromDate">조회기간</label>
-                                    <div class="orders-filter-input-wrap supplier-range-inputs">
-                                        <input type="date" id="supplierFromDate" class="orders-date-input">
-                                        <span class="range-separator">~</span>
-                                        <input type="date" id="supplierToDate" class="orders-date-input">
-                                        <button type="button" class="btn btn-tiny btn-secondary" id="supplierDateApplyBtn">조회</button>
-                                    </div>
-                                </div>
-                                <div class="orders-search-wrap">
-                                    <label class="visually-hidden" for="supplierOrderSearch">주문 검색</label>
-                                    <input type="search" id="supplierOrderSearch" class="orders-search-input" placeholder="주문번호·주소·구매자 검색" autocomplete="off" enterkeyhint="search">
-                                </div>
                             </div>
                         </div>
                         <div class="orders-list-stack">

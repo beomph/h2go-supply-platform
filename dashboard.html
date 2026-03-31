@@ -326,6 +326,27 @@
         </div>
     </div>
 
+    <!-- 출하도: 공차 도착 시 충전 완료 시각 (공급자) -->
+    <div id="exFactoryChargeModal" class="modal" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="exFactoryChargeModalTitle">
+            <button type="button" class="modal-close" id="exFactoryChargeModalClose" aria-label="닫기">&times;</button>
+            <h3 id="exFactoryChargeModalTitle">충전 완료 시각</h3>
+            <p id="exFactoryChargeModalHint" class="supplier-modal-hint">공차가 공급지에 도착해 충전이 끝난 시각을 입력해 주세요. 수요자 화면에 출하 가능 시각으로 표시됩니다.</p>
+            <form id="exFactoryChargeForm" class="order-form">
+                <input type="hidden" id="exFactoryChargeOrderId" value="">
+                <input type="hidden" id="exFactoryChargeMode" value="">
+                <div class="form-group">
+                    <label for="exFactoryChargeDatetime">충전 완료 일시</label>
+                    <input type="datetime-local" id="exFactoryChargeDatetime" required step="60">
+                </div>
+                <div class="form-row" style="justify-content:flex-end;gap:0.5rem;margin-top:0.75rem;">
+                    <button type="button" class="btn btn-secondary" id="exFactoryChargeModalCancel">취소</button>
+                    <button type="submit" class="btn btn-primary" id="exFactoryChargeModalSubmit">확인</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- 운송 시작 입력 모달 (T/T 번호, 운송기사) -->
     <div id="transportStartModal" class="modal">
         <div class="modal-content">

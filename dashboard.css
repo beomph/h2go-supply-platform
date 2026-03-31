@@ -5523,6 +5523,12 @@ body.theme-light .order-item--notif-focus {
     margin-bottom: 0;
 }
 
+.map-info-row--muted {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+}
+
 .order-map-container {
     height: 400px;
     border-radius: 8px;

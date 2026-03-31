@@ -437,8 +437,14 @@ Phase 4 — 운영 안정화 및 확장 (지속)
 
 - 2026-03-31 (3)
   - **도착도·수요자** 주문 카드: 출하·회차 열은 표시하지 않음(계획 시각으로 납품 시각과 혼동 방지). 실차 출발(`in_transit`) 후에는 예상도착(ETA)만 표시.
-  - **출하도·공급자** 주문 카드: 출하·회차 열 숨김. 공차 출발 시 ETA만, 공급자가 **공차 도착** 처리 시 `prompt`로 **충전 완료 시각** 입력 → `extra_payload.exFactoryChargeCompletedAt` 저장. 수요자 카드 ETA에 **출하 가능** 시각 표시.
+  - **출하도·공급자** 주문 카드: 출하·회차 열 숨김. 공차 출발 시 ETA만, 공급자가 **공차 도착** 처리 시 **충전 완료 시각** 입력(이후 모달로 개선). `extra_payload.exFactoryChargeCompletedAt` 저장. 수요자 카드 ETA에 **출하 가능** 시각 표시.
   - `dashboard.js`, `dashboard.css`
+
+- 2026-03-31 (4)
+  - 충전 완료: **`datetime-local` 모달**(`#exFactoryChargeModal`)로 입력. 검증: 공차 출발 이후·실차 출발 이전·미래 시각 불가. **공급자**만 등록/수정. `empty_arrived` 상태에서 **충전완료 수정** 버튼. 이력 `ex_factory_charge_completed` / `ex_factory_charge_updated` → 주문 알림 패널.
+  - **도착도·수요자**: 카드에 **지도·출하/회차** 버튼 → 지도 모달에 계획 출하·회차 시각 안내(카드에서는 숨김).
+  - 도착도 **공급자** 카드: 출하·회차 열 유지(운영 참고).
+  - `dashboard.html`, `dashboard.js`, `dashboard.css`, `.taskmaster/docs/prd.txt`
 
 - 2026-03-31
   - 구매·판매「주문 현황」: 모바일에서도 데스크톱과 동일한 **7열** 표 형태, `.orders-table-hscroll` 가로 스크롤·모바일 힌트 문구·스크롤 영역 inset 페이드·좁은 화면 글자 크기 소폭 축소. Supabase `loadOrdersFromSupabase`: DB 행 + **아직 DB에 없는 로컬 주문 ID** 병합(동기화 지연·오프라인). 로드 실패 시 상단 경고 배너.

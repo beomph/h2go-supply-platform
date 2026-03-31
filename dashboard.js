@@ -2450,6 +2450,7 @@ function renderConsumerView() {
             ${canCancelChangeRequest ? `<button type="button" class="btn btn-small btn-secondary" data-action="cancel-change-request" data-id="${order.id}">변경요청 취소</button>` : ''}
             ${showChangeBtn ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
             ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''}
+            ${order.supplyCondition === 'delivery' ? `<button type="button" class="btn btn-small btn-secondary" data-action="open-order-map" data-id="${order.id}">지도·출하/회차</button>` : ''}
         `.trim();
         const decisionButtons = `
             ${canApproveChange ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${order.id}">승인</button>
@@ -2759,8 +2760,14 @@ function renderSupplierOrdersCards() {
             ? `<div class="order-footer-transport-note">${escapeBannerHtml(emptyReturnNoteS)}</div>`
             : "";
         const { etaCellTop: etaCellInner, etaCellFooter: etaFooterS } = buildOrderCardEtaCells(o, travelTimeText, "supplier");
+        const canEditExFactoryCharge =
+            o.supplyCondition === "ex_factory" &&
+            status === "empty_arrived" &&
+            !hasPendingChange &&
+            !hasPendingCancel;
         const actionButtons = `
             ${advanceAction ? `<button type="button" class="btn btn-small btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : ''}
+            ${canEditExFactoryCharge ? `<button type="button" class="btn btn-small btn-secondary" data-action="edit-exfactory-charge" data-id="${o.id}">충전완료 수정</button>` : ''}
             ${canCancelChangeRequest ? `<button type="button" class="btn btn-small btn-secondary" data-action="cancel-change-request" data-id="${o.id}">변경요청 취소</button>` : ''}
             ${canProposeChange ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${o.id}">변경</button>` : ''}
             ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${o.id}">취소</button>` : ''}
@@ -2880,6 +2887,128 @@ function renderSupplierView() {
 // ========== 주문 지도 모달 ==========
 let orderMapInstance = null;
 
+function isoToDatetimeLocalValue(iso) {
+    const d = parseIsoToDate(iso);
+    if (!d) return "";
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** 출하도: 충전 완료 시각이 타임라인과 맞는지 검사 */
+function validateExFactoryChargeCompletedAt(order, chargeIso) {
+    const charge = parseIsoToDate(chargeIso);
+    if (!charge || !Number.isFinite(charge.getTime())) return "올바른 일시를 입력해 주세요.";
+    const now = Date.now();
+    if (charge.getTime() > now + 5 * 60 * 1000) {
+        return "충전 완료 시각은 현재 시각 이후로 둘 수 없습니다.";
+    }
+    const emptyLeg = order.emptyLegStartedAt ? parseIsoToDate(order.emptyLegStartedAt) : null;
+    if (emptyLeg && charge.getTime() < emptyLeg.getTime()) {
+        return "충전 완료 시각은 수요자 공차 출발 시각 이후여야 합니다.";
+    }
+    const loaded = order.transportStartedAt ? parseIsoToDate(order.transportStartedAt) : null;
+    if (loaded && charge.getTime() > loaded.getTime()) {
+        return "충전 완료 시각은 실차 출발 시각 이전이어야 합니다.";
+    }
+    return null;
+}
+
+function openExFactoryChargeModal(orderId, mode) {
+    const order = orders.find((o) => o.id === orderId);
+    const modal = document.getElementById("exFactoryChargeModal");
+    const idEl = document.getElementById("exFactoryChargeOrderId");
+    const modeEl = document.getElementById("exFactoryChargeMode");
+    const dtEl = document.getElementById("exFactoryChargeDatetime");
+    const titleEl = document.getElementById("exFactoryChargeModalTitle");
+    const hintEl = document.getElementById("exFactoryChargeModalHint");
+    if (!modal || !idEl || !modeEl || !dtEl) return;
+    idEl.value = orderId;
+    modeEl.value = mode;
+    if (titleEl) titleEl.textContent = mode === "edit" ? "충전 완료 시각 수정" : "충전 완료 시각";
+    if (hintEl) {
+        hintEl.textContent =
+            mode === "edit"
+                ? "저장된 충전 완료 시각을 수정합니다. 공차 출발·실차 출발 시각과의 선후 관계가 맞아야 합니다."
+                : "공차가 공급지에 도착해 충전이 끝난 시각을 입력해 주세요. 수요자 화면에 출하 가능 시각으로 표시됩니다.";
+    }
+    if (order?.exFactoryChargeCompletedAt) {
+        dtEl.value = isoToDatetimeLocalValue(order.exFactoryChargeCompletedAt);
+    } else {
+        dtEl.value = isoToDatetimeLocalValue(new Date().toISOString());
+    }
+    modal.classList.add("active");
+    modal.setAttribute("aria-hidden", "false");
+}
+
+function closeExFactoryChargeModal() {
+    const modal = document.getElementById("exFactoryChargeModal");
+    if (modal) {
+        modal.classList.remove("active");
+        modal.setAttribute("aria-hidden", "true");
+    }
+}
+
+function applyExFactoryChargeFromModal() {
+    const idEl = document.getElementById("exFactoryChargeOrderId");
+    const modeEl = document.getElementById("exFactoryChargeMode");
+    const dtEl = document.getElementById("exFactoryChargeDatetime");
+    const orderId = idEl?.value;
+    const mode = modeEl?.value || "create";
+    const raw = dtEl?.value;
+    const order = orderId ? orders.find((o) => o.id === orderId) : null;
+    if (!order || !isExFactoryOrder(order)) {
+        alert("주문을 찾을 수 없습니다.");
+        return;
+    }
+    if (getActorForOrder(order) !== "supplier") {
+        alert("공급자만 충전 완료 시각을 등록·수정할 수 있습니다.");
+        return;
+    }
+    if (mode === "edit" && normalizeStatus(order.status) !== "empty_arrived") {
+        alert("공차 도착·충전 상태에서만 수정할 수 있습니다.");
+        return;
+    }
+    if (!raw || !String(raw).trim()) {
+        alert("충전 완료 일시를 입력해 주세요.");
+        return;
+    }
+    const local = new Date(String(raw).replace(" ", "T"));
+    if (!Number.isFinite(local.getTime())) {
+        alert("올바른 일시를 입력해 주세요.");
+        return;
+    }
+    const chargeIso = local.toISOString();
+    const err = validateExFactoryChargeCompletedAt(order, chargeIso);
+    if (err) {
+        alert(err);
+        return;
+    }
+    order.exFactoryChargeCompletedAt = chargeIso;
+    const nowIso = new Date().toISOString();
+    if (mode === "create") {
+        order.status = "empty_arrived";
+        order.emptyArrivedAt = nowIso;
+        appendOrderChangeHistory(order, "ex_factory_charge_completed", "supplier", {
+            chargeCompletedAt: chargeIso,
+        });
+        appendOrderChangeHistory(order, "status_changed", "supplier", {
+            to: "empty_arrived",
+            at: nowIso,
+        });
+    } else {
+        appendOrderChangeHistory(order, "ex_factory_charge_updated", "supplier", {
+            chargeCompletedAt: chargeIso,
+        });
+    }
+    saveOrdersToStorage();
+    renderConsumerView();
+    renderSupplierView();
+    renderOrderNotificationPanels();
+    lastOrdersSnapshot = deepClone(orders);
+    closeExFactoryChargeModal();
+    alert(mode === "create" ? `공차 도착이 등록되었습니다. 충전 완료: ${formatCalendarDateTimeFromDate(local)}` : "충전 완료 시각이 수정되었습니다.");
+}
+
 function openOrderMapModal(orderId) {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
@@ -2887,6 +3016,15 @@ function openOrderMapModal(orderId) {
     const destCoords = getCoordinatesFromAddress(order.address);
     const travelTimeMin = getOrderTravelTimeMinutes(order);
     const isExFactory = order.supplyCondition === 'ex_factory';
+    const shipPlan = formatShipmentDateTime(order, { viewer: "consumer" });
+    const retPlan = formatReturnDateTime(order, { viewer: "consumer" });
+    const planRows =
+        !isExFactory && shipPlan && retPlan
+            ? `<div class="map-info-row"><strong>출하·회차(계획):</strong> ${escapeBannerHtml(shipPlan)} → ${escapeBannerHtml(
+                  retPlan
+              )}</div>
+        <div class="map-info-row map-info-row--muted">카드에서는 납품 약속과 혼동을 줄이기 위해 숨깁니다. 여기서만 참고하세요.</div>`
+            : "";
 
     document.getElementById('orderMapTitle').textContent = isExFactory ? `주문 ${order.id} - 출하지 픽업` : `주문 ${order.id} - 튜브트레일러 배송 경로`;
     document.getElementById('orderMapInfo').innerHTML = `
@@ -2895,6 +3033,7 @@ function openOrderMapModal(orderId) {
         <div class="map-info-row"><strong>${isExFactory ? '픽업지' : '납품지'}:</strong> ${order.address}</div>
         <div class="map-info-row"><strong>트레일러:</strong> ${order.tubeTrailers}대</div>
         <div class="map-info-row"><strong>${isExFactory ? "구간당 편도(공차·실차 추정)" : "생산지→수요처 운송시간"}:</strong> 약 ${travelTimeMin}분</div>
+        ${planRows}
     `;
 
     document.getElementById('orderMapModal').classList.add('active');
@@ -3735,6 +3874,16 @@ function formatHistoryNotification(order, h, viewerRole) {
         }
         case "empty_leg_started":
             return { title: "공차 운송 시작", text: `${oid} · 공차 운송이 시작되었습니다.` };
+        case "ex_factory_charge_completed":
+            if (viewerRole === "consumer") {
+                return {
+                    title: "출하 가능 시각",
+                    text: `${oid} · 공급자가 충전 완료 시각을 등록했습니다. 주문 카드에서 확인하세요.`,
+                };
+            }
+            return { title: "충전 완료 등록", text: `${oid} · 충전 완료 시각이 저장되었습니다.` };
+        case "ex_factory_charge_updated":
+            return { title: "충전 완료 시각 수정", text: `${oid} · 충전 완료 시각이 변경되었습니다.` };
         case "delivery_qty_settled":
             return { title: "물량 정산", text: `${oid} · 실차 도착 물량이 정산되었습니다.` };
         case "ex_factory_consumer_flow":
@@ -4747,6 +4896,16 @@ document.getElementById('exFactoryFlowKgModal')?.addEventListener('click', (e) =
     if (e.target === e.currentTarget) closeExFactoryFlowKgModal();
 });
 
+document.getElementById("exFactoryChargeModalClose")?.addEventListener("click", closeExFactoryChargeModal);
+document.getElementById("exFactoryChargeModalCancel")?.addEventListener("click", closeExFactoryChargeModal);
+document.getElementById("exFactoryChargeModal")?.addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) closeExFactoryChargeModal();
+});
+document.getElementById("exFactoryChargeForm")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    applyExFactoryChargeFromModal();
+});
+
 document.querySelector('#transportAssetPickModal .modal-close')?.addEventListener('click', closeTransportAssetPickModal);
 document.getElementById('transportAssetPickModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeTransportAssetPickModal();
@@ -4860,6 +5019,15 @@ document.addEventListener('click', (e) => {
         if (!order) return;
         if (getActorForOrder(order) !== 'consumer') return;
         openExFactoryFlowKgModal(orderId);
+    } else if (action === 'edit-exfactory-charge') {
+        if (!order || !isExFactoryOrder(order)) return;
+        if (getActorForOrder(order) !== 'supplier') return;
+        if (normalizeStatus(order.status) !== 'empty_arrived') return;
+        if (order.changeRequest?.status === 'pending' || order.cancelRequest?.status === 'pending') return;
+        openExFactoryChargeModal(orderId, 'edit');
+    } else if (action === 'open-order-map') {
+        if (!order || order.supplyCondition !== 'delivery') return;
+        openOrderMapModal(orderId);
     } else if (action === 'advance-status') {
         if (!order) return;
         const actor = getActorForOrder(order);
@@ -4876,22 +5044,8 @@ document.addEventListener('click', (e) => {
                 return;
             }
             if (nextStatus === 'empty_arrived' && isExFactoryOrder(order)) {
-                const raw = window.prompt(
-                    "공차 도착·충전 완료 시각을 입력해 주세요.\n형식: YYYY-MM-DDTHH:mm (예: 2026-03-31T14:30)",
-                    ""
-                );
-                if (raw === null) return;
-                const trimmed = String(raw).trim();
-                if (!trimmed) {
-                    alert("충전 완료 시각을 입력해야 공차 도착을 처리할 수 있습니다.");
-                    return;
-                }
-                const parsed = new Date(trimmed);
-                if (!Number.isFinite(parsed.getTime())) {
-                    alert("올바른 날짜·시각 형식으로 입력해 주세요.");
-                    return;
-                }
-                order.exFactoryChargeCompletedAt = parsed.toISOString();
+                openExFactoryChargeModal(orderId, "create");
+                return;
             }
             const supplierAction = getSupplierAdvanceAction(order);
             if (!supplierAction || supplierAction.next !== nextStatus) return;

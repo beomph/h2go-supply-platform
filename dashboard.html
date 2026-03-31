@@ -68,12 +68,12 @@
                             <div class="my-orders-header-title-row my-orders-header-title-row--with-inline-insights">
                                 <div class="my-orders-header-title-cluster">
                                     <div class="my-orders-header-title"><h3>주문 현황</h3></div>
-                                    <div class="order-card-insight-row" aria-label="로컬 시각 및 납품일 요약">
-                                        <div class="insight-clock-block insight-clock-block--inline">
+                                    <div class="order-card-insight-row order-card-insight-tiles" aria-label="로컬 시각 및 납품일 요약">
+                                        <div class="insight-clock-block insight-clock-block--inline order-card-insight-tile">
                                             <span class="insight-clock-label">로컬 시각</span>
                                             <time class="insight-clock dashboard-live-clock" datetime="" aria-live="polite"></time>
                                         </div>
-                                        <div id="consumerDashboardStats" class="insight-stats order-card-insight-stats" role="list" aria-live="polite"></div>
+                                        <div id="consumerDashboardStats" class="insight-stats order-card-insight-stats order-card-insight-stats--tiles" role="list" aria-live="polite"></div>
                                     </div>
                                 </div>
                                 <button type="button" class="btn btn-primary btn-tiny" id="openNewOrderModalBtn">새 주문</button>
@@ -161,12 +161,12 @@
                     <div class="my-orders-header supplier-orders-header">
                         <div class="supplier-orders-header-top">
                             <h3>주문 현황</h3>
-                            <div class="order-card-insight-row" aria-label="로컬 시각 및 납품일 요약">
-                                <div class="insight-clock-block insight-clock-block--inline">
+                            <div class="order-card-insight-row order-card-insight-tiles" aria-label="로컬 시각 및 납품일 요약">
+                                <div class="insight-clock-block insight-clock-block--inline order-card-insight-tile">
                                     <span class="insight-clock-label">로컬 시각</span>
                                     <time class="insight-clock dashboard-live-clock" datetime="" aria-live="polite"></time>
                                 </div>
-                                <div id="supplierDashboardStats" class="insight-stats order-card-insight-stats" role="list" aria-live="polite"></div>
+                                <div id="supplierDashboardStats" class="insight-stats order-card-insight-stats order-card-insight-stats--tiles" role="list" aria-live="polite"></div>
                             </div>
                         </div>
                         <div class="my-orders-header-toolbar">

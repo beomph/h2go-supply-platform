@@ -1869,8 +1869,8 @@ function updateDashboardStats() {
         const tipTomorrowInner = formatConsumerInsightTooltipPanelHtml("납품일 내일 · 공급자별", tomorrowDelivery);
 
         consumerContainer.innerHTML = `
-            <div class="insight-stat insight-stat--banner insight-stat--readonly insight-stat--tip" role="listitem" tabindex="0" aria-describedby="insight-consumer-tip-today">
-                <span class="insight-stat-label">오늘 주문</span>
+            <div class="insight-stat insight-stat--banner insight-stat--readonly insight-stat--tip order-card-insight-tile" role="listitem" tabindex="0" aria-describedby="insight-consumer-tip-today">
+                <span class="insight-stat-label">오늘 주문<span class="insight-stat-label-suffix"> (납품일 기준)</span></span>
                 <span class="insight-stat-values-triple" aria-label="접수 완료, 완료, 미완료 순">
                     <span class="insight-stat-value">${todayAccepted.length}</span>
                     <span class="insight-stat-triple-sep">/</span>
@@ -1878,13 +1878,11 @@ function updateDashboardStats() {
                     <span class="insight-stat-triple-sep">/</span>
                     <span class="insight-stat-value">${todayIncomplete.length}</span>
                 </span>
-                <span class="insight-stat-sub hint">접수·완료·미완료 · 납품일 기준</span>
                 <div id="insight-consumer-tip-today" class="insight-tooltip-panel" role="tooltip">${tipTodayInner}</div>
             </div>
-            <div class="insight-stat insight-stat--banner insight-stat--readonly insight-stat--tip" role="listitem" tabindex="0" aria-describedby="insight-consumer-tip-tomorrow">
-                <span class="insight-stat-label">내일 주문</span>
+            <div class="insight-stat insight-stat--banner insight-stat--readonly insight-stat--tip order-card-insight-tile" role="listitem" tabindex="0" aria-describedby="insight-consumer-tip-tomorrow">
+                <span class="insight-stat-label">내일 주문<span class="insight-stat-label-suffix"> (납품일 기준)</span></span>
                 <span class="insight-stat-value insight-stat-value--solo">${tomorrowCount}</span>
-                <span class="insight-stat-sub hint">납품 예정(건) · 납품일 기준</span>
                 <div id="insight-consumer-tip-tomorrow" class="insight-tooltip-panel" role="tooltip">${tipTomorrowInner}</div>
             </div>
         `;
@@ -1916,8 +1914,8 @@ function updateDashboardStats() {
         const tipTomorrowInner = formatSupplierInsightTooltipPanelHtml("납품일 내일 · 수요처별", tomorrowDelivery);
 
         supplierContainer.innerHTML = `
-            <div class="insight-stat insight-stat--banner insight-stat--readonly insight-stat--tip" role="listitem" tabindex="0" aria-describedby="insight-supplier-tip-today">
-                <span class="insight-stat-label">오늘 주문</span>
+            <div class="insight-stat insight-stat--banner insight-stat--readonly insight-stat--tip order-card-insight-tile" role="listitem" tabindex="0" aria-describedby="insight-supplier-tip-today">
+                <span class="insight-stat-label">오늘 주문<span class="insight-stat-label-suffix"> (납품일 기준)</span></span>
                 <span class="insight-stat-values-triple" aria-label="접수 완료, 완료, 미완료 순">
                     <span class="insight-stat-value">${todayAccepted.length}</span>
                     <span class="insight-stat-triple-sep">/</span>
@@ -1925,13 +1923,11 @@ function updateDashboardStats() {
                     <span class="insight-stat-triple-sep">/</span>
                     <span class="insight-stat-value">${todayIncomplete.length}</span>
                 </span>
-                <span class="insight-stat-sub hint">접수·완료·미완료 · 납품일 기준</span>
                 <div id="insight-supplier-tip-today" class="insight-tooltip-panel" role="tooltip">${tipTodayInner}</div>
             </div>
-            <div class="insight-stat insight-stat--banner insight-stat--readonly insight-stat--tip" role="listitem" tabindex="0" aria-describedby="insight-supplier-tip-tomorrow">
-                <span class="insight-stat-label">내일 주문</span>
+            <div class="insight-stat insight-stat--banner insight-stat--readonly insight-stat--tip order-card-insight-tile" role="listitem" tabindex="0" aria-describedby="insight-supplier-tip-tomorrow">
+                <span class="insight-stat-label">내일 주문<span class="insight-stat-label-suffix"> (납품일 기준)</span></span>
                 <span class="insight-stat-value insight-stat-value--solo">${tomorrowCount}</span>
-                <span class="insight-stat-sub hint">납품 예정(건) · 납품일 기준</span>
                 <div id="insight-supplier-tip-tomorrow" class="insight-tooltip-panel" role="tooltip">${tipTomorrowInner}</div>
             </div>
         `;

@@ -431,6 +431,10 @@ Phase 4 — 운영 안정화 및 확장 (지속)
 최근 변경
 ================================================================================
 
+- 2026-03-31 (2)
+  - 주문번호 가운데 2자리: 동일 YYMMDD에 대해 **수요자·공급자 쌍별** 주문 순번(01~99). 다른 공급자에게 첫 주문이면 01부터 시작.
+  - `dashboard.js` (`nextConsumerSupplierOrderSequence`, `generateOrderId`)
+
 - 2026-03-31
   - 구매·판매「주문 현황」: 모바일에서도 데스크톱과 동일한 **7열** 표 형태, `.orders-table-hscroll` 가로 스크롤·모바일 힌트 문구·스크롤 영역 inset 페이드·좁은 화면 글자 크기 소폭 축소. Supabase `loadOrdersFromSupabase`: DB 행 + **아직 DB에 없는 로컬 주문 ID** 병합(동기화 지연·오프라인). 로드 실패 시 상단 경고 배너.
   - 구매 대시보드 상단 **오늘 주문** 집계: `getConsumerOrders`를 수요자명 **대소문자 무시** 매칭으로 수정. 구매 카드 하단 주소 열: `supplier_address`(없으면 등록/기본 출하 주소) 표시 — 납품지(`consumer_address`)와 구분. 신규 주문 객체에 `supplierAddress` 포함.

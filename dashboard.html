@@ -76,7 +76,9 @@
                                         <div id="consumerDashboardStats" class="insight-stats order-card-insight-stats order-card-insight-stats--tiles" role="list" aria-live="polite"></div>
                                     </div>
                                 </div>
-                                <button type="button" class="btn btn-primary btn-tiny" id="openNewOrderModalBtn">새 주문</button>
+                                <div class="my-orders-header-actions">
+                                    <button type="button" class="btn btn-primary btn-tiny" id="openNewOrderModalBtn">새 주문</button>
+                                </div>
                             </div>
                             <div class="my-orders-header-toolbar">
                                 <div class="orders-filter">
@@ -156,50 +158,55 @@
                 </div>
             </div>
             
-            <div class="supplier-content">
-                <div class="supplier-orders-card">
-                    <div class="my-orders-header supplier-orders-header">
-                        <div class="supplier-orders-header-top">
-                            <h3>주문 현황</h3>
-                            <div class="order-card-insight-row order-card-insight-tiles" aria-label="로컬 시각 및 납품일 요약">
-                                <div class="insight-clock-block insight-clock-block--inline order-card-insight-tile">
-                                    <span class="insight-clock-label">로컬 시각</span>
-                                    <time class="insight-clock dashboard-live-clock" datetime="" aria-live="polite"></time>
-                                </div>
-                                <div id="supplierDashboardStats" class="insight-stats order-card-insight-stats order-card-insight-stats--tiles" role="list" aria-live="polite"></div>
-                            </div>
-                        </div>
-                        <div class="my-orders-header-toolbar">
-                            <div class="orders-filter">
-                                <label for="supplierFromDate">조회기간</label>
-                                <div class="orders-filter-input-wrap supplier-range-inputs">
-                                    <input type="date" id="supplierFromDate" class="orders-date-input">
-                                    <span class="range-separator">~</span>
-                                    <input type="date" id="supplierToDate" class="orders-date-input">
-                                    <button type="button" class="btn btn-tiny btn-secondary" id="supplierDateApplyBtn">조회</button>
-                                </div>
-                            </div>
-                            <div class="orders-search-wrap">
-                                <label class="visually-hidden" for="supplierOrderSearch">주문 검색</label>
-                                <input type="search" id="supplierOrderSearch" class="orders-search-input" placeholder="주문번호·주소·구매자 검색" autocomplete="off" enterkeyhint="search">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="orders-list-stack">
-                        <div class="orders-table-hscroll" aria-label="주문 목록 가로 스크롤">
-                            <div class="orders-table-hscroll-track">
-                                <div id="supplierOrdersColumnHeader" class="orders-column-header" hidden>
-                                    <div class="order-card-banner-grid orders-column-header-grid">
-                                        <div class="order-banner-cell"><span class="order-banner-label">납품일시</span></div>
-                                        <div class="order-banner-cell"><span class="order-banner-label">수요자</span></div>
-                                        <div class="order-banner-cell"><span class="order-banner-label">T/T정보</span></div>
-                                        <div class="order-banner-cell"><span class="order-banner-label">예상도착(소요)</span></div>
-                                        <div class="order-banner-cell"><span class="order-banner-label">출하</span></div>
-                                        <div class="order-banner-cell"><span class="order-banner-label">회차</span></div>
-                                        <div class="order-banner-cell order-banner-cell--status"><span class="order-banner-label">주문상태</span></div>
+            <div class="consumer-content consumer-content--orders-only">
+                <div class="consumer-order-stack--compact consumer-orders-main">
+                    <div class="my-orders-card supplier-orders-card">
+                        <div class="my-orders-header supplier-orders-header">
+                            <div class="my-orders-header-title-row my-orders-header-title-row--with-inline-insights">
+                                <div class="my-orders-header-title-cluster">
+                                    <div class="my-orders-header-title"><h3>주문 현황</h3></div>
+                                    <div class="order-card-insight-row order-card-insight-tiles" aria-label="로컬 시각 및 납품일 요약">
+                                        <div class="insight-clock-block insight-clock-block--inline order-card-insight-tile">
+                                            <span class="insight-clock-label">로컬 시각</span>
+                                            <time class="insight-clock dashboard-live-clock" datetime="" aria-live="polite"></time>
+                                        </div>
+                                        <div id="supplierDashboardStats" class="insight-stats order-card-insight-stats order-card-insight-stats--tiles" role="list" aria-live="polite"></div>
                                     </div>
                                 </div>
-                                <div id="supplierOrdersList" class="orders-list"></div>
+                                <div class="my-orders-header-actions my-orders-header-actions--placeholder" aria-hidden="true"></div>
+                            </div>
+                            <div class="my-orders-header-toolbar">
+                                <div class="orders-filter">
+                                    <label for="supplierFromDate">조회기간</label>
+                                    <div class="orders-filter-input-wrap supplier-range-inputs">
+                                        <input type="date" id="supplierFromDate" class="orders-date-input">
+                                        <span class="range-separator">~</span>
+                                        <input type="date" id="supplierToDate" class="orders-date-input">
+                                        <button type="button" class="btn btn-tiny btn-secondary" id="supplierDateApplyBtn">조회</button>
+                                    </div>
+                                </div>
+                                <div class="orders-search-wrap">
+                                    <label class="visually-hidden" for="supplierOrderSearch">주문 검색</label>
+                                    <input type="search" id="supplierOrderSearch" class="orders-search-input" placeholder="주문번호·주소·구매자 검색" autocomplete="off" enterkeyhint="search">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="orders-list-stack">
+                            <div class="orders-table-hscroll" aria-label="주문 목록 가로 스크롤">
+                                <div class="orders-table-hscroll-track">
+                                    <div id="supplierOrdersColumnHeader" class="orders-column-header" hidden>
+                                        <div class="order-card-banner-grid orders-column-header-grid">
+                                            <div class="order-banner-cell"><span class="order-banner-label">납품일시</span></div>
+                                            <div class="order-banner-cell"><span class="order-banner-label">수요자</span></div>
+                                            <div class="order-banner-cell"><span class="order-banner-label">T/T정보</span></div>
+                                            <div class="order-banner-cell"><span class="order-banner-label">예상도착(소요)</span></div>
+                                            <div class="order-banner-cell"><span class="order-banner-label">출하</span></div>
+                                            <div class="order-banner-cell"><span class="order-banner-label">회차</span></div>
+                                            <div class="order-banner-cell order-banner-cell--status"><span class="order-banner-label">주문상태</span></div>
+                                        </div>
+                                    </div>
+                                    <div id="supplierOrdersList" class="orders-list"></div>
+                                </div>
                             </div>
                         </div>
                     </div>

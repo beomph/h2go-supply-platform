@@ -634,27 +634,20 @@ body.theme-light .insight-tooltip-panel {
     }
 }
 
-.supplier-orders-header-top {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.65rem 1.25rem;
-    padding-bottom: 0.65rem;
-    margin-bottom: 0.75rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.supplier-orders-header-top h3 {
-    margin: 0;
+/* 구매·판매 공통: 제목 행 우측 액션 열(구매=새 주문, 판매=정렬용 플레이스홀더) */
+.my-orders-header-actions {
     flex: 0 0 auto;
-    font-size: 1.125rem;
-    line-height: 1.3;
-    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
 }
 
-.supplier-orders-header-top .order-card-insight-row {
-    flex: 1 1 auto;
-    min-width: 0;
+.my-orders-header-actions--placeholder {
+    flex: 0 0 5.75rem;
+    min-height: 2.25rem;
+    align-self: center;
+    pointer-events: none;
 }
 
 @media (max-width: 720px) {
@@ -674,8 +667,12 @@ body.theme-light .insight-tooltip-panel {
         align-items: stretch;
     }
 
-    .my-orders-header-title-row--with-inline-insights .btn-primary {
+    .my-orders-header-actions {
         align-self: flex-end;
+    }
+
+    .my-orders-header-actions--placeholder {
+        display: none;
     }
 }
 
@@ -1262,7 +1259,7 @@ body.theme-dark .supplier-orders-card {
     align-items: start;
 }
 
-/* 재고·예측 패널 제거 후: 주문 현황만 전폭 */
+/* 재고·예측 패널 제거 후: 주문 현황만 전폭 — 구매/판매 공통 본문 래퍼 */
 .consumer-content.consumer-content--orders-only {
     display: block;
 }
@@ -1711,12 +1708,6 @@ body.theme-dark .supplier-orders-card {
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
-}
-
-.supplier-orders-card .supplier-orders-header-top h3 {
-    margin-bottom: 0;
-    padding-bottom: 0;
-    border-bottom: none;
 }
 
 .order-form .form-row {
@@ -2515,16 +2506,16 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
     }
 }
 
-/* 구매 대시보드(웹): 조회기간 라벨·날짜·조회·검색을 한 가로 행 (라벨을 인라인으로 두어 두 줄 줄바꿈 방지) */
+/* 구매·판매 주문 카드: 조회기간·날짜·조회·검색 한 줄(동일 레이아웃·크기) */
 @media (min-width: 640px) {
-    #consumerView .my-orders-header-toolbar {
+    .consumer-content--orders-only .my-orders-header-toolbar {
         flex-direction: row;
         flex-wrap: nowrap;
         align-items: center;
         gap: 0.6rem 0.85rem;
     }
 
-    #consumerView .orders-filter {
+    .consumer-content--orders-only .orders-filter {
         flex-direction: row;
         align-items: center;
         flex: 1 1 auto;
@@ -2533,13 +2524,15 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
         gap: 0.45rem;
     }
 
-    #consumerView .orders-filter-label {
+    .consumer-content--orders-only .orders-filter > label {
         flex: 0 0 auto;
         white-space: nowrap;
-        line-height: 1;
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
     }
 
-    #consumerView .orders-filter-input-wrap {
+    .consumer-content--orders-only .orders-filter-input-wrap {
         flex: 1 1 auto;
         min-width: 0;
         flex-wrap: nowrap;
@@ -2548,7 +2541,7 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
         min-height: 2.5rem;
     }
 
-    #consumerView .orders-filter-input-wrap .orders-date-input {
+    .consumer-content--orders-only .orders-filter-input-wrap .orders-date-input {
         flex: 1 1 0;
         min-width: 7.1rem;
         max-width: 9.75rem;
@@ -2557,7 +2550,10 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
         font-size: 0.82rem;
     }
 
-    #consumerView .orders-filter-input-wrap .orders-date-apply-btn {
+    .consumer-content--orders-only .orders-filter-input-wrap .btn-tiny,
+    .consumer-content--orders-only .orders-filter-input-wrap .orders-date-apply-btn,
+    .consumer-content--orders-only #ordersDateApplyBtn,
+    .consumer-content--orders-only #supplierDateApplyBtn {
         min-height: 2.2rem;
         padding-left: 0.65rem;
         padding-right: 0.65rem;
@@ -2565,78 +2561,14 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
         flex-shrink: 0;
     }
 
-    #consumerView .my-orders-header-toolbar .orders-search-wrap {
+    .consumer-content--orders-only .my-orders-header-toolbar .orders-search-wrap {
         flex: 0 1 18rem;
         min-width: 10rem;
         max-width: 22rem;
         margin-left: 0;
     }
 
-    #consumerView .my-orders-header-toolbar .orders-search-input {
-        min-height: 2.5rem;
-    }
-}
-
-/* 판매: 조회기간·날짜·조회·검색 한 줄 정렬(구매와 동일 계열) */
-@media (min-width: 640px) {
-    #supplierView .my-orders-header-toolbar {
-        flex-direction: row;
-        flex-wrap: nowrap;
-        align-items: center;
-        gap: 0.6rem 0.85rem;
-    }
-
-    #supplierView .orders-filter {
-        flex-direction: row;
-        align-items: center;
-        flex: 1 1 auto;
-        min-width: 0;
-        max-width: none;
-        gap: 0.45rem;
-    }
-
-    #supplierView .orders-filter > label {
-        flex: 0 0 auto;
-        white-space: nowrap;
-        font-size: 0.68rem;
-        font-weight: 600;
-        letter-spacing: 0.04em;
-    }
-
-    #supplierView .orders-filter-input-wrap {
-        flex: 1 1 auto;
-        min-width: 0;
-        flex-wrap: nowrap;
-        gap: 0.35rem;
-        padding: 0.35rem 0.45rem;
-        min-height: 2.5rem;
-    }
-
-    #supplierView .orders-filter-input-wrap .orders-date-input {
-        flex: 1 1 0;
-        min-width: 7rem;
-        max-width: 9.75rem;
-        height: 2.2rem;
-        min-height: 2.2rem;
-        font-size: 0.82rem;
-    }
-
-    #supplierView .orders-filter-input-wrap .btn-tiny,
-    #supplierView #supplierDateApplyBtn {
-        min-height: 2.2rem;
-        padding-left: 0.65rem;
-        padding-right: 0.65rem;
-        flex-shrink: 0;
-    }
-
-    #supplierView .my-orders-header-toolbar .orders-search-wrap {
-        flex: 0 1 18rem;
-        min-width: 10rem;
-        max-width: 22rem;
-        margin-left: 0;
-    }
-
-    #supplierView .my-orders-header-toolbar .orders-search-input {
+    .consumer-content--orders-only .my-orders-header-toolbar .orders-search-input {
         min-height: 2.5rem;
     }
 }
@@ -2722,11 +2654,6 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
         max-width: 100%;
     }
 
-    .supplier-orders-card .supplier-orders-header h3 {
-        margin-bottom: 0.55rem;
-        padding-bottom: 0.5rem;
-    }
-
     .my-orders-header-toolbar {
         flex-direction: column;
         align-items: stretch;
@@ -2734,13 +2661,6 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
         gap: 0.5rem;
         min-width: 0;
         max-width: 100%;
-    }
-
-    #consumerView .my-orders-header-toolbar,
-    #supplierView .my-orders-header-toolbar {
-        flex-direction: column;
-        flex-wrap: nowrap;
-        align-items: stretch;
     }
 
     .my-orders-header-toolbar .orders-filter {
@@ -2788,7 +2708,8 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
     }
 
     .orders-filter-input-wrap .orders-date-apply-btn,
-    #supplierView #supplierDateApplyBtn {
+    .orders-filter-input-wrap #ordersDateApplyBtn,
+    .orders-filter-input-wrap #supplierDateApplyBtn {
         flex: 0 0 auto;
         margin-left: 0;
         align-self: center;
@@ -4362,13 +4283,9 @@ td .order-status:not(.order-status--action) {
     background: transparent;
 }
 
-/* 생산자 화면 - 구매 대시보드와 동일한 카드 스타일로 통일 */
-.supplier-orders-card {
-    margin-bottom: 2rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 2rem;
+/* 판매 주문 카드: 박스 스타일은 .my-orders-card와 공유(병용 시 중복 없음) */
+.my-orders-card.supplier-orders-card {
+    margin-bottom: 0;
 }
 
 /* 판매 대시보드 주문카드: 본문(구매자+일시) | 우측 상태·버튼 */

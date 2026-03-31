@@ -2930,109 +2930,28 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
         font-size: 0.84rem;
     }
 
-    /* ---------- 가로 스크롤: 카드 높이 단일 띠 — 배너(7열) | 푸터(7열) 나란히 ---------- */
+    /* ---------- 가로 스크롤: 데스크톱과 동일 7열 — 목록·헤더·카드(배너+푸터) 한 트랙에서 동시 스크롤 ---------- */
     .orders-table-hscroll-track {
-        min-width: 0;
-        width: 100%;
-        max-width: 100%;
+        min-width: 65rem;
+        width: max(100%, 65rem);
+        max-width: none;
     }
 
     .orders-table-hscroll {
-        overflow-x: hidden;
-    }
-
-    .order-card-flat-scroll {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: nowrap;
-        align-items: stretch;
-        gap: 0;
-        width: 100%;
-        min-width: 0;
         overflow-x: auto;
-        overflow-y: hidden;
+        overflow-y: clip;
         -webkit-overflow-scrolling: touch;
-        scroll-snap-type: x proximity;
-        padding-bottom: 0.12rem;
-        margin-left: -0.15rem;
-        margin-right: -0.15rem;
-        padding-left: 0.15rem;
-        padding-right: 0.15rem;
-        box-sizing: border-box;
     }
 
-    .order-card-flat-scroll .order-card-data-row {
-        flex: 0 0 auto;
-        scroll-snap-align: start;
-        width: auto;
-        min-width: 47.5rem;
-        max-width: none;
-    }
-
-    .order-card-flat-scroll .order-card-toolbar {
-        flex: 0 0 auto;
-        scroll-snap-align: start;
-        width: auto;
-        min-width: 47.5rem;
-        max-width: none;
-        margin-top: 0;
-        padding-top: 0;
-        border-top: none;
-        border-left: 1px solid rgba(148, 163, 184, 0.38);
-        padding-left: 0.42rem;
-        margin-left: 0;
-        align-self: stretch;
-        display: flex;
-        align-items: center;
-        gap: 0.28rem;
-    }
-
-    body.theme-light .order-card-flat-scroll .order-card-toolbar {
-        border-left-color: rgba(100, 116, 139, 0.38);
-    }
-
-    .order-card-flat-scroll .order-card-toolbar-primary {
-        width: 100%;
-        align-self: center;
-    }
-
-    .order-card-banner-grid,
-    .orders-column-header-grid,
-    .order-card-footer-grid {
-        display: grid;
-        grid-template-columns:
-            minmax(5.5rem, 6.35rem)
-            minmax(4.85rem, 5.65rem)
-            minmax(4.65rem, 5.25rem)
-            minmax(5.1rem, 5.85rem)
-            minmax(4.2rem, 4.95rem)
-            minmax(4.2rem, 4.95rem)
-            minmax(4.75rem, 5.4rem);
-        gap: 0.22rem 0.26rem;
-        align-items: center;
-        width: 100%;
-        min-width: 0;
-    }
-
-    .order-card-footer-grid--unified {
-        column-gap: 0.26rem;
-        row-gap: 0.22rem;
-    }
-
-    .order-banner-cell--status {
-        grid-column: auto;
+    /* 배너 아래 푸터(웹과 동일 세로 스택); 가로 스크롤은 부모 .orders-table-hscroll에만 */
+    .order-card-flat-scroll {
+        display: contents;
     }
 
     .orders-column-header {
         margin-bottom: 0.28rem;
         padding: 0.32rem 0.4rem;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        max-width: 100%;
-    }
-
-    .orders-column-header-grid {
-        min-width: 47.5rem;
+        max-width: none;
     }
 
     .orders-column-header-grid .order-banner-label {
@@ -3197,16 +3116,12 @@ body.theme-light .order-item {
     -webkit-overflow-scrolling: touch;
 }
 
+/* 7열 그리드 minmax·gap 합 — 헤더·카드 열 정렬, 뷰포트보다 좁으면 .orders-table-hscroll에서 가로 스크롤 */
 .orders-table-hscroll-track {
-    min-width: 0;
-    width: 100%;
-}
-
-@media (min-width: 960px) {
-    /* 7열 그리드 minmax·gap 합(구매 카드 ≈64.35rem) 이상 — 짧게 잡히면 .orders-list overflow-x:hidden에 주문상태 열이 잘림 */
-    .orders-table-hscroll-track {
-        min-width: 65rem;
-    }
+    min-width: 65rem;
+    width: max(100%, 65rem);
+    max-width: none;
+    box-sizing: border-box;
 }
 
 /* 가로 스크롤은 .orders-table-hscroll 한 곳만(목록·버튼 줄 이중 스크롤바 방지), 카드는 트랙 너비까지 채움 */
@@ -3267,13 +3182,6 @@ body.theme-light .orders-column-header {
     line-height: 1.25;
 }
 
-.order-card-banner-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(7.25rem, 1fr));
-    gap: 0.42rem 0.85rem;
-    align-items: center;
-}
-
 .order-banner-cell {
     min-width: 0;
     display: flex;
@@ -3298,34 +3206,31 @@ body.theme-light .orders-column-header {
     gap: 0.4rem 0.55rem;
 }
 
+/* 주문상태 열은 항상 7열 그리드의 마지막 열(웹·모바일 동일 가로 배치). 1 / -1 병합 시 좁은 화면에서 세로로 떨어짐 */
 .order-banner-cell--status {
-    grid-column: 1 / -1;
+    grid-column: auto;
 }
 
-@media (min-width: 960px) {
-    .order-banner-cell--status {
-        grid-column: auto;
-    }
+/* 구매·판매 공통: 상단 배너·열 헤더 동일 열 폭·간격 (7열 고정, 좁은 화면은 가로 스크롤) */
+.order-card-banner-grid {
+    display: grid;
+    align-items: center;
+    gap: 0.42rem 0.85rem;
+}
 
-    .order-card-banner-grid {
-        grid-template-columns: repeat(7, minmax(0, 1fr));
-    }
-
-    /* 구매·판매 공통: 상단 배너·열 헤더 동일 열 폭·간격 */
-    .order-card-data-row .order-card-banner-grid,
-    #consumerOrdersColumnHeader .orders-column-header-grid,
-    #supplierOrdersColumnHeader .orders-column-header-grid {
-        grid-template-columns:
-            minmax(11.5rem, 1.2fr)
-            minmax(6.25rem, 0.88fr)
-            minmax(7.25rem, 0.95fr)
-            minmax(9.5rem, 1.05fr)
-            minmax(8.75rem, 0.98fr)
-            minmax(8.75rem, 0.98fr)
-            minmax(7.25rem, 0.82fr);
-        column-gap: 0.42rem;
-        row-gap: 0.38rem;
-    }
+.order-card-data-row .order-card-banner-grid,
+#consumerOrdersColumnHeader .orders-column-header-grid,
+#supplierOrdersColumnHeader .orders-column-header-grid {
+    grid-template-columns:
+        minmax(11.5rem, 1.2fr)
+        minmax(6.25rem, 0.88fr)
+        minmax(7.25rem, 0.95fr)
+        minmax(9.5rem, 1.05fr)
+        minmax(8.75rem, 0.98fr)
+        minmax(8.75rem, 0.98fr)
+        minmax(7.25rem, 0.82fr);
+    column-gap: 0.42rem;
+    row-gap: 0.38rem;
 }
 
 /* 상대방 열(공급자/수요자): 구매·판매 동일 구분선·최소 높이 */
@@ -3580,28 +3485,21 @@ body.theme-light .order-card-toolbar {
     min-width: 0;
 }
 
+/* 상단 배너와 동일 7열(주문번호·주소·T/T·…·액션) */
 .order-card-footer-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(7.25rem, 1fr));
-    /* 상단 .order-card-banner-grid와 동일 간격(열 정렬) */
-    gap: 0.42rem 0.85rem;
+    grid-template-columns:
+        minmax(11.5rem, 1.2fr)
+        minmax(6.25rem, 0.88fr)
+        minmax(7.25rem, 0.95fr)
+        minmax(9.5rem, 1.05fr)
+        minmax(8.75rem, 0.98fr)
+        minmax(8.75rem, 0.98fr)
+        minmax(7.25rem, 0.82fr);
+    column-gap: 0.42rem;
+    row-gap: 0.38rem;
     align-items: center;
     width: 100%;
-}
-
-@media (min-width: 960px) {
-    .order-card-footer-grid--unified {
-        grid-template-columns:
-            minmax(11.5rem, 1.2fr)
-            minmax(6.25rem, 0.88fr)
-            minmax(7.25rem, 0.95fr)
-            minmax(9.5rem, 1.05fr)
-            minmax(8.75rem, 0.98fr)
-            minmax(8.75rem, 0.98fr)
-            minmax(7.25rem, 0.82fr);
-        column-gap: 0.42rem;
-        row-gap: 0.38rem;
-    }
 }
 
 .order-footer-cell {

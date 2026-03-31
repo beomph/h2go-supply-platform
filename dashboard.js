@@ -531,7 +531,6 @@ function sortOrdersByRequestTime(list) {
 
 async function loadOrdersFromSupabase() {
     if (!supabaseClient) return;
-    const localBefore = deepClone(orders);
     const { data, error } = await supabaseClient
         .from("h2go_orders")
         .select("*")
@@ -542,17 +541,10 @@ async function loadOrdersFromSupabase() {
     }
     if (!Array.isArray(data)) return;
     const fromDb = data.map(deserializeSupabaseOrder);
-    const dbIds = new Set(fromDb.map((o) => String(o.id || "")));
-    const merged = [...fromDb];
-    for (const o of localBefore) {
-        if (o && o.id && !dbIds.has(String(o.id))) merged.push(o);
-    }
-    orders = sortOrdersByRequestTime(merged);
+    /* 구매/판매 대시보드 목록은 Supabase `h2go_orders`만 단일 소스로 표시(웹·모바일 동일). 로컬 전용 병합 제거 */
+    orders = sortOrdersByRequestTime(fromDb);
     localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
     lastOrdersSnapshot = deepClone(orders);
-    if (merged.length > fromDb.length) {
-        queueOrdersSyncToSupabase();
-    }
 }
 
 function teardownOrdersRealtime() {

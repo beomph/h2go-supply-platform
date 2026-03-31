@@ -45,6 +45,7 @@
     </nav>
 
     <main class="dashboard-main">
+        <div id="ordersRemoteLoadBanner" class="orders-remote-load-banner" hidden></div>
         <!-- ========== 수요자 화면 ========== -->
         <section id="consumerView" class="dashboard-view active">
             <div class="view-header view-header--hero view-header--dashboard-top">
@@ -103,7 +104,8 @@
                             </div>
                         </div>
                         <div class="orders-list-stack">
-                            <div class="orders-table-hscroll" aria-label="주문 목록 가로 스크롤">
+                            <p class="orders-hscroll-hint" aria-hidden="true">좌우로 밀어 더 보기</p>
+                            <div class="orders-table-hscroll orders-table-hscroll--edge-fade" aria-label="주문 목록 가로 스크롤">
                                 <div class="orders-table-hscroll-track">
                                     <div id="consumerOrdersColumnHeader" class="orders-column-header" hidden>
                                         <div class="order-card-banner-grid orders-column-header-grid">
@@ -204,7 +206,8 @@
                             </div>
                         </div>
                         <div class="orders-list-stack">
-                            <div class="orders-table-hscroll" aria-label="주문 목록 가로 스크롤">
+                            <p class="orders-hscroll-hint" aria-hidden="true">좌우로 밀어 더 보기</p>
+                            <div class="orders-table-hscroll orders-table-hscroll--edge-fade" aria-label="주문 목록 가로 스크롤">
                                 <div class="orders-table-hscroll-track">
                                     <div id="supplierOrdersColumnHeader" class="orders-column-header" hidden>
                                         <div class="order-card-banner-grid orders-column-header-grid">

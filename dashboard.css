@@ -3021,6 +3021,19 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
         font-size: 0.76rem;
     }
 
+    /* 좁은 화면: 카드·푸터 글자만 살짝 줄여 가로 스크롤 거리 완화 */
+    .orders-table-hscroll .order-item {
+        padding: 0.38rem 0.42rem 0.34rem;
+    }
+
+    .order-card-order-id {
+        font-size: 0.72rem;
+    }
+
+    .order-card-footer-grid .order-footer-memo {
+        font-size: 0.6rem;
+    }
+
     /* 납품일시 한 띠로 유지(날짜·실선·시각 가로) */
     .order-banner-datetime-stack {
         flex-direction: row;
@@ -3105,6 +3118,56 @@ body.theme-light .order-item {
     flex-direction: column;
     gap: 0;
     min-width: 0;
+    position: relative;
+}
+
+.orders-hscroll-hint {
+    margin: 0 0 0.35rem;
+    padding: 0 0.1rem;
+    font-size: 0.68rem;
+    line-height: 1.25;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+}
+
+@media (min-width: 769px) {
+    .orders-hscroll-hint {
+        display: none;
+    }
+}
+
+/* Supabase 주문 로드 실패 안내 */
+.orders-remote-load-banner {
+    max-width: 960px;
+    margin: 0.5rem auto 0;
+    padding: 0 1rem;
+    box-sizing: border-box;
+}
+
+.orders-remote-load-banner__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 8px;
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    background: rgba(251, 191, 36, 0.12);
+    color: var(--text-primary, #f8fafc);
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
+body.theme-light .orders-remote-load-banner__inner {
+    color: #78350f;
+    background: rgba(254, 243, 199, 0.65);
+    border-color: rgba(245, 158, 11, 0.45);
+}
+
+.orders-remote-load-banner__text {
+    flex: 1 1 12rem;
+    min-width: 0;
 }
 
 /* 헤더 배너 + 주문 카드 목록을 같은 가로 스크롤에 묶어 열이 항상 일치 */
@@ -3114,6 +3177,19 @@ body.theme-light .order-item {
     overflow-x: auto;
     overflow-y: clip;
     -webkit-overflow-scrolling: touch;
+}
+
+/* 가로 스크롤 뷰포트 가장자리 페이드(내용 가림 없음, 스크롤 가능 영역 표시) */
+.orders-table-hscroll--edge-fade {
+    box-shadow:
+        inset 14px 0 12px -12px rgba(15, 23, 42, 0.35),
+        inset -14px 0 12px -12px rgba(15, 23, 42, 0.35);
+}
+
+body.theme-light .orders-table-hscroll--edge-fade {
+    box-shadow:
+        inset 14px 0 12px -12px rgba(148, 163, 184, 0.28),
+        inset -14px 0 12px -12px rgba(148, 163, 184, 0.28);
 }
 
 /* 7열 그리드 minmax·gap 합 — 헤더·카드 열 정렬, 뷰포트보다 좁으면 .orders-table-hscroll에서 가로 스크롤 */

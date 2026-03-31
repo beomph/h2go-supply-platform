@@ -239,6 +239,14 @@ function getSupplierShippingAddress(supplierName) {
     return PRODUCTION_SITE.address;
 }
 
+/** 주문 카드·집계용: DB `supplier_address` 우선, 없으면 등록/기본 출하 주소 */
+function getOrderSupplierAddressDisplay(order) {
+    if (!order) return "";
+    const fromRow = String(order.supplierAddress || "").trim();
+    if (fromRow) return fromRow;
+    return getSupplierShippingAddress(order.supplierName);
+}
+
 // 주소별 운송시간 (분)
 function getTravelTimeFromAddress(addr) {
     const keywords = [{ key: '강남', time: 60 }, { key: '인천', time: 40 }, { key: '수원', time: 50 }, { key: '안산', time: 75 }, { key: '부천', time: 55 }];
@@ -352,6 +360,8 @@ let supabaseClient = null;
 let isSupabaseOrdersEnabled = false;
 let syncOrdersTimer = null;
 let h2goOrdersRealtimeChannel = null;
+/** Supabase 주문 로드 실패 시 사용자 안내(배너) */
+let ordersRemoteLoadError = null;
 let reloadOrdersFromRemoteTimer = null;
 const dashboardStatFilters = {
     consumer: 'all',
@@ -455,6 +465,7 @@ function deserializeSupabaseOrder(row) {
         consumerName: String(row.consumer_name || ""),
         supplierName: String(row.supplier_name || ""),
         address: String(row.consumer_address || ""),
+        supplierAddress: String(row.supplier_address || ""),
         year: Number(payload.year || new Date(row.order_requested_at || Date.now()).getFullYear()),
         month: Number(payload.month || (new Date(row.delivery_due_at || Date.now()).getMonth() + 1)),
         day: Number(payload.day || new Date(row.delivery_due_at || Date.now()).getDate()),
@@ -529,20 +540,55 @@ function sortOrdersByRequestTime(list) {
     return arr;
 }
 
+function renderOrdersRemoteLoadBanner() {
+    const host = document.getElementById("ordersRemoteLoadBanner");
+    if (!host) return;
+    if (!ordersRemoteLoadError) {
+        host.hidden = true;
+        host.innerHTML = "";
+        return;
+    }
+    host.hidden = false;
+    const msg = escapeBannerHtml(String(ordersRemoteLoadError));
+    host.innerHTML = `<div class="orders-remote-load-banner__inner" role="status">
+        <span class="orders-remote-load-banner__text">최신 주문을 불러오지 못했습니다. ${msg}</span>
+        <button type="button" class="btn btn-tiny btn-secondary orders-remote-load-banner__dismiss" id="ordersRemoteLoadBannerDismiss">닫기</button>
+    </div>`;
+    document.getElementById("ordersRemoteLoadBannerDismiss")?.addEventListener(
+        "click",
+        () => {
+            ordersRemoteLoadError = null;
+            renderOrdersRemoteLoadBanner();
+        },
+        { once: true }
+    );
+}
+
 async function loadOrdersFromSupabase() {
     if (!supabaseClient) return;
+    const localBefore = deepClone(orders);
     const { data, error } = await supabaseClient
         .from("h2go_orders")
         .select("*")
         .order("order_requested_at", { ascending: true });
     if (error) {
-        console.warn("[h2go] failed to load orders from supabase:", error.message || error);
+        const msg = error.message || String(error);
+        console.warn("[h2go] failed to load orders from supabase:", msg);
+        ordersRemoteLoadError = msg;
+        renderOrdersRemoteLoadBanner();
         return;
     }
+    ordersRemoteLoadError = null;
+    renderOrdersRemoteLoadBanner();
     if (!Array.isArray(data)) return;
     const fromDb = data.map(deserializeSupabaseOrder);
-    /* 구매/판매 대시보드 목록은 Supabase `h2go_orders`만 단일 소스로 표시(웹·모바일 동일). 로컬 전용 병합 제거 */
-    orders = sortOrdersByRequestTime(fromDb);
+    const dbIds = new Set(fromDb.map((o) => String(o.id || "")));
+    const merged = [...fromDb];
+    /* 동기화 대기 중 로컬 전용 행은 유지(오프라인·upsert 지연) */
+    for (const o of localBefore) {
+        if (o && o.id && !dbIds.has(String(o.id))) merged.push(o);
+    }
+    orders = sortOrdersByRequestTime(merged);
     localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
     lastOrdersSnapshot = deepClone(orders);
 }
@@ -1092,8 +1138,10 @@ function formatConsumerInsightTooltipPanelHtml(heading, orderList) {
 }
 
 function getConsumerOrders(consumerName) {
-    // 수요자별 전체 주문 이력 (취소 포함)
-    return orders.filter(o => o.consumerName === consumerName);
+    // 수요자별 전체 주문 이력 (취소 포함) — DB·세션 표기 차이로 인한 미집계 방지
+    const want = String(consumerName || "").trim().toLowerCase();
+    if (!want) return [];
+    return orders.filter((o) => String(o.consumerName || "").trim().toLowerCase() === want);
 }
 
 function getSupplierOrders(supplierName) {
@@ -1499,6 +1547,8 @@ function buildOrderCardEtaCells(order, travelTimeText, viewer = "consumer") {
 function buildOrderCardFooterGridHtml({
     orderId,
     deliveryAddress,
+    /** 카드 하단 주소 열에 넣을 문자열(미지정 시 deliveryAddress) — 구매: 공급자 출하 주소, 판매: 납품지 등 */
+    footerAddressDisplay,
     driverLine,
     transportNoteHtml,
     etaFooterHtml,
@@ -1514,7 +1564,9 @@ function buildOrderCardFooterGridHtml({
             ? `<span class="order-footer-driver">${escapeBannerHtml(drv)}</span>`
             : `<span class="order-footer-driver order-footer-driver--empty">—</span>`;
     const noteBlock = transportNoteHtml || "";
-    const addrRaw = String(deliveryAddress || "").trim();
+    const addrRaw = String(
+        footerAddressDisplay !== undefined && footerAddressDisplay !== null ? footerAddressDisplay : deliveryAddress || ""
+    ).trim();
     const titleAttr = addrRaw
         ? ` title="${escapeBannerHtml(addrRaw).replace(/"/g, "&quot;")}"`
         : "";
@@ -2391,6 +2443,7 @@ function renderConsumerView() {
         const footerGridConsumer = buildOrderCardFooterGridHtml({
             orderId: order.id,
             deliveryAddress: order.address,
+            footerAddressDisplay: getOrderSupplierAddressDisplay(order),
             driverLine: driverLineC,
             transportNoteHtml: emptyReturnNoteFooterC,
             etaFooterHtml: etaFooterC,
@@ -2648,6 +2701,7 @@ function renderSupplierOrdersCards() {
         const footerGridSupplier = buildOrderCardFooterGridHtml({
             orderId: o.id,
             deliveryAddress: o.address,
+            footerAddressDisplay: o.address,
             driverLine,
             transportNoteHtml: emptyReturnNoteFooterS,
             etaFooterHtml: etaFooterS,
@@ -4167,6 +4221,7 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
         time: `${String(document.getElementById('orderHour').value).padStart(2, '0')}:${String(document.getElementById('orderMinute').value).padStart(2, '0')}`,
         tubeTrailers: 1,
         address: addressValue,
+        supplierAddress: getSupplierShippingAddress(supplierName),
         supplyCondition: supplyCondition,
         exFactoryConsumerSettlementMode:
             supplyCondition === 'ex_factory'
@@ -4956,6 +5011,7 @@ async function bootstrapOrderViews() {
     if (r === 'supplier') renderSupplierView();
 }
 bootstrapOrderViews();
+renderOrdersRemoteLoadBanner();
 
 function wireOrderNotificationAck(buttonId, role) {
     document.getElementById(buttonId)?.addEventListener("click", () => {

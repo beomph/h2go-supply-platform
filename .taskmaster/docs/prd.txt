@@ -432,8 +432,9 @@ Phase 4 — 운영 안정화 및 확장 (지속)
 ================================================================================
 
 - 2026-03-31
-  - 구매·판매「주문 현황」: 모바일에서도 데스크톱과 동일한 **7열** 표 형태(주문상태 열이 아래 행으로 떨어지지 않음)를 유지하고, `.orders-table-hscroll` 한 곳에 가로 스크롤을 두어 헤더·카드 열이 맞춤. Supabase 연동 시 `loadOrdersFromSupabase`가 `h2go_orders` 조회 결과만으로 `orders`/localStorage를 갱신해 웹·모바일 목록이 DB와 동일하게 보이도록 함(로컬에만 있던 주문을 병합하던 동작 제거).
-  - `dashboard.css`, `dashboard.js`
+  - 구매·판매「주문 현황」: 모바일에서도 데스크톱과 동일한 **7열** 표 형태, `.orders-table-hscroll` 가로 스크롤·모바일 힌트 문구·스크롤 영역 inset 페이드·좁은 화면 글자 크기 소폭 축소. Supabase `loadOrdersFromSupabase`: DB 행 + **아직 DB에 없는 로컬 주문 ID** 병합(동기화 지연·오프라인). 로드 실패 시 상단 경고 배너.
+  - 구매 대시보드 상단 **오늘 주문** 집계: `getConsumerOrders`를 수요자명 **대소문자 무시** 매칭으로 수정. 구매 카드 하단 주소 열: `supplier_address`(없으면 등록/기본 출하 주소) 표시 — 납품지(`consumer_address`)와 구분. 신규 주문 객체에 `supplierAddress` 포함.
+  - `dashboard.css`, `dashboard.js`, `dashboard.html`
 
 - 2026-04-08
   - 주문 카드에서 **물량확인증** 별도 버튼 제거. 카드 본문 클릭 시 기존과 같이 물량확인증 모달 표시(`dashboard.js`, `dashboard.css`).

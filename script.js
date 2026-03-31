@@ -1,6 +1,6 @@
 // H2GO - 수소거래 플랫폼 스크립트
 // Auth는 Supabase를 사용하고, 앱 세션 정보는 기존 대시보드 호환을 위해 localStorage에 보관한다.
-// 회원가입 경로는 이 파일의 signUp 한 곳뿐이며, 별도 이메일 가입 서버는 없습니다. (URL·키는 /h2go-config.js 가 우선)
+// 회원가입: Edge `h2go-submit-signup-request` → 관리자 메일 승인 → `h2go-approve-signup`에서 Auth·프로필 생성. (URL·키는 /h2go-config.js 가 우선)
 
 const AUTH_KEY = "h2go_auth";
 const THEME_KEY = "h2go_theme";
@@ -221,7 +221,6 @@ function showRegister(open) {
             const partyHidden = document.getElementById("registerBusinessPartyValue");
             if (partyHidden) partyHidden.value = "[]";
             syncRegisterBusinessPartyButtonUI();
-            resetRegisterVerificationUi();
         } else {
             registerSection.classList.remove("auth-section--active");
             loginSection.classList.add("auth-section--active");
@@ -264,53 +263,10 @@ function normalizeRegisterPhoneDigits(v) {
     return String(v || "").replace(/\D/g, "");
 }
 
-function getRegisterVerificationChannel() {
-    const h = document.getElementById("registerVerificationChannel");
-    const v = String(h?.value || "email").toLowerCase();
-    return v === "phone" ? "phone" : "email";
-}
-
-function resetRegisterVerificationUi() {
-    window.__h2goRegVerified = { channel: null, destination: "" };
-    const code = document.getElementById("registerOtpCode");
-    const status = document.getElementById("registerOtpStatus");
-    if (code) code.value = "";
-    if (status) status.textContent = "";
-}
-
-function wireRegisterVerificationChannel() {
-    const hidden = document.getElementById("registerVerificationChannel");
-    const buttons = document.querySelectorAll("#registerForm .verify-channel-btn");
-    const emailGroup = document.getElementById("registerEmailOtpGroup");
-    const phoneGroup = document.getElementById("registerPhoneOtpGroup");
-    if (!hidden || !buttons.length) return;
-
-    const applyChannel = (ch) => {
-        hidden.value = ch;
-        buttons.forEach((b) => {
-            const on = String(b.getAttribute("data-channel") || "") === ch;
-            b.classList.toggle("is-selected", on);
-            b.setAttribute("aria-pressed", on ? "true" : "false");
-        });
-        if (emailGroup) emailGroup.classList.toggle("is-hidden", ch !== "email");
-        if (phoneGroup) phoneGroup.classList.toggle("is-hidden", ch !== "phone");
-        resetRegisterVerificationUi();
-    };
-
-    buttons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-            const ch = String(btn.getAttribute("data-channel") || "email");
-            applyChannel(ch === "phone" ? "phone" : "email");
-        });
-    });
-    applyChannel(getRegisterVerificationChannel());
-}
-
-async function invokeSignupContactAction(payload) {
-    const client = getSupabaseClient();
-    if (!client) throw new Error("Supabase 클라이언트 없음");
+async function invokeSubmitSignupRequest(payload) {
     const anonKey = getSupabaseAnonKey();
-    const res = await fetch(getEdgeFunctionUrl("h2go-signup-contact"), {
+    if (!anonKey) throw new Error("Supabase ANON KEY 없음");
+    const res = await fetch(getEdgeFunctionUrl("h2go-submit-signup-request"), {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -320,97 +276,10 @@ async function invokeSignupContactAction(payload) {
         body: JSON.stringify(payload),
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(json.error || res.statusText || "요청 실패");
+    if (!res.ok) {
+        throw new Error(String(json.error || res.statusText || "요청 실패"));
+    }
     return json;
-}
-
-function wireRegisterOtpButtons() {
-    document.getElementById("registerSendOtpBtn")?.addEventListener("click", async () => {
-        const ch = getRegisterVerificationChannel();
-        const status = document.getElementById("registerOtpStatus");
-        try {
-            if (ch === "email") {
-                const email = String(document.getElementById("registerContactEmail")?.value || "").trim().toLowerCase();
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                    alert("유효한 이메일을 입력해 주세요.");
-                    return;
-                }
-                const json = await invokeSignupContactAction({
-                    action: "send_otp",
-                    channel: "email",
-                    destination: email,
-                });
-                if (status) {
-                    status.textContent = json.dev_code
-                        ? `개발: 인증번호 ${json.dev_code} (Resend 미설정 시에만 표시)`
-                        : "인증번호를 이메일로 보냈습니다.";
-                }
-                if (json.dev_code) console.info("[h2go] OTP dev_code:", json.dev_code);
-            } else {
-                const phoneRaw = String(document.getElementById("registerContactPhone")?.value || "");
-                const digits = normalizeRegisterPhoneDigits(phoneRaw);
-                if (digits.length < 10) {
-                    alert("휴대폰 번호를 올바르게 입력해 주세요.");
-                    return;
-                }
-                await invokeSignupContactAction({
-                    action: "send_otp",
-                    channel: "phone",
-                    destination: digits,
-                });
-                if (status) status.textContent = "인증번호를 문자로 보냈습니다.";
-            }
-        } catch (err) {
-            const msg = String(err?.message || err);
-            if (msg.includes("sms_not_configured")) {
-                alert("문자(SMS) 발송이 아직 설정되지 않았습니다. 관리자에게 문의하거나 이메일 인증을 이용해 주세요.");
-            } else alert(`인증번호 발송 실패: ${msg}`);
-        }
-    });
-
-    document.getElementById("registerVerifyOtpBtn")?.addEventListener("click", async () => {
-        const ch = getRegisterVerificationChannel();
-        const status = document.getElementById("registerOtpStatus");
-        const code = String(document.getElementById("registerOtpCode")?.value || "").trim();
-        if (!/^\d{6}$/.test(code)) {
-            alert("6자리 인증번호를 입력해 주세요.");
-            return;
-        }
-        try {
-            if (ch === "email") {
-                const email = String(document.getElementById("registerContactEmail")?.value || "").trim().toLowerCase();
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                    alert("이메일을 입력해 주세요.");
-                    return;
-                }
-                await invokeSignupContactAction({
-                    action: "verify_otp",
-                    channel: "email",
-                    destination: email,
-                    code,
-                });
-                window.__h2goRegVerified = { channel: "email", destination: email };
-                if (status) status.textContent = "이메일 인증이 완료되었습니다.";
-            } else {
-                const phoneRaw = String(document.getElementById("registerContactPhone")?.value || "");
-                const digits = normalizeRegisterPhoneDigits(phoneRaw);
-                if (digits.length < 10) {
-                    alert("휴대폰 번호를 입력해 주세요.");
-                    return;
-                }
-                await invokeSignupContactAction({
-                    action: "verify_otp",
-                    channel: "phone",
-                    destination: digits,
-                    code,
-                });
-                window.__h2goRegVerified = { channel: "phone", destination: digits };
-                if (status) status.textContent = "휴대폰 인증이 완료되었습니다.";
-            }
-        } catch (err) {
-            alert(`인증 확인 실패: ${err?.message || err}`);
-        }
-    });
 }
 
 function wireAuthorityButtons() {
@@ -471,6 +340,13 @@ async function handleLoginSubmit(e) {
         return;
     }
     if (!isRegistered) {
+        const { data: st, error: stErr } = await client.rpc("check_login_id_status", { p_login_id: loginId });
+        if (!stErr && st === "pending") {
+            alert(
+                "이 아이디는 관리자 승인 대기 중입니다.\n승인 메일의 링크로 계정이 생성되면 로그인할 수 있습니다.",
+            );
+            return;
+        }
         alert("가입되지 않은 아이디입니다.\n회원가입 후 이용해 주세요.");
         return;
     }
@@ -524,8 +400,7 @@ async function handleLoginSubmit(e) {
 
 async function handleRegisterSubmit(e) {
     e.preventDefault();
-    const client = getSupabaseClient();
-    if (!client) {
+    if (!getSupabaseAnonKey()) {
         alert("Supabase ANON KEY가 설정되지 않았습니다. localStorage의 h2go_supabase_anon_key 또는 window.H2GO_SUPABASE_ANON_KEY를 설정해 주세요.");
         return;
     }
@@ -544,146 +419,46 @@ async function handleRegisterSubmit(e) {
     if (!password) return alert("비밀번호를 입력해 주세요.");
     if (password !== passwordConfirm) return alert("비밀번호가 일치하지 않습니다.");
 
-    const verCh = getRegisterVerificationChannel();
-    const contactEmail =
-        verCh === "email"
-            ? String(document.getElementById("registerContactEmail")?.value || "").trim().toLowerCase()
-            : "";
-    const contactPhone =
-        verCh === "phone"
-            ? normalizeRegisterPhoneDigits(document.getElementById("registerContactPhone")?.value || "")
-            : "";
-    const v = window.__h2goRegVerified || { channel: null, destination: "" };
-    if (verCh === "email") {
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
-            return alert("연락·인증 이메일을 입력해 주세요.");
-        }
-        if (v.channel !== "email" || v.destination !== contactEmail) {
-            return alert("이메일 인증(인증번호 받기 → 인증 확인)을 완료해 주세요.");
-        }
-    } else {
-        if (contactPhone.length < 10) {
-            return alert("휴대폰 번호를 입력해 주세요.");
-        }
-        if (v.channel !== "phone" || v.destination !== contactPhone) {
-            return alert("휴대폰 인증(인증번호 받기 → 인증 확인)을 완료해 주세요.");
-        }
-    }
+    const contactEmailRaw = String(document.getElementById("registerContactEmail")?.value || "").trim().toLowerCase();
+    const contactPhoneDigits = normalizeRegisterPhoneDigits(document.getElementById("registerContactPhone")?.value || "");
+    const contact_email = contactEmailRaw && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmailRaw) ? contactEmailRaw : null;
+    const contact_phone = contactPhoneDigits.length >= 10 ? contactPhoneDigits : null;
 
-    const email = toAuthEmail(loginId);
-    const { data: signUpData, error: signUpError } = await client.auth.signUp({ email, password });
-    if (signUpError || !signUpData.user?.id) {
-        const msg = String(signUpError?.message || "");
-        const lc = msg.toLowerCase();
-        if (lc.includes("already")) {
+    try {
+        const json = await invokeSubmitSignupRequest({
+            login_id: loginId,
+            password,
+            username,
+            business_parties: businessParties,
+            authority,
+            contact_email,
+            contact_phone,
+        });
+        if (json.warn && json.approveUrl) {
+            console.warn("[h2go] 가입 신청:", json.warn, json.approveUrl);
+        }
+        alert(
+            "가입 신청이 접수되었습니다.\n\n" +
+                "• Supabase 계정은 관리자가 메일의 승인 링크를 연 뒤에 생성됩니다.\n" +
+                "• 관리자에게 승인 요청 메일이 발송됩니다. (Resend 미설정 시 서버 로그에서 승인 URL 확인)",
+        );
+        showRegister(false);
+    } catch (err) {
+        const msg = String(err?.message || err || "");
+        if (msg === "login_id_taken") {
             alert("이미 사용 중인 아이디입니다. 다른 아이디를 입력해 주세요.");
             return;
         }
-        if (lc.includes("signups are disabled") || lc.includes("signup disabled")) {
-            const dash = getSupabaseAuthProvidersDashboardUrl();
-            alert(
-                "H2GO는 Supabase「이메일+비밀번호」가입 한 가지뿐입니다. 다른 이메일 가입 서버와 겹치지 않습니다.\n\n" +
-                    "지금 오류는 보통 **새 사용자 가입 전체**를 끈 상태입니다.\n" +
-                    "(**이메일 확인(Confirm email)만** 끈 것과 다릅니다 — 가입 자체는 **켜 두어야** 합니다.)\n\n" +
-                    "① " +
-                    dash +
-                    "\n   → Email(펼침) → **Allow new users to sign up** 켜기, Email 제공자도 켜져 있는지 확인\n\n" +
-                    "② PAT로 scripts/supabase_mailer_autoconfirm.ps1 실행 시\n" +
-                    "   external_email + 가입 허용 + 자동확인을 한 번에 맞출 수 있습니다."
-            );
+        if (msg === "signup_pending") {
+            alert("이 아이디로 이미 가입 신청이 접수되어 있습니다. 관리자 승인을 기다려 주세요.");
             return;
         }
-        if (
-            lc.includes("email provider") ||
-            lc.includes("email signups not allowed") ||
-            (lc.includes("signup") && lc.includes("not allowed"))
-        ) {
-            alert(
-                "Supabase Email 인증이 꺼져 있거나 가입 정책과 맞지 않습니다.\n\n" +
-                    "Sign In / Providers → Email 에서 제공자를 켜고,\n" +
-                    "Allow new users to sign up 이 켜져 있는지 확인해 주세요.\n\n" +
-                    getSupabaseAuthProvidersDashboardUrl()
-            );
+        if (msg.includes("server misconfigured")) {
+            alert("서버 설정이 완료되지 않았습니다. (Edge Secret: APPROVAL_HMAC_SECRET) 관리자에게 문의해 주세요.");
             return;
         }
-        if (
-            signUpError?.status === 429 ||
-            lc.includes("rate limit") ||
-            lc.includes("too many requests") ||
-            lc.includes("email rate")
-        ) {
-            alert(
-                "회원가입 확인 메일 발송 한도에 걸렸습니다. (Supabase 이메일 제한)\n\n" +
-                    "H2GO는 '아이디@h2go.local'만 쓰므로 이메일 확인이 필요 없습니다.\n\n" +
-                    "【대시보드】 왼쪽 Authentication → Sign In / Providers 로 이동한 뒤,\n" +
-                    "아래쪽 「Email」 블록을 펼치면 Confirm email(또는 Enable email confirmations) 스위치가 있습니다. 끄세요.\n" +
-                    "(상단 General 탭만 보면 스위치가 안 보일 수 있습니다.)\n\n" +
-                    "【API】 scripts/supabase_mailer_autoconfirm.ps1 (가입 허용 + 이메일 자동확인)\n" +
-                    "(Dashboard → Account → Access Tokens, SUPABASE_ACCESS_TOKEN)\n\n" +
-                    "설명: https://supabase.com/docs/guides/auth/general-configuration\n" +
-                    "한도: https://supabase.com/docs/guides/deployment/going-into-prod#auth-rate-limits"
-            );
-            return;
-        }
-        alert(`회원가입에 실패했습니다: ${msg || "알 수 없는 오류"}`);
-        return;
+        alert(`회원가입 요청에 실패했습니다: ${msg || "알 수 없는 오류"}`);
     }
-
-    const userId = signUpData.user.id;
-    const profilePayload = {
-        id: userId,
-        business_parties: businessParties,
-        username,
-        login_id: loginId,
-        authority,
-        approval_status: "pending",
-        verification_channel: verCh,
-        contact_email: verCh === "email" ? contactEmail : null,
-        contact_phone: verCh === "phone" ? contactPhone : null,
-    };
-    const { error: profileError } = await client.from("member_profiles").insert(profilePayload);
-
-    if (profileError) {
-        alert(`회원 프로필 저장에 실패했습니다: ${profileError.message || "알 수 없는 오류"}`);
-        return;
-    }
-
-    const { data: signInData, error: signInError } = await client.auth.signInWithPassword({ email, password });
-    if (signInError || !signInData.session?.access_token) {
-        alert(
-            "가입 신청은 저장되었으나 로그인에 실패했습니다. 승인 후 로그인 화면에서 다시 시도해 주세요.",
-        );
-        showRegister(false);
-        return;
-    }
-
-    try {
-        const notifyRes = await fetch(getEdgeFunctionUrl("h2go-notify-admin-signup"), {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                apikey: getSupabaseAnonKey(),
-                Authorization: `Bearer ${signInData.session.access_token}`,
-            },
-            body: "{}",
-        });
-        const notifyJson = await notifyRes.json().catch(() => ({}));
-        if (!notifyRes.ok) {
-            console.warn("[h2go] notify admin:", notifyJson);
-        } else if (notifyJson.approveUrl) {
-            console.info("[h2go] admin mail 미설정 — 승인 URL:", notifyJson.approveUrl);
-        }
-    } catch (err) {
-        console.warn("[h2go] notify admin failed:", err);
-    }
-
-    await client.auth.signOut();
-    alert(
-        "가입 신청이 접수되었습니다.\n\n" +
-            "• 관리자 승인 후 로그인할 수 있습니다.\n" +
-            "• 관리자에게 승인 요청 메일이 발송되었습니다(메일·Edge 설정이 된 경우).",
-    );
-    showRegister(false);
 }
 
 function wireEvents() {
@@ -701,12 +476,9 @@ function wireEvents() {
     });
     wireBusinessPartyButtons();
     wireAuthorityButtons();
-    wireRegisterVerificationChannel();
-    wireRegisterOtpButtons();
 }
 
 function init() {
-    window.__h2goRegVerified = { channel: null, destination: "" };
     initTheme();
     try {
         if (getAuth()) {

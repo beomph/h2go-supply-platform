@@ -354,6 +354,7 @@ function readOrdersFromStorage() {
 let orders = readOrdersFromStorage();
 let currentUser = { type: 'consumer', name: '수요자 A' };
 let pendingApprovalOrderId = null;
+let pendingCancelApprovalOrderId = null;
 let selectedSupplierName = null;
 let lastOrdersSnapshot = deepClone(orders);
 let supabaseClient = null;
@@ -1300,6 +1301,83 @@ function canActorApprovePendingCancel(order, actor) {
     if (rb === "consumer") return actor === "supplier";
     if (rb === "supplier") return actor === "consumer";
     return false;
+}
+
+const SEEN_CHANGE_REVIEW_PREFIX = "h2go_seen_change_review_v1:";
+const SEEN_CANCEL_REVIEW_PREFIX = "h2go_seen_cancel_review_v1:";
+
+function seenReviewStorageKey(prefix, actor, orderId) {
+    const a = String(actor || "").trim();
+    const id = String(orderId || "").trim();
+    return `${prefix}${a}:${encodeURIComponent(id)}`;
+}
+
+function hasSeenPendingChangeReview(orderId, actor) {
+    try {
+        return localStorage.getItem(seenReviewStorageKey(SEEN_CHANGE_REVIEW_PREFIX, actor, orderId)) === "1";
+    } catch (_) {
+        return false;
+    }
+}
+
+function markSeenPendingChangeReview(orderId, actor) {
+    try {
+        localStorage.setItem(seenReviewStorageKey(SEEN_CHANGE_REVIEW_PREFIX, actor, orderId), "1");
+    } catch (_) {}
+}
+
+function hasSeenPendingCancelReview(orderId, actor) {
+    try {
+        return localStorage.getItem(seenReviewStorageKey(SEEN_CANCEL_REVIEW_PREFIX, actor, orderId)) === "1";
+    } catch (_) {
+        return false;
+    }
+}
+
+function markSeenPendingCancelReview(orderId, actor) {
+    try {
+        localStorage.setItem(seenReviewStorageKey(SEEN_CANCEL_REVIEW_PREFIX, actor, orderId), "1");
+    } catch (_) {}
+}
+
+function clearSeenChangeReviewForOrder(order) {
+    const ch = order?.changeRequest;
+    if (!ch) return;
+    const approver = ch.requestedBy === "consumer" ? "supplier" : "consumer";
+    try {
+        localStorage.removeItem(seenReviewStorageKey(SEEN_CHANGE_REVIEW_PREFIX, approver, order.id));
+    } catch (_) {}
+}
+
+function clearSeenCancelReviewForOrder(order) {
+    const cr = order?.cancelRequest;
+    if (!cr) return;
+    const approver = cr.requestedBy === "consumer" ? "supplier" : "consumer";
+    try {
+        localStorage.removeItem(seenReviewStorageKey(SEEN_CANCEL_REVIEW_PREFIX, approver, order.id));
+    } catch (_) {}
+}
+
+function decideCancelOrder(o, approved) {
+    if (!o || !o.cancelRequest) return;
+    const decidedAt = new Date().toISOString();
+    const requestedBy = o.cancelRequest.requestedBy;
+    const decidedBy = requestedBy === "consumer" ? "supplier" : "consumer";
+
+    if (approved) {
+        o.status = "cancelled";
+        o.cancelledAt = decidedAt;
+        o.cancelRequest.status = "approved";
+        o.cancelRequest.decidedAt = decidedAt;
+        o.cancelRequest.decidedBy = decidedBy;
+        o.lastCancel = { result: "approved", decidedAt, decidedBy };
+    } else {
+        o.cancelRequest.status = "rejected";
+        o.cancelRequest.decidedAt = decidedAt;
+        o.cancelRequest.decidedBy = decidedBy;
+        o.lastCancel = { result: "rejected", decidedAt, decidedBy, reason: o.cancelRequest.reason || "" };
+        o.status = o.cancelRequest.originalStatus || "accepted";
+    }
 }
 
 function parseIsoToDate(iso) {
@@ -2427,6 +2505,8 @@ function renderConsumerView() {
 
         const canApproveChange = canActorApprovePendingChange(order, 'consumer');
         const canApproveCancel = canActorApprovePendingCancel(order, 'consumer');
+        const seenChangeReview = canApproveChange && hasSeenPendingChangeReview(order.id, 'consumer');
+        const seenCancelReview = canApproveCancel && hasSeenPendingCancelReview(order.id, 'consumer');
         const hasDecisionRequest = canApproveChange || canApproveCancel;
 
         const showChangeBtn = canRequestChange && !immediateCancelable;
@@ -2453,10 +2533,12 @@ function renderConsumerView() {
             ${order.supplyCondition === 'delivery' ? `<button type="button" class="btn btn-small btn-secondary" data-action="open-order-map" data-id="${order.id}">지도·출하/회차</button>` : ''}
         `.trim();
         const decisionButtons = `
-            ${canApproveChange ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${order.id}">승인</button>
-            <button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${order.id}">거절</button>` : ''}
-            ${canApproveCancel ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${order.id}">승인</button>
-            <button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${order.id}">거절</button>` : ''}
+            ${canApproveChange && !seenChangeReview ? `<button type="button" class="btn btn-small btn-primary" data-action="review-change-request" data-id="${order.id}">확인</button>` : ''}
+            ${canApproveChange && seenChangeReview ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${order.id}">승인</button>
+            <button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${order.id}">반려</button>` : ''}
+            ${canApproveCancel && !seenCancelReview ? `<button type="button" class="btn btn-small btn-primary" data-action="review-cancel-request" data-id="${order.id}">확인</button>` : ''}
+            ${canApproveCancel && seenCancelReview ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${order.id}">승인</button>
+            <button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${order.id}">반려</button>` : ''}
         `.trim();
 
         const travelTimeMinC = getOrderTravelTimeMinutes(order);
@@ -2593,6 +2675,8 @@ function renderOrdersTable(tbodyId, showActions) {
 
         const canApproveChange = showActions && canActorApprovePendingChange(o, 'supplier');
         const canApproveCancel = showActions && canActorApprovePendingCancel(o, 'supplier');
+        const seenChangeReviewT = canApproveChange && hasSeenPendingChangeReview(o.id, 'supplier');
+        const seenCancelReviewT = canApproveCancel && hasSeenPendingCancelReview(o.id, 'supplier');
 
         const canProposeChange = showActions && !hasPendingChange && !hasPendingCancel && ['requested', 'accepted', 'change_accepted', 'empty_in_transit', 'empty_arrived'].includes(status);
         const canRequestCancel = showActions && !hasPendingChange && !hasPendingCancel && !['completed', 'cancelled'].includes(status);
@@ -2628,10 +2712,12 @@ function renderOrdersTable(tbodyId, showActions) {
                 ${canCancelChangeRequest ? `<button type="button" class="btn btn-tiny btn-secondary" data-action="cancel-change-request" data-id="${o.id}">변경요청 취소</button>` : ''}
                 ${canProposeChange ? `<button type="button" class="btn btn-tiny" data-action="request-change" data-id="${o.id}">변경</button>` : ''}
                 ${canRequestCancel ? `<button type="button" class="btn btn-tiny btn-secondary" data-action="request-cancel" data-id="${o.id}">취소</button>` : ''}
-                ${canApproveChange ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-change" data-id="${o.id}">변경 확정</button>
-                <button type="button" class="btn btn-tiny btn-secondary" data-action="reject-change" data-id="${o.id}">변경 거절</button>` : ''}
-                ${canApproveCancel ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-cancel" data-id="${o.id}">취소 승인</button>
-                <button type="button" class="btn btn-tiny btn-secondary" data-action="reject-cancel" data-id="${o.id}">취소 거절</button>` : ''}
+                ${canApproveChange && !seenChangeReviewT ? `<button type="button" class="btn btn-tiny btn-primary" data-action="review-change-request" data-id="${o.id}">확인</button>` : ''}
+                ${canApproveChange && seenChangeReviewT ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-change" data-id="${o.id}">승인</button>
+                <button type="button" class="btn btn-tiny btn-secondary" data-action="reject-change" data-id="${o.id}">반려</button>` : ''}
+                ${canApproveCancel && !seenCancelReviewT ? `<button type="button" class="btn btn-tiny btn-primary" data-action="review-cancel-request" data-id="${o.id}">확인</button>` : ''}
+                ${canApproveCancel && seenCancelReviewT ? `<button type="button" class="btn btn-tiny btn-primary" data-action="approve-cancel" data-id="${o.id}">승인</button>
+                <button type="button" class="btn btn-tiny btn-secondary" data-action="reject-cancel" data-id="${o.id}">반려</button>` : ''}
             </td>
         </tr>
     `}).join('') || `<tr><td colspan="${colspan}" class="empty-state">주문이 없습니다.</td></tr>`;
@@ -2709,11 +2795,15 @@ function renderSupplierOrdersCards() {
 
         const canApproveChange = canActorApprovePendingChange(o, 'supplier');
         const canApproveCancel = canActorApprovePendingCancel(o, 'supplier');
+        const seenChangeReviewS = canApproveChange && hasSeenPendingChangeReview(o.id, 'supplier');
+        const seenCancelReviewS = canApproveCancel && hasSeenPendingCancelReview(o.id, 'supplier');
         const decisionButtonsSupplier = `
-            ${canApproveChange ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${o.id}">승인</button>
-            <button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${o.id}">거절</button>` : ''}
-            ${canApproveCancel ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${o.id}">승인</button>
-            <button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${o.id}">거절</button>` : ''}
+            ${canApproveChange && !seenChangeReviewS ? `<button type="button" class="btn btn-small btn-primary" data-action="review-change-request" data-id="${o.id}">확인</button>` : ''}
+            ${canApproveChange && seenChangeReviewS ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-change" data-id="${o.id}">승인</button>
+            <button type="button" class="btn btn-small btn-secondary" data-action="reject-change" data-id="${o.id}">반려</button>` : ''}
+            ${canApproveCancel && !seenCancelReviewS ? `<button type="button" class="btn btn-small btn-primary" data-action="review-cancel-request" data-id="${o.id}">확인</button>` : ''}
+            ${canApproveCancel && seenCancelReviewS ? `<button type="button" class="btn btn-small btn-primary" data-action="approve-cancel" data-id="${o.id}">승인</button>
+            <button type="button" class="btn btn-small btn-secondary" data-action="reject-cancel" data-id="${o.id}">반려</button>` : ''}
         `.trim();
         const hasSupplierDecision = canApproveChange || canApproveCancel;
 
@@ -3589,22 +3679,52 @@ function openApprovalModal(orderId) {
     const body = document.getElementById('approvalModalBody');
     const summary = summarizeChange(order, cr.proposed);
     body.innerHTML = `
-        <p><strong>주문 ${order.id}</strong></p>
+        <p><strong>주문 ${escapeBannerHtml(order.id)}</strong></p>
         <p>${cr.requestedBy === 'supplier' ? '공급자' : '수요자'}가 아래와 같이 변경을 요청했습니다.</p>
-        <p class="change-summary">요약: ${summary}</p>
+        <p class="change-summary">요약: ${escapeBannerHtml(summary)}</p>
         <div class="change-diff">
             <p><strong>현재:</strong> ${order.year}/${order.month}/${order.day} ${formatTimeText(order.time)}, 트레일러 ${order.tubeTrailers}대</p>
             <p><strong>변경 후:</strong> ${cr.proposed.year}/${cr.proposed.month}/${cr.proposed.day} ${formatTimeText(cr.proposed.time)}, 트레일러 ${cr.proposed.tubeTrailers}대</p>
-            <p><strong>주소:</strong> ${cr.proposed.address || order.address}</p>
+            <p><strong>주소:</strong> ${escapeBannerHtml(cr.proposed.address || order.address)}</p>
         </div>
     `;
-    document.getElementById('approvalModalTitle').textContent = '변경 요청 검토 - 확정하시겠습니까?';
+    document.getElementById('approvalModalTitle').textContent = '주문 변경 요청 확인';
     document.getElementById('changeApprovalModal').classList.add('active');
+    document.getElementById('changeApprovalModal')?.setAttribute('aria-hidden', 'false');
+}
+
+function openCancelApprovalModal(orderId) {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order || !order.cancelRequest || order.cancelRequest.status !== "pending") return;
+    pendingCancelApprovalOrderId = orderId;
+    const cr = order.cancelRequest;
+    const body = document.getElementById("cancelApprovalModalBody");
+    const reqBy = cr.requestedBy === "supplier" ? "공급자" : "수요자";
+    const reason = String(cr.requestReason || "").trim();
+    if (body) {
+        body.innerHTML = `
+        <p><strong>주문 ${escapeBannerHtml(order.id)}</strong></p>
+        <p>${reqBy}가 주문 취소를 요청했습니다.</p>
+        ${reason ? `<p class="change-summary">사유: ${escapeBannerHtml(reason)}</p>` : "<p class=\"change-summary\">별도 사유 없음</p>"}
+        <p class="supplier-modal-hint" style="margin-top:0.5rem;">승인 시 주문이 취소되고, 반려 시 이전 상태로 돌아갑니다.</p>
+        `;
+    }
+    const modal = document.getElementById("cancelApprovalModal");
+    modal?.classList.add("active");
+    modal?.setAttribute("aria-hidden", "false");
+}
+
+function closeCancelApprovalModal() {
+    pendingCancelApprovalOrderId = null;
+    const modal = document.getElementById("cancelApprovalModal");
+    modal?.classList.remove("active");
+    modal?.setAttribute("aria-hidden", "true");
 }
 
 function applyChange(orderId, approved) {
     const order = orders.find(o => o.id === orderId);
     if (!order || !order.changeRequest) return;
+    clearSeenChangeReviewForOrder(order);
 
     const decidedAt = new Date().toISOString();
     const p = order.changeRequest.proposed;
@@ -3644,6 +3764,7 @@ function applyChange(orderId, approved) {
     saveOrdersToStorage();
     pendingApprovalOrderId = null;
     document.getElementById('changeApprovalModal').classList.remove('active');
+    document.getElementById('changeApprovalModal')?.setAttribute('aria-hidden', 'true');
     renderConsumerView();
     renderSupplierView();
 }
@@ -3852,7 +3973,7 @@ function formatHistoryNotification(order, h, viewerRole) {
             return { title: "변경 요청 승인", text: `${oid} · 변경이 반영되었습니다.` };
         case "change_rejected": {
             const sum = d.summary ? ` · 요청 내용: ${d.summary}` : "";
-            return { title: "변경 요청 거절", text: `${oid} · 변경이 거절되었습니다.${sum}` };
+            return { title: "변경 요청 반려", text: `${oid} · 변경이 반려되었습니다.${sum}` };
         }
         case "change_request_cancelled":
             return { title: "변경 요청 취소", text: `${oid} · 대기 중이던 변경 요청이 취소되었습니다.` };
@@ -3864,7 +3985,7 @@ function formatHistoryNotification(order, h, viewerRole) {
             return { title: "취소 승인", text: `${oid} · 주문이 취소되었습니다.` };
         case "cancel_rejected": {
             const r = d.reason ? ` (${d.reason})` : "";
-            return { title: "취소 요청 거절", text: `${oid} · 취소 요청이 거절되었습니다.${r}` };
+            return { title: "취소 요청 반려", text: `${oid} · 취소 요청이 반려되었습니다.${r}` };
         }
         case "cancelled_immediately":
             return { title: "즉시 취소", text: `${oid} · 주문이 즉시 취소되었습니다.` };
@@ -4517,6 +4638,7 @@ document.getElementById('changeRequestForm')?.addEventListener('submit', (e) => 
         originalStatus: normalizeStatus(order.status),
     };
     order.status = 'change_requested';
+    clearSeenChangeReviewForOrder(order);
     appendOrderChangeHistory(order, "change_requested", requestedBy, {
         proposed,
         originalStatus: order.changeRequest.originalStatus,
@@ -4831,14 +4953,66 @@ document.getElementById('transportStartForm').addEventListener('submit', (e) => 
 
 document.getElementById('approveChangeBtn').addEventListener('click', () => {
     if (!pendingApprovalOrderId) return;
-    applyChange(pendingApprovalOrderId, true);
-    alert('변경 요청이 승인되었습니다. 주문 상태가 "변경 접수"로 변경됩니다.');
+    const oid = pendingApprovalOrderId;
+    const order = orders.find((o) => o.id === oid);
+    const actor = getActorForOrder(order || {});
+    if (!order || !hasSeenPendingChangeReview(oid, actor)) return;
+    applyChange(oid, true);
+    alert('변경 요청을 승인했습니다. 주문 상태가 "변경 접수"로 변경됩니다.');
 });
 
 document.getElementById('rejectChangeBtn').addEventListener('click', () => {
     if (!pendingApprovalOrderId) return;
-    applyChange(pendingApprovalOrderId, false);
-    alert('변경 요청이 거절되었습니다. 주문 상태가 이전 단계로 유지됩니다.');
+    const oid = pendingApprovalOrderId;
+    const order = orders.find((o) => o.id === oid);
+    const actor = getActorForOrder(order || {});
+    if (!order || !hasSeenPendingChangeReview(oid, actor)) return;
+    applyChange(oid, false);
+    alert('변경 요청을 반려했습니다. 주문 상태가 이전 단계로 유지됩니다.');
+});
+
+document.getElementById("approveCancelBtn")?.addEventListener("click", () => {
+    const oid = pendingCancelApprovalOrderId;
+    if (!oid) return;
+    const order = orders.find((o) => o.id === oid);
+    const actor = getActorForOrder(order || {});
+    if (!order || !order.cancelRequest || order.cancelRequest.status !== "pending") return;
+    if (!canActorApprovePendingCancel(order, actor) || !hasSeenPendingCancelReview(oid, actor)) return;
+    clearSeenCancelReviewForOrder(order);
+    decideCancelOrder(order, true);
+    appendOrderChangeHistory(order, "cancel_approved", actor, {});
+    saveOrdersToStorage();
+    renderConsumerView();
+    renderSupplierView();
+    lastOrdersSnapshot = deepClone(orders);
+    closeCancelApprovalModal();
+    alert("취소 요청을 승인했습니다. 주문이 취소 상태로 표시됩니다.");
+});
+
+document.getElementById("rejectCancelBtn")?.addEventListener("click", () => {
+    const oid = pendingCancelApprovalOrderId;
+    if (!oid) return;
+    const order = orders.find((o) => o.id === oid);
+    const actor = getActorForOrder(order || {});
+    if (!order || !order.cancelRequest || order.cancelRequest.status !== "pending") return;
+    if (!canActorApprovePendingCancel(order, actor) || !hasSeenPendingCancelReview(oid, actor)) return;
+    const reason = window.prompt("취소 요청 반려 사유를 입력해 주세요.", "");
+    if (reason === null) return;
+    order.cancelRequest.reason = String(reason || "").trim();
+    clearSeenCancelReviewForOrder(order);
+    decideCancelOrder(order, false);
+    appendOrderChangeHistory(order, "cancel_rejected", actor, { reason: order.cancelRequest.reason });
+    saveOrdersToStorage();
+    renderConsumerView();
+    renderSupplierView();
+    lastOrdersSnapshot = deepClone(orders);
+    closeCancelApprovalModal();
+    alert("취소 요청을 반려했습니다. 사유가 요청자에게 전달됩니다.");
+});
+
+document.getElementById("cancelApprovalModalClose")?.addEventListener("click", closeCancelApprovalModal);
+document.getElementById("cancelApprovalModal")?.addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) closeCancelApprovalModal();
 });
 
 document.getElementById('changeRequestModal').addEventListener('click', (e) => {
@@ -4952,33 +5126,12 @@ document.addEventListener('click', (e) => {
         o.status = 'cancel_requested';
     }
 
-    function decideCancel(o, approved) {
-        if (!o || !o.cancelRequest) return;
-        const decidedAt = new Date().toISOString();
-        const requestedBy = o.cancelRequest.requestedBy;
-        const decidedBy = requestedBy === 'consumer' ? 'supplier' : 'consumer';
-
-        if (approved) {
-            o.status = 'cancelled';
-            o.cancelledAt = decidedAt;
-            o.cancelRequest.status = 'approved';
-            o.cancelRequest.decidedAt = decidedAt;
-            o.cancelRequest.decidedBy = decidedBy;
-            o.lastCancel = { result: 'approved', decidedAt, decidedBy };
-        } else {
-            o.cancelRequest.status = 'rejected';
-            o.cancelRequest.decidedAt = decidedAt;
-            o.cancelRequest.decidedBy = decidedBy;
-            o.lastCancel = { result: 'rejected', decidedAt, decidedBy, reason: o.cancelRequest.reason || "" };
-            o.status = o.cancelRequest.originalStatus || 'accepted';
-        }
-    }
-
     if (action === 'cancel-change-request') {
         if (!order || !order.changeRequest || order.changeRequest.status !== 'pending') return;
         const actor = getActorForOrder(order);
         if (order.changeRequest.requestedBy !== actor) return;
         if (!confirm('변경 요청을 취소하시겠습니까?')) return;
+        clearSeenChangeReviewForOrder(order);
         order.status = order.changeRequest.originalStatus || 'accepted';
         order.changeRequest = null;
         appendOrderChangeHistory(order, "change_request_cancelled", actor, {});
@@ -4990,19 +5143,36 @@ document.addEventListener('click', (e) => {
         if (order.changeRequest && order.changeRequest.status === 'pending') return;
         if (order.cancelRequest && order.cancelRequest.status === 'pending') return;
         openChangeRequestModal(orderId, actor);
+    } else if (action === 'review-change-request') {
+        if (!order || !order.changeRequest || order.changeRequest.status !== "pending") return;
+        const actor = getActorForOrder(order);
+        if (!canActorApprovePendingChange(order, actor)) return;
+        markSeenPendingChangeReview(orderId, actor);
+        openApprovalModal(orderId);
+        persistAndRerender();
+    } else if (action === 'review-cancel-request') {
+        if (!order || !order.cancelRequest || order.cancelRequest.status !== "pending") return;
+        const actor = getActorForOrder(order);
+        if (!canActorApprovePendingCancel(order, actor)) return;
+        markSeenPendingCancelReview(orderId, actor);
+        openCancelApprovalModal(orderId);
+        persistAndRerender();
     } else if (action === 'approve-change') {
         if (!order || !order.changeRequest || order.changeRequest.status !== 'pending') return;
         const actor = getActorForOrder(order);
         if (!canActorApprovePendingChange(order, actor)) return;
-        openApprovalModal(orderId);
+        if (!hasSeenPendingChangeReview(orderId, actor)) return;
+        applyChange(orderId, true);
+        persistAndRerender();
+        alert('변경 요청을 승인했습니다. 주문 상태가 "변경 접수"로 변경됩니다.');
     } else if (action === 'reject-change') {
         if (!order || !order.changeRequest || order.changeRequest.status !== 'pending') return;
         const actor = getActorForOrder(order);
         if (!canActorApprovePendingChange(order, actor)) return;
-        if (confirm('변경 요청을 거절하시겠습니까?')) {
-            applyChange(orderId, false);
-            alert('변경 요청이 거절되었습니다.');
-        }
+        if (!hasSeenPendingChangeReview(orderId, actor)) return;
+        applyChange(orderId, false);
+        persistAndRerender();
+        alert('변경 요청을 반려했습니다.');
     } else if (action === 'open-delivery-settlement') {
         if (!order) return;
         if (getActorForOrder(order) !== 'consumer') return;
@@ -5118,23 +5288,28 @@ document.addEventListener('click', (e) => {
         const actor = getActorForOrder(order);
         const reqBy = order.cancelRequest.requestedBy;
         if ((reqBy === 'consumer' && actor !== 'supplier') || (reqBy === 'supplier' && actor !== 'consumer')) return;
-        if (!confirm('취소 요청을 승인하시겠습니까? 승인하면 주문이 취소 상태로 표시됩니다.')) return;
-        decideCancel(order, true);
+        if (!hasSeenPendingCancelReview(orderId, actor)) return;
+        clearSeenCancelReviewForOrder(order);
+        decideCancelOrder(order, true);
         appendOrderChangeHistory(order, "cancel_approved", getActorForOrder(order), {});
         persistAndRerender();
+        closeCancelApprovalModal();
         alert('취소 요청을 승인했습니다. 주문이 취소 상태로 표시됩니다.');
     } else if (action === 'reject-cancel') {
         if (!order || !order.cancelRequest || order.cancelRequest.status !== 'pending') return;
         const actor = getActorForOrder(order);
         const reqBy = order.cancelRequest.requestedBy;
         if ((reqBy === 'consumer' && actor !== 'supplier') || (reqBy === 'supplier' && actor !== 'consumer')) return;
-        const reason = window.prompt("취소 요청 거절 사유를 입력해 주세요.", "");
+        if (!hasSeenPendingCancelReview(orderId, actor)) return;
+        const reason = window.prompt("취소 요청 반려 사유를 입력해 주세요.", "");
         if (reason === null) return;
         order.cancelRequest.reason = String(reason || "").trim();
-        decideCancel(order, false);
+        clearSeenCancelReviewForOrder(order);
+        decideCancelOrder(order, false);
         appendOrderChangeHistory(order, "cancel_rejected", getActorForOrder(order), { reason: order.cancelRequest.reason });
         persistAndRerender();
-        alert('취소 요청을 거절했습니다. 사유가 요청자에게 전달됩니다.');
+        closeCancelApprovalModal();
+        alert('취소 요청을 반려했습니다. 사유가 요청자에게 전달됩니다.');
     } else if (action === 'remove-cancelled-consumer') {
         if (!orderId || !order || order.status !== 'cancelled') return;
         addHiddenConsumerOrderId(orderId);

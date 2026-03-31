@@ -429,8 +429,21 @@
             <h3 id="approvalModalTitle">변경 요청 검토</h3>
             <div id="approvalModalBody" class="approval-body"></div>
             <div class="approval-actions">
-                <button type="button" class="btn btn-primary" id="approveChangeBtn">변경 확정</button>
-                <button type="button" class="btn btn-secondary" id="rejectChangeBtn">거절</button>
+                <button type="button" class="btn btn-primary" id="approveChangeBtn">승인</button>
+                <button type="button" class="btn btn-secondary" id="rejectChangeBtn">반려</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 주문 취소 요청 검토 (상대방 수신) -->
+    <div id="cancelApprovalModal" class="modal" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="cancelApprovalModalTitle">
+            <button type="button" class="modal-close" id="cancelApprovalModalClose" aria-label="닫기">&times;</button>
+            <h3 id="cancelApprovalModalTitle">취소 요청 확인</h3>
+            <div id="cancelApprovalModalBody" class="approval-body"></div>
+            <div class="approval-actions">
+                <button type="button" class="btn btn-primary" id="approveCancelBtn">승인</button>
+                <button type="button" class="btn btn-secondary" id="rejectCancelBtn">반려</button>
             </div>
         </div>
     </div>

@@ -597,37 +597,8 @@ body.theme-light .insight-tooltip-panel {
 
 .dashboard-order-notif-item--unread {
     border-left: none;
-    padding-left: 1.05rem;
     background: color-mix(in srgb, var(--h2-blue, #3b82f6) 7%, var(--bg-card));
     box-shadow: inset 3px 0 0 0 color-mix(in srgb, var(--h2-blue, #3b82f6) 65%, transparent);
-}
-
-@keyframes dashboard-notif-dot-pulse {
-    0%,
-    100% {
-        transform: scale(1);
-        opacity: 1;
-        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.45);
-    }
-
-    50% {
-        transform: scale(1.12);
-        opacity: 0.95;
-        box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
-    }
-}
-
-.dashboard-order-notif-new-indicator {
-    position: absolute;
-    left: 0.42rem;
-    top: 50%;
-    margin-top: -0.24rem;
-    width: 0.48rem;
-    height: 0.48rem;
-    border-radius: 50%;
-    background: radial-gradient(circle at 32% 30%, #fecaca, #dc2626 55%, #991b1b);
-    pointer-events: none;
-    animation: dashboard-notif-dot-pulse 1.65s ease-in-out infinite;
 }
 
 .dashboard-order-notifications-card.dashboard-order-notifications--beside-title {
@@ -4757,10 +4728,6 @@ td .order-status:not(.order-status--action) {
 
 .dashboard-order-notifications-list--compact .dashboard-order-notif-item {
     padding: 0.4rem 0.45rem;
-}
-
-.dashboard-order-notifications-list--compact .dashboard-order-notif-item--unread {
-    padding: 0.4rem 0.45rem 0.4rem 0.95rem;
 }
 
 .dashboard-order-notifications-list--compact .dashboard-order-notif-title {

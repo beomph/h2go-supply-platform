@@ -1304,7 +1304,7 @@ function getExFactoryConsumerEmptyDepartEstimate(order) {
     return addMinutesToDate(due, -(travel * 2 + EX_FACTORY_CHARGE_MINUTES));
 }
 
-/** 실차(또는 도착도 본 운송) 기준: 출하=시작 시각, 예상도착=시작+편도, 회차=시작+2*편도+T/T교체 */
+/** 실차(또는 도착도 본 운송) 기준: 출하=시작 시각, 예상도착=시작+편도, 회차=납품도착+T/T교체+복귀편도 (=시작+2*편도+교체) */
 function getLiveTransportScheduleStrings(order) {
     const anchor = getTransportStartedAtDate(order);
     const travelMin = getShipmentLegTravelMinutes(order);
@@ -1591,7 +1591,7 @@ function formatShipmentDateTime(order, opts = {}) {
     return `${year}/${month}/${day} ${timeStr}`;
 }
 
-/** 도착도: 약속 납품일시 + T/T교체 + 편도. 출하도·구매: 실차 도착 예정(또는 공차·충전·편도 반영 추정) */
+/** 도착도(계획): 약속 납품일시 + T/T교체(15분) + 편도(복귀). 운송 시작 후에는 getLiveTransportScheduleStrings와 동일(납품도착+교체+복귀). */
 function formatReturnDateTime(order, opts = {}) {
     const viewer = opts.viewer || "consumer";
     if (!order) return null;
@@ -1614,7 +1614,8 @@ function formatReturnDateTime(order, opts = {}) {
     if (live) return live.returnStr;
     const travelMin = getShipmentLegTravelMinutes(order);
     if (travelMin <= 0) return null;
-    const totalMin = travelMin + TT_SWAP_MINUTES + travelMin;
+    /* 납품 약속 시각 기준: 교체 15분 + 복귀 편도 1회(이중 편도를 더하지 않음) */
+    const totalMin = TT_SWAP_MINUTES + travelMin;
     const y = order.year, m = order.month, d = order.day;
     const [hRaw = '0', mRaw = '0'] = String(order.time || '0:0').split(':');
     let h = parseInt(hRaw, 10) || 0;
@@ -3677,14 +3678,10 @@ function renderOneOrderNotifPanel(role, cardId, listId) {
         .map((it) => {
             const unread = isOrderNotifEntryUnread(role, it, seen, ack);
             const unreadClass = unread ? " dashboard-order-notif-item--unread" : "";
-            const dot = unread
-                ? '<span class="dashboard-order-notif-new-indicator" aria-hidden="true"></span>'
-                : "";
             const oid = escapeNotificationText(String(it.orderId ?? ""));
             const oAt = escapeNotificationText(String(it.atIso ?? ""));
             return `
         <li class="dashboard-order-notif-item${unreadClass}" data-order-id="${oid}" data-notif-at="${oAt}" tabindex="0" role="button" aria-label="${escapeNotificationText(it.title)} 상세로 이동">
-            ${dot}
             <span class="dashboard-order-notif-time">${escapeNotificationText(formatNotifListTime(it.atIso))}</span>
             <span class="dashboard-order-notif-title">${escapeNotificationText(it.title)}</span>
             <span class="dashboard-order-notif-text">${escapeNotificationText(it.text)}</span>

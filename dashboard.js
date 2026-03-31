@@ -440,6 +440,7 @@ function serializeOrderForSupabase(order) {
             returnAt: order.returnAt || null,
             emptyLegStartedAt: order.emptyLegStartedAt || null,
             emptyArrivedAt: order.emptyArrivedAt || null,
+            exFactoryChargeCompletedAt: order.exFactoryChargeCompletedAt || null,
             outboundStartedAt: order.outboundStartedAt || null,
             outboundInfo,
             deliveryConfirmation,
@@ -483,6 +484,7 @@ function deserializeSupabaseOrder(row) {
         returnAt: payload.returnAt || null,
         emptyLegStartedAt: payload.emptyLegStartedAt || null,
         emptyArrivedAt: payload.emptyArrivedAt || null,
+        exFactoryChargeCompletedAt: payload.exFactoryChargeCompletedAt || null,
         outboundStartedAt: payload.outboundStartedAt || null,
         changeRequest: row.change_request || null,
         cancelRequest: row.cancel_request || null,
@@ -1530,6 +1532,23 @@ function formatOrderEtaTimeToolbarHtml(order, viewer = "consumer") {
 }
 
 function buildOrderCardEtaCells(order, travelTimeText, viewer = "consumer") {
+    const stEta = normalizeStatus(order?.status);
+    if (
+        isExFactoryOrder(order) &&
+        viewer === "consumer" &&
+        stEta === "empty_arrived" &&
+        order.exFactoryChargeCompletedAt
+    ) {
+        const d = parseIsoToDate(order.exFactoryChargeCompletedAt);
+        if (d) {
+            const stack = formatBannerDateTimeTwoLinesHtml(formatCalendarDateTimeFromDate(d), { muted: false });
+            const etaCellTopReady = `<div class="supplier-tl-value supplier-tl-eta"><div class="order-exfactory-ready-eta"><span class="order-exfactory-ready-label">출하 가능</span>${stack}</div></div>`;
+            const etaFooterReady = `<div class="order-card-footer-eta-wrap">${formatBannerDateTimeTimeOnlyHtml(null, {
+                muted: true,
+            })}</div>`;
+            return { etaCellTop: etaCellTopReady, etaCellFooter: etaFooterReady };
+        }
+    }
     const etaLines = getOrderEtaLines(order, viewer).filter((l) => l.text);
     let etaCellTop;
     let etaCellFooter;
@@ -1605,6 +1624,27 @@ function buildOrderCardFooterGridHtml({
         <div class="order-banner-cell order-footer-cell">${returnFooterHtml}</div>
         ${statusCol}
     </div>`;
+}
+
+/**
+ * 주문 카드 7열 중 출하·회차 열 표시 여부
+ * - 도착도·수요자: 출하/회차(계획) 숨김 — 실차 출발 후 예상도착만 사용
+ * - 출하도·공급자: 출하/회차 열 숨김 — 공차 출발 시 예상도착만, 공차 도착 후 충전완료 시각은 ETA 열
+ */
+function orderCardShowShipmentReturnColumns(order, viewer) {
+    if (!order) return { showShipment: true, showReturn: true };
+    if (order.supplyCondition === "delivery" && viewer === "consumer") {
+        return { showShipment: false, showReturn: false };
+    }
+    if (isExFactoryOrder(order) && viewer === "supplier") {
+        return { showShipment: false, showReturn: false };
+    }
+    return { showShipment: true, showReturn: true };
+}
+
+function orderCardMutedShipmentReturnBannerCells() {
+    const dash = formatBannerDateTimeDateOnlyHtml(null, { muted: true });
+    return { shipmentBanner: dash, returnBanner: dash };
 }
 
 /**
@@ -2424,6 +2464,20 @@ function renderConsumerView() {
         const returnDtC = formatReturnDateTime(order, { viewer: "consumer" });
         const shipmentDisplayC = shipmentDtC || '—';
         const returnDisplayC = returnDtC || '—';
+        const colFlagsConsumer = orderCardShowShipmentReturnColumns(order, "consumer");
+        const mutedSrConsumer = orderCardMutedShipmentReturnBannerCells();
+        const shipmentBannerCellC = colFlagsConsumer.showShipment
+            ? formatBannerDateTimeDateOnlyHtml(shipmentDtC ? shipmentDisplayC : null, { muted: !shipmentDtC })
+            : mutedSrConsumer.shipmentBanner;
+        const returnBannerCellC = colFlagsConsumer.showReturn
+            ? formatBannerDateTimeDateOnlyHtml(returnDtC ? returnDisplayC : null, { muted: !returnDtC })
+            : mutedSrConsumer.returnBanner;
+        const shipmentFooterC = colFlagsConsumer.showShipment
+            ? formatBannerDateTimeTimeOnlyHtml(shipmentDtC ? shipmentDisplayC : null, { muted: !shipmentDtC })
+            : formatBannerDateTimeTimeOnlyHtml(null, { muted: true });
+        const returnFooterC = colFlagsConsumer.showReturn
+            ? formatBannerDateTimeTimeOnlyHtml(returnDtC ? returnDisplayC : null, { muted: !returnDtC })
+            : formatBannerDateTimeTimeOnlyHtml(null, { muted: true });
         const supplyBadgeClassC =
             order.supplyCondition === 'ex_factory' ? 'supply-condition-ex-factory' : 'supply-condition-delivery';
         const { ttLine: ttLineC, driverLine: driverLineC } = getOrderCardTransportDisplay(order);
@@ -2435,8 +2489,6 @@ function renderConsumerView() {
             ? `<div class="order-footer-transport-note">${escapeBannerHtml(emptyReturnNoteC)}</div>`
             : "";
         const { etaCellTop: etaCellInnerC, etaCellFooter: etaFooterC } = buildOrderCardEtaCells(order, travelTimeTextC, "consumer");
-        const shipmentFooterC = formatBannerDateTimeTimeOnlyHtml(shipmentDtC ? shipmentDisplayC : null, { muted: !shipmentDtC });
-        const returnFooterC = formatBannerDateTimeTimeOnlyHtml(returnDtC ? returnDisplayC : null, { muted: !returnDtC });
 
         const isCancelled = order.status === 'cancelled';
         const statusLabelC = getConsumerStatusDisplayLabel(order);
@@ -2486,10 +2538,10 @@ function renderConsumerView() {
                         <div class="order-banner-value">${etaCellInnerC}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <div class="order-banner-value">${formatBannerDateTimeDateOnlyHtml(shipmentDtC ? shipmentDisplayC : null, { muted: !shipmentDtC })}</div>
+                        <div class="order-banner-value">${shipmentBannerCellC}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <div class="order-banner-value">${formatBannerDateTimeDateOnlyHtml(returnDtC ? returnDisplayC : null, { muted: !returnDtC })}</div>
+                        <div class="order-banner-value">${returnBannerCellC}</div>
                     </div>
                     <div class="order-banner-cell order-banner-cell--status">
                         <div class="order-banner-value order-banner-status-wrap">
@@ -2683,6 +2735,20 @@ function renderSupplierOrdersCards() {
         const returnDt = formatReturnDateTime(o, { viewer: "supplier" });
         const shipmentDisplay = shipmentDt || '—';
         const returnDisplay = returnDt || '—';
+        const colFlagsSupplier = orderCardShowShipmentReturnColumns(o, "supplier");
+        const mutedSrSupplier = orderCardMutedShipmentReturnBannerCells();
+        const shipmentBannerCellS = colFlagsSupplier.showShipment
+            ? formatBannerDateTimeDateOnlyHtml(shipmentDt ? shipmentDisplay : null, { muted: !shipmentDt })
+            : mutedSrSupplier.shipmentBanner;
+        const returnBannerCellS = colFlagsSupplier.showReturn
+            ? formatBannerDateTimeDateOnlyHtml(returnDt ? returnDisplay : null, { muted: !returnDt })
+            : mutedSrSupplier.returnBanner;
+        const shipmentFooterS = colFlagsSupplier.showShipment
+            ? formatBannerDateTimeTimeOnlyHtml(shipmentDt ? shipmentDisplay : null, { muted: !shipmentDt })
+            : formatBannerDateTimeTimeOnlyHtml(null, { muted: true });
+        const returnFooterS = colFlagsSupplier.showReturn
+            ? formatBannerDateTimeTimeOnlyHtml(returnDt ? returnDisplay : null, { muted: !returnDt })
+            : formatBannerDateTimeTimeOnlyHtml(null, { muted: true });
 
         const { ttLine, driverLine } = getOrderCardTransportDisplay(o);
         const emptyReturnNoteS =
@@ -2693,8 +2759,6 @@ function renderSupplierOrdersCards() {
             ? `<div class="order-footer-transport-note">${escapeBannerHtml(emptyReturnNoteS)}</div>`
             : "";
         const { etaCellTop: etaCellInner, etaCellFooter: etaFooterS } = buildOrderCardEtaCells(o, travelTimeText, "supplier");
-        const shipmentFooterS = formatBannerDateTimeTimeOnlyHtml(shipmentDt ? shipmentDisplay : null, { muted: !shipmentDt });
-        const returnFooterS = formatBannerDateTimeTimeOnlyHtml(returnDt ? returnDisplay : null, { muted: !returnDt });
         const actionButtons = `
             ${advanceAction ? `<button type="button" class="btn btn-small btn-primary" data-action="advance-status" data-next-status="${advanceAction.next}" data-id="${o.id}">${advanceAction.label}</button>` : ''}
             ${canCancelChangeRequest ? `<button type="button" class="btn btn-small btn-secondary" data-action="cancel-change-request" data-id="${o.id}">변경요청 취소</button>` : ''}
@@ -2744,10 +2808,10 @@ function renderSupplierOrdersCards() {
                         <div class="order-banner-value">${etaCellInner}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <div class="order-banner-value">${formatBannerDateTimeDateOnlyHtml(shipmentDt ? shipmentDisplay : null, { muted: !shipmentDt })}</div>
+                        <div class="order-banner-value">${shipmentBannerCellS}</div>
                     </div>
                     <div class="order-banner-cell">
-                        <div class="order-banner-value">${formatBannerDateTimeDateOnlyHtml(returnDt ? returnDisplay : null, { muted: !returnDt })}</div>
+                        <div class="order-banner-value">${returnBannerCellS}</div>
                     </div>
                     <div class="order-banner-cell order-banner-cell--status">
                         <div class="order-banner-value order-banner-status-wrap">
@@ -4810,6 +4874,24 @@ document.addEventListener('click', (e) => {
                     console.warn("[h2go] transport start modal:", err?.message || err)
                 );
                 return;
+            }
+            if (nextStatus === 'empty_arrived' && isExFactoryOrder(order)) {
+                const raw = window.prompt(
+                    "공차 도착·충전 완료 시각을 입력해 주세요.\n형식: YYYY-MM-DDTHH:mm (예: 2026-03-31T14:30)",
+                    ""
+                );
+                if (raw === null) return;
+                const trimmed = String(raw).trim();
+                if (!trimmed) {
+                    alert("충전 완료 시각을 입력해야 공차 도착을 처리할 수 있습니다.");
+                    return;
+                }
+                const parsed = new Date(trimmed);
+                if (!Number.isFinite(parsed.getTime())) {
+                    alert("올바른 날짜·시각 형식으로 입력해 주세요.");
+                    return;
+                }
+                order.exFactoryChargeCompletedAt = parsed.toISOString();
             }
             const supplierAction = getSupplierAdvanceAction(order);
             if (!supplierAction || supplierAction.next !== nextStatus) return;

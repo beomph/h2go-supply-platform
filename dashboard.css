@@ -3469,6 +3469,25 @@ body.theme-light .order-banner-datetime-divider {
     overflow-wrap: normal;
 }
 
+/* 출하도·수요자: 공차 도착 후 충전완료 시각(출하 가능) */
+.order-exfactory-ready-eta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.18rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.order-exfactory-ready-label {
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: var(--h2-blue, #38bdf8);
+}
+
 /* 주문상태: 한 줄 · 칸 중앙 */
 .order-banner-status-wrap {
     display: flex;

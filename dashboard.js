@@ -3903,8 +3903,9 @@ function toggleOrderAddressBySupplyCondition() {
         if (settleGrp) settleGrp.classList.remove('is-hidden');
         if (exGroup) {
             exGroup.classList.remove('is-hidden');
-            if (ttIn) ttIn.setAttribute('required', 'required');
-            if (drvIn) drvIn.setAttribute('required', 'required');
+            /* 출하도는 주문 시점에 T/T·기사를 몰 수 있음 — 공차 출발 시 대시보드에서 입력 */
+            if (ttIn) ttIn.removeAttribute('required');
+            if (drvIn) drvIn.removeAttribute('required');
         }
         loadConsumerTransportDatalists().catch((err) => console.warn("[h2go] consumer transport datalists:", err?.message || err));
     } else {
@@ -4122,19 +4123,14 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
         const ttRaw = String(document.getElementById('orderConsumerTtInput')?.value || '');
         const driverRaw = String(document.getElementById('orderConsumerDriverInput')?.value || '').trim();
         const trailerNumbers = ttRaw.split(/[,，\s]+/).map((s) => s.trim()).filter(Boolean);
-        if (!trailerNumbers.length) {
-            alert('출하도(상차도) 주문은 T/T 차량번호를 입력해 주세요.');
-            return;
-        }
-        if (!driverRaw) {
-            alert('출하도(상차도) 주문은 운송기사를 입력해 주세요.');
-            return;
-        }
         addressValue = getSupplierShippingAddress(supplierName);
-        consumerTransport = { trailerNumbers, driverName: driverRaw };
+        /* 미리 알고 있으면 저장; 비우면 공차 출발 시 수요자가 입력 */
+        if (trailerNumbers.length || driverRaw) {
+            consumerTransport = { trailerNumbers, driverName: driverRaw };
+        }
         const saveTt = Boolean(document.getElementById('orderSaveConsumerTt')?.checked);
         const saveDrv = Boolean(document.getElementById('orderSaveConsumerDriver')?.checked);
-        if (saveTt || saveDrv) {
+        if ((saveTt || saveDrv) && (trailerNumbers.length || driverRaw)) {
             void maybeSaveConsumerTransportAssets(ttRaw, driverRaw, saveTt, saveDrv);
         }
     } else {

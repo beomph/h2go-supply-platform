@@ -1683,23 +1683,6 @@ function summarizeChange(order, proposed) {
     return changes.join(", ");
 }
 
-function getChangeBadgeText(order) {
-    const cr = order?.changeRequest;
-    if (!cr) return "";
-    const sum = summarizeChange(order, cr.proposed);
-    if (cr.status === "pending") return `변경요청: ${sum}`;
-    if (cr.status === "rejected") return `변경요청 거절: ${sum}`;
-    return "";
-}
-
-function getCancelBadgeText(order) {
-    const cr = order?.cancelRequest;
-    if (!cr) return "";
-    if (cr.status === "pending") return `취소요청: ${cr.reason ? cr.reason : "상대방 확인 필요"}`;
-    if (cr.status === "rejected") return `취소요청 거절: ${cr.reason ? cr.reason : "사유 없음"} (취소 불가)`;
-    return "";
-}
-
 function getSupplierStatusLabel(order) {
     const status = normalizeStatus(order?.status);
     if (order?.cancelRequest?.status === 'pending' || status === 'cancel_requested') return '취소 요청';
@@ -2349,8 +2332,6 @@ function renderConsumerView() {
         const canApproveCancel = canActorApprovePendingCancel(order, 'consumer');
         const hasDecisionRequest = canApproveChange || canApproveCancel;
 
-        const changeBadge = getChangeBadgeText(order);
-        const cancelBadge = getCancelBadgeText(order);
         const showChangeBtn = canRequestChange && !immediateCancelable;
         const consumerAdvanceAction = !hasPendingChange && !hasPendingCancel ? getConsumerAdvanceAction(order) : null;
         const showDeliverySettle =
@@ -2469,11 +2450,6 @@ function renderConsumerView() {
                 </div>
             </div>
             </div>
-            ${(changeBadge || cancelBadge) ? `
-            <div class="order-item-foot">
-                <div class="order-item-badges"><div class="change-summary">${changeBadge || ''} ${cancelBadge || ''}</div></div>
-            </div>
-            ` : ''}
         </div>
     `}).join('');
 
@@ -2512,8 +2488,6 @@ function renderOrdersTable(tbodyId, showActions) {
 
         const travelTimeMin = getOrderTravelTimeMinutes(o);
         const travelTimeText = travelTimeMin === 0 ? '—' : `${travelTimeMin}분`;
-        const changeBadge = getChangeBadgeText(o);
-        const cancelBadge = getCancelBadgeText(o);
         const noteText = String(o.note || '').trim();
 
         const supplierStatus = getSupplierStatusLabel(o);
@@ -2533,8 +2507,6 @@ function renderOrdersTable(tbodyId, showActions) {
             <td>
                 <span class="order-status ${status}">${supplierStatus}</span>
                 ${noteText ? `<div class="change-summary">메모: ${noteText}</div>` : ''}
-                ${changeBadge ? `<div class="change-summary">${changeBadge}</div>` : ''}
-                ${cancelBadge ? `<div class="change-summary">${cancelBadge}</div>` : ''}
                 ${o.transportInfo ? `<div class="change-summary">T/T: ${(o.transportInfo.trailerNumbers || []).join(', ')} · 기사: ${o.transportInfo.driverName || '-'}</div>` : ''}
             </td>
             <td class="table-actions">
@@ -2639,8 +2611,6 @@ function renderSupplierOrdersCards() {
 
         const travelTimeMin = getOrderTravelTimeMinutes(o);
         const travelTimeText = travelTimeMin === 0 ? '—' : `${travelTimeMin}분`;
-        const changeBadge = getChangeBadgeText(o);
-        const cancelBadge = getCancelBadgeText(o);
         const noteText = String(o.note || '').trim();
 
         const supplierStatus = getSupplierStatusLabel(o);
@@ -2736,12 +2706,10 @@ function renderSupplierOrdersCards() {
                 </div>
             </div>
             </div>
-            ${(noteText || changeBadge || cancelBadge) ? `
+            ${noteText ? `
             <div class="order-item-foot">
                 <div class="order-item-badges">
-                    ${noteText ? `<div class="change-summary">메모: ${noteText}</div>` : ''}
-                    ${changeBadge ? `<div class="change-summary">${changeBadge}</div>` : ''}
-                    ${cancelBadge ? `<div class="change-summary">${cancelBadge}</div>` : ''}
+                    <div class="change-summary">메모: ${noteText}</div>
                 </div>
             </div>
             ` : ''}
@@ -3503,12 +3471,16 @@ function formatHistoryNotification(order, h, viewerRole) {
         }
         case "change_approved":
             return { title: "변경 요청 승인", text: `${oid} · 변경이 반영되었습니다.` };
-        case "change_rejected":
-            return { title: "변경 요청 거절", text: `${oid} · 변경이 거절되었습니다.` };
+        case "change_rejected": {
+            const sum = d.summary ? ` · 요청 내용: ${d.summary}` : "";
+            return { title: "변경 요청 거절", text: `${oid} · 변경이 거절되었습니다.${sum}` };
+        }
         case "change_request_cancelled":
             return { title: "변경 요청 취소", text: `${oid} · 대기 중이던 변경 요청이 취소되었습니다.` };
-        case "cancel_requested":
-            return { title: "취소 요청", text: `${oid} · 상대방이 주문 취소를 요청했습니다.` };
+        case "cancel_requested": {
+            const r = d.reason ? ` · 사유: ${d.reason}` : "";
+            return { title: "취소 요청", text: `${oid} · 상대방이 주문 취소를 요청했습니다.${r}` };
+        }
         case "cancel_approved":
             return { title: "취소 승인", text: `${oid} · 주문이 취소되었습니다.` };
         case "cancel_rejected": {
@@ -3536,10 +3508,9 @@ function formatHistoryNotification(order, h, viewerRole) {
     }
 }
 
-function collectNotificationsForRole(role) {
+function collectAllOrderNotificationsForRole(role) {
     const me = String(currentUser?.name || "").trim();
     if (!me) return [];
-    const seen = getOrderNotifSeenTs(role);
     const out = [];
     for (const order of orders) {
         if (!order?.id) continue;
@@ -3548,7 +3519,7 @@ function collectNotificationsForRole(role) {
         const hist = Array.isArray(order.changeHistory) ? order.changeHistory : [];
         for (const h of hist) {
             const ts = new Date(h.at).getTime();
-            if (!Number.isFinite(ts) || ts <= seen) continue;
+            if (!Number.isFinite(ts)) continue;
             const formatted = formatHistoryNotification(order, h, role);
             if (!formatted) continue;
             out.push({
@@ -3560,24 +3531,28 @@ function collectNotificationsForRole(role) {
         }
     }
     out.sort((a, b) => b.ts - a.ts);
-    return out.slice(0, 50);
+    return out.slice(0, 250);
 }
 
 function renderOneOrderNotifPanel(role, cardId, listId) {
     const card = document.getElementById(cardId);
     const list = document.getElementById(listId);
     if (!card || !list) return;
-    const items = collectNotificationsForRole(role);
-    if (!items.length) {
+    const seen = getOrderNotifSeenTs(role);
+    const allItems = collectAllOrderNotificationsForRole(role);
+    if (!allItems.length) {
         card.hidden = true;
         list.innerHTML = "";
+        card.classList.remove("dashboard-order-notifications--has-unread");
         return;
     }
     card.hidden = false;
-    list.innerHTML = items
+    const hasUnread = allItems.some((it) => it.ts > seen);
+    card.classList.toggle("dashboard-order-notifications--has-unread", hasUnread);
+    list.innerHTML = allItems
         .map(
             (it) => `
-        <li class="dashboard-order-notif-item">
+        <li class="dashboard-order-notif-item${it.ts > seen ? " dashboard-order-notif-item--unread" : ""}">
             <span class="dashboard-order-notif-time">${escapeNotificationText(formatNotifListTime(it.atIso))}</span>
             <span class="dashboard-order-notif-title">${escapeNotificationText(it.title)}</span>
             <span class="dashboard-order-notif-text">${escapeNotificationText(it.text)}</span>
@@ -4546,10 +4521,17 @@ document.addEventListener('click', (e) => {
         lastOrdersSnapshot = deepClone(orders);
     }
 
-    function requestCancel(o, requestedBy) {
+    function requestCancel(o, requestedBy, requestReason) {
         if (!o) return;
         if (o.cancelRequest && o.cancelRequest.status === 'pending') return;
-        o.cancelRequest = { requestedBy, status: 'pending', requestedAt: new Date().toISOString(), originalStatus: normalizeStatus(o.status) };
+        const reqReason = String(requestReason ?? "").trim();
+        o.cancelRequest = {
+            requestedBy,
+            status: 'pending',
+            requestedAt: new Date().toISOString(),
+            originalStatus: normalizeStatus(o.status),
+            requestReason: reqReason,
+        };
         o.status = 'cancel_requested';
     }
 
@@ -4690,8 +4672,15 @@ document.addEventListener('click', (e) => {
             return;
         }
         if (!confirm('이 주문에 대해 취소(삭제) 요청을 보내시겠습니까? 상대방 승인 후 삭제됩니다.')) return;
-        requestCancel(order, actor);
-        appendOrderChangeHistory(order, "cancel_requested", actor, {});
+        const cancelNote = window.prompt(
+            "취소 요청 사유가 있으면 입력해 주세요. (선택)",
+            ""
+        );
+        if (cancelNote === null) return;
+        requestCancel(order, actor, cancelNote);
+        appendOrderChangeHistory(order, "cancel_requested", actor, {
+            reason: order.cancelRequest?.requestReason || "",
+        });
         persistAndRerender();
         alert('취소 요청을 보냈습니다. 상대방 승인을 기다립니다.');
     } else if (action === 'approve-cancel') {

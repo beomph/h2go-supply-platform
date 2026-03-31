@@ -446,20 +446,57 @@ body.theme-light .insight-tooltip-panel {
 .dashboard-order-notifications--beside-title {
     flex: 0 1 min(20rem, 42vw);
     max-width: 22rem;
-    max-height: 12.5rem;
     display: flex;
     flex-direction: column;
     min-width: 12rem;
     margin-bottom: 0;
     overflow: hidden;
+    border-radius: 12px;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
+/* 접힘: 최근 알림만 미리보기 · 호버/포커스 시 전체 스크롤 */
 .dashboard-order-notifications--beside-title .dashboard-order-notifications-list--scroll {
     flex: 1 1 auto;
     min-height: 0;
-    max-height: none;
-    overflow-y: auto;
+    max-height: 5.25rem;
+    overflow: hidden;
     -webkit-overflow-scrolling: touch;
+    transition: max-height 0.3s ease;
+}
+
+.dashboard-order-notifications--beside-title:hover .dashboard-order-notifications-list--scroll,
+.dashboard-order-notifications--beside-title:focus-within .dashboard-order-notifications-list--scroll {
+    max-height: min(70vh, 26rem);
+    overflow-y: auto;
+}
+
+/* 미확인 알림이 있을 때 패널 강조 */
+@keyframes dashboard-order-notif-attention {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.25);
+        border-color: var(--border-color);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        border-color: rgba(59, 130, 246, 0.75);
+    }
+}
+
+.dashboard-order-notifications-card.dashboard-order-notifications--has-unread {
+    animation: dashboard-order-notif-attention 1.5s ease-in-out infinite;
+}
+
+.dashboard-order-notifications-card.dashboard-order-notifications--has-unread:hover,
+.dashboard-order-notifications-card.dashboard-order-notifications--has-unread:focus-within {
+    animation-play-state: paused;
+}
+
+.dashboard-order-notif-item--unread {
+    border-left: 3px solid var(--h2-blue, #3b82f6);
+    background: color-mix(in srgb, var(--h2-blue, #3b82f6) 6%, var(--bg-card));
 }
 
 /* 주문 현황 제목 오른쪽: 로컬 시각 + 오늘/내일 배너 */
@@ -498,7 +535,8 @@ body.theme-light .insight-tooltip-panel {
 
 .order-card-insight-tiles .order-card-insight-tile,
 .order-card-insight-tiles .insight-clock-block--inline.order-card-insight-tile {
-    min-height: 5.75rem;
+    /* 조회기간 날짜 입력란(약 2.35rem) + 줄 간격과 맞춤 */
+    min-height: 2.75rem;
     min-width: 0;
     box-sizing: border-box;
     display: flex;
@@ -513,19 +551,20 @@ body.theme-light .insight-tooltip-panel {
 
 .insight-clock-block--inline {
     flex: 0 0 auto;
-    padding: 0.55rem 0.7rem;
+    padding: 0.28rem 0.45rem;
     border-radius: 10px;
     background: var(--surface-soft);
     border: 1px solid var(--surface-soft-border, var(--border-color));
 }
 
 .insight-clock-block--inline .insight-clock-label {
-    font-size: 0.62rem;
+    font-size: 0.58rem;
+    line-height: 1.15;
 }
 
 .insight-clock-block--inline .insight-clock {
-    font-size: 0.98rem;
-    line-height: 1.35;
+    font-size: 0.8rem;
+    line-height: 1.2;
 }
 
 .order-card-insight-stats {
@@ -546,13 +585,13 @@ body.theme-light .insight-tooltip-panel {
     justify-content: center;
     align-items: center;
     text-align: center;
-    gap: 0.35rem;
-    padding: 0.55rem 0.7rem;
+    gap: 0.12rem;
+    padding: 0.28rem 0.45rem;
 }
 
 .order-card-insight-tiles .insight-stat-label {
-    font-size: 0.72rem;
-    line-height: 1.25;
+    font-size: 0.62rem;
+    line-height: 1.15;
     font-weight: 700;
 }
 
@@ -563,8 +602,25 @@ body.theme-light .insight-tooltip-panel {
 
 .order-card-insight-tiles .insight-stat-values-triple,
 .order-card-insight-tiles .insight-stat-value--solo {
-    margin-top: 0.1rem;
+    margin-top: 0;
     justify-content: center;
+}
+
+.order-card-insight-tiles .insight-stat-value {
+    font-size: 0.88rem;
+}
+
+.order-card-insight-tiles .insight-stat-value--solo {
+    font-size: 0.95rem;
+    line-height: 1.1;
+}
+
+.order-card-insight-tiles .insight-stat-triple-sep {
+    font-size: 0.8rem;
+}
+
+.order-card-insight-tiles .insight-stat-values-triple {
+    line-height: 1.1;
 }
 
 @media (max-width: 640px) {
@@ -574,7 +630,7 @@ body.theme-light .insight-tooltip-panel {
 
     .order-card-insight-tiles .order-card-insight-tile,
     .order-card-insight-tiles .insight-clock-block--inline.order-card-insight-tile {
-        min-height: 4.75rem;
+        min-height: 2.75rem;
     }
 }
 
@@ -4666,6 +4722,10 @@ body.theme-light .order-item-supplier .order-banner-cell:nth-child(2) .order-ban
     grid-row: 1;
     font-weight: 700;
     color: var(--text-white, var(--text-primary));
+}
+
+body.theme-light .dashboard-order-notif-item--unread {
+    background: color-mix(in srgb, var(--h2-blue, #3b82f6) 8%, var(--bg-card, #fff));
 }
 
 .dashboard-order-notif-text {

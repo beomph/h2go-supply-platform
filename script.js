@@ -259,10 +259,6 @@ function getEdgeFunctionUrl(slug) {
     return `${base}/functions/v1/${slug}`;
 }
 
-function normalizeRegisterPhoneDigits(v) {
-    return String(v || "").replace(/\D/g, "");
-}
-
 async function invokeSubmitSignupRequest(payload) {
     const anonKey = getSupabaseAnonKey();
     if (!anonKey) throw new Error("Supabase ANON KEY 없음");
@@ -419,11 +415,6 @@ async function handleRegisterSubmit(e) {
     if (!password) return alert("비밀번호를 입력해 주세요.");
     if (password !== passwordConfirm) return alert("비밀번호가 일치하지 않습니다.");
 
-    const contactEmailRaw = String(document.getElementById("registerContactEmail")?.value || "").trim().toLowerCase();
-    const contactPhoneDigits = normalizeRegisterPhoneDigits(document.getElementById("registerContactPhone")?.value || "");
-    const contact_email = contactEmailRaw && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmailRaw) ? contactEmailRaw : null;
-    const contact_phone = contactPhoneDigits.length >= 10 ? contactPhoneDigits : null;
-
     try {
         const json = await invokeSubmitSignupRequest({
             login_id: loginId,
@@ -431,8 +422,6 @@ async function handleRegisterSubmit(e) {
             username,
             business_parties: businessParties,
             authority,
-            contact_email,
-            contact_phone,
         });
         if (json.warn && json.approveUrl) {
             console.warn("[h2go] 가입 신청:", json.warn, json.approveUrl);

@@ -486,8 +486,10 @@ body.theme-light .insight-tooltip-panel {
     gap: 0.14rem;
 }
 
-.dashboard-hero-insight-tiles .insight-stat-label {
-    font-size: 0.74rem;
+/* 히어로 타일: .order-card-insight-tiles 규칙(0.62rem)보다 구체적으로 잡아 라벨 가독성 확보 */
+.order-card-insight-tiles.dashboard-hero-insight-tiles .insight-stat-label {
+    font-size: 0.92rem;
+    line-height: 1.25;
 }
 
 .dashboard-hero-insight-tiles .insight-stat-value {

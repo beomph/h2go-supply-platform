@@ -2498,7 +2498,7 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
    사용처: `dashboard.html`의 `#consumerOrdersList`, `#supplierOrdersList` */
 @media (max-width: 768px) {
     .orders-list {
-        max-height: 48vh;
+        max-height: 52vh;
         padding-right: 0;
         overflow-x: visible;
         overflow-y: auto;
@@ -2510,6 +2510,8 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
+        padding: 0.4rem 0.45rem 0.36rem;
+        margin-bottom: 0.28rem;
     }
 
     .order-item-parties-row .order-party {
@@ -2534,6 +2536,224 @@ body.theme-light .orders-filter-input-wrap .orders-date-input::-webkit-calendar-
 
     .order-supplier-timeline-grid {
         grid-template-columns: 1fr;
+    }
+
+    /* ---------- 주문 현황 카드: 조회기간·검색이 카드 밖으로 나가지 않도록 ---------- */
+    .my-orders-card,
+    .supplier-orders-card {
+        min-width: 0;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .my-orders-header,
+    .supplier-orders-header {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .supplier-orders-card .supplier-orders-header h3 {
+        margin-bottom: 0.55rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .my-orders-header-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        flex-wrap: nowrap;
+        gap: 0.5rem;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    #consumerView .my-orders-header-toolbar,
+    #supplierView .my-orders-header-toolbar {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        align-items: stretch;
+    }
+
+    .my-orders-header-toolbar .orders-filter {
+        flex-direction: column;
+        align-items: stretch;
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 100%;
+        gap: 0.32rem;
+    }
+
+    .my-orders-header-toolbar .orders-filter > label,
+    .my-orders-header-toolbar .orders-filter-label {
+        flex: 0 0 auto;
+        align-self: flex-start;
+        font-size: 0.68rem;
+        line-height: 1.2;
+    }
+
+    .orders-filter-input-wrap {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 0.28rem;
+        max-width: 100%;
+        min-width: 0;
+        padding: 0.32rem 0.4rem;
+        box-sizing: border-box;
+    }
+
+    .orders-filter-input-wrap .orders-date-input {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+        font-size: 0.78rem;
+        padding: 0.28rem 0.35rem 0.28rem 0.4rem;
+        height: 2.05rem;
+        min-height: 2.05rem;
+    }
+
+    .orders-filter-input-wrap .range-separator {
+        flex: 0 0 auto;
+        padding: 0 0.04rem;
+    }
+
+    .orders-filter-input-wrap .orders-date-apply-btn,
+    #supplierView #supplierDateApplyBtn {
+        flex: 0 0 auto;
+        margin-left: 0;
+        align-self: center;
+        white-space: nowrap;
+        writing-mode: horizontal-tb;
+        text-orientation: mixed;
+        padding: 0.28rem 0.5rem;
+        font-size: 0.76rem;
+        line-height: 1.2;
+        min-height: 2.05rem;
+        max-width: 100%;
+    }
+
+    .my-orders-header-toolbar .orders-search-wrap {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        flex: 1 1 auto;
+        margin-left: 0;
+    }
+
+    .my-orders-header-toolbar .orders-search-input {
+        min-height: 2.45rem;
+        font-size: 0.84rem;
+    }
+
+    /* ---------- 가로 스크롤: 헤더 배너 + 카드 본문을 동일 7열 한 줄로 (세로 두께 완화) ---------- */
+    .orders-table-hscroll-track {
+        min-width: 46.5rem;
+    }
+
+    .order-card-banner-grid,
+    .orders-column-header-grid,
+    .order-card-footer-grid {
+        display: grid;
+        grid-template-columns:
+            minmax(5.75rem, 6.5rem)
+            minmax(5rem, 5.75rem)
+            minmax(4.75rem, 5.35rem)
+            minmax(5.25rem, 6rem)
+            minmax(4.35rem, 5rem)
+            minmax(4.35rem, 5rem)
+            minmax(4.85rem, 5.5rem);
+        gap: 0.26rem 0.3rem;
+        align-items: start;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .order-card-footer-grid--consumer,
+    .order-card-footer-grid--supplier {
+        column-gap: 0.3rem;
+        row-gap: 0.26rem;
+    }
+
+    .order-banner-cell--status {
+        grid-column: auto;
+    }
+
+    .orders-column-header {
+        margin-bottom: 0.28rem;
+        padding: 0.32rem 0.4rem;
+    }
+
+    .orders-column-header-grid .order-banner-label {
+        font-size: 0.65rem;
+        line-height: 1.2;
+    }
+
+    .order-card-toolbar {
+        margin-top: 0.3rem;
+        padding-top: 0.3rem;
+        gap: 0.28rem;
+    }
+
+    .order-banner-value {
+        font-size: 0.8rem;
+        line-height: 1.28;
+    }
+
+    .order-banner-strong {
+        font-size: 0.84rem;
+        line-height: 1.25;
+    }
+
+    .order-item .order-banner-label {
+        font-size: 0.68rem;
+    }
+
+    .order-item .order-banner-cell > .order-banner-value.order-banner-datetime.order-datetime-with-badge-inline {
+        flex-wrap: nowrap;
+        gap: 0.22rem 0.35rem;
+    }
+
+    .order-banner-date-line {
+        font-size: 0.78rem;
+    }
+
+    .order-banner-time-line {
+        font-size: 0.76rem;
+    }
+
+    /* 예상도착 등: 세로 스택 대신 짧은 가로 흐름으로 높이 절감 */
+    .order-card-eta-toolbar--stacked {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.2rem 0.32rem;
+        justify-content: center;
+    }
+
+    .order-item-supplier .order-card-eta-toolbar--stacked {
+        gap: 0.2rem 0.3rem;
+    }
+
+    .order-card-eta-segment {
+        flex: 0 1 auto;
+        width: auto;
+        max-width: 100%;
+    }
+
+    .order-banner-status-wrap .order-status:not(.order-status--action) {
+        font-size: 0.72rem;
+    }
+
+    .order-footer-address {
+        font-size: 0.64rem;
+        -webkit-line-clamp: 3;
+    }
+
+    .order-footer-time-line {
+        font-size: 0.76rem;
+    }
+
+    .order-footer-driver {
+        font-size: 0.76rem;
     }
 }
 

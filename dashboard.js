@@ -1517,6 +1517,7 @@ function buildOrderCardFooterGridHtml({
     returnFooterHtml,
     variant,
     footerStatusActionsHtml = "",
+    memoText = "",
 }) {
     const drv = String(driverLine || "").trim();
     const driverInner =
@@ -1533,7 +1534,11 @@ function buildOrderCardFooterGridHtml({
               addrRaw
           )}</span></div>`
         : `<div class="order-footer-address-wrap"><span class="order-footer-address order-footer-address--empty">—</span></div>`;
-    const gridExtra = variant === "supplier" ? "order-card-footer-grid--supplier" : "order-card-footer-grid--consumer";
+    const gridExtra = "order-card-footer-grid--unified";
+    const memoRaw = String(memoText || "").trim();
+    const memoBlock = memoRaw
+        ? `<div class="order-footer-memo change-summary">메모: ${escapeBannerHtml(memoRaw)}</div>`
+        : "";
     const statusCol =
         String(footerStatusActionsHtml || "").trim() !== ""
             ? `<div class="order-banner-cell order-footer-cell order-footer-cell--status-actions"><div class="order-footer-status-actions-inner">${footerStatusActionsHtml}</div></div>`
@@ -1541,6 +1546,7 @@ function buildOrderCardFooterGridHtml({
     return `<div class="order-card-footer-grid ${gridExtra}">
         <div class="order-banner-cell order-footer-cell order-footer-cell--id">
             <span class="order-card-order-id">주문번호 ${escapeBannerHtml(orderId)}</span>
+            ${memoBlock}
         </div>
         <div class="order-banner-cell order-footer-cell order-footer-cell--address">${addressBlock}</div>
         <div class="order-banner-cell order-footer-cell order-footer-cell--tt">${driverInner}${noteBlock}</div>
@@ -2391,6 +2397,7 @@ function renderConsumerView() {
             actionButtons ? `<div class="order-actions order-actions--footer">${actionButtons}</div>` : '',
         ].filter(Boolean).join('');
 
+        const noteTextConsumer = String(order.note || "").trim();
         const footerGridConsumer = buildOrderCardFooterGridHtml({
             orderId: order.id,
             deliveryAddress: order.address,
@@ -2401,6 +2408,7 @@ function renderConsumerView() {
             returnFooterHtml: returnFooterC,
             variant: "consumer",
             footerStatusActionsHtml: toolbarActions,
+            memoText: noteTextConsumer,
         });
 
         const orderDataRowConsumer = `
@@ -2657,6 +2665,7 @@ function renderSupplierOrdersCards() {
             returnFooterHtml: returnFooterS,
             variant: "supplier",
             footerStatusActionsHtml: supplierToolbarActions,
+            memoText: noteText,
         });
 
         const orderDataRowSupplier = `
@@ -2706,13 +2715,6 @@ function renderSupplierOrdersCards() {
                 </div>
             </div>
             </div>
-            ${noteText ? `
-            <div class="order-item-foot">
-                <div class="order-item-badges">
-                    <div class="change-summary">메모: ${noteText}</div>
-                </div>
-            </div>
-            ` : ''}
         </div>
         `;
     }).join('');

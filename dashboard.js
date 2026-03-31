@@ -354,6 +354,8 @@ let lastOrdersSnapshot = deepClone(orders);
 let supabaseClient = null;
 let isSupabaseOrdersEnabled = false;
 let syncOrdersTimer = null;
+let h2goOrdersRealtimeChannel = null;
+let reloadOrdersFromRemoteTimer = null;
 const dashboardStatFilters = {
     consumer: 'all',
     supplier: 'all',
@@ -520,8 +522,19 @@ function queueOrdersSyncToSupabase() {
     }, 200);
 }
 
+function sortOrdersByRequestTime(list) {
+    const arr = Array.isArray(list) ? [...list] : [];
+    arr.sort((a, b) => {
+        const ka = getOrderDateTimeSortKey(a) || "";
+        const kb = getOrderDateTimeSortKey(b) || "";
+        return ka.localeCompare(kb);
+    });
+    return arr;
+}
+
 async function loadOrdersFromSupabase() {
     if (!supabaseClient) return;
+    const localBefore = deepClone(orders);
     const { data, error } = await supabaseClient
         .from("h2go_orders")
         .select("*")
@@ -531,19 +544,81 @@ async function loadOrdersFromSupabase() {
         return;
     }
     if (!Array.isArray(data)) return;
-    orders = data.map(deserializeSupabaseOrder);
+    const fromDb = data.map(deserializeSupabaseOrder);
+    const dbIds = new Set(fromDb.map((o) => String(o.id || "")));
+    const merged = [...fromDb];
+    for (const o of localBefore) {
+        if (o && o.id && !dbIds.has(String(o.id))) merged.push(o);
+    }
+    orders = sortOrdersByRequestTime(merged);
     localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
     lastOrdersSnapshot = deepClone(orders);
+    if (merged.length > fromDb.length) {
+        queueOrdersSyncToSupabase();
+    }
+}
+
+function teardownOrdersRealtime() {
+    if (h2goOrdersRealtimeChannel && supabaseClient) {
+        try {
+            supabaseClient.removeChannel(h2goOrdersRealtimeChannel);
+        } catch (_) {}
+        h2goOrdersRealtimeChannel = null;
+    }
+}
+
+function scheduleReloadOrdersFromRemote() {
+    if (!isSupabaseOrdersEnabled || !supabaseClient) return;
+    if (reloadOrdersFromRemoteTimer) clearTimeout(reloadOrdersFromRemoteTimer);
+    reloadOrdersFromRemoteTimer = setTimeout(async () => {
+        reloadOrdersFromRemoteTimer = null;
+        const prev = deepClone(orders);
+        await loadOrdersFromSupabase();
+        try {
+            renderConsumerView();
+            renderSupplierView();
+            detectAndNotifyChangeDecisions(prev, orders);
+        } catch (err) {
+            console.warn("[h2go] render after remote reload:", err?.message || err);
+        }
+        lastOrdersSnapshot = deepClone(orders);
+    }, 400);
+}
+
+function subscribeOrdersRealtime() {
+    teardownOrdersRealtime();
+    if (!supabaseClient || !isSupabaseOrdersEnabled) return;
+    try {
+        h2goOrdersRealtimeChannel = supabaseClient
+            .channel("h2go_orders_dashboard")
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "h2go_orders" },
+                () => scheduleReloadOrdersFromRemote()
+            )
+            .subscribe((status) => {
+                if (status === "CHANNEL_ERROR") {
+                    console.warn("[h2go] Supabase Realtime: h2go_orders 채널 오류(프로젝트에서 Realtime 활성화 여부 확인)");
+                }
+            });
+    } catch (err) {
+        console.warn("[h2go] orders realtime subscribe failed:", err?.message || err);
+    }
 }
 
 async function initializeSupabaseOrders() {
     supabaseClient = getSupabaseClient();
     if (!supabaseClient) return true;
     try {
-        const { data } = await supabaseClient.auth.getSession();
-        if (!data?.session) return true;
+        let { data } = await supabaseClient.auth.getSession();
+        let session = data?.session;
+        if (!session) {
+            const refreshed = await supabaseClient.auth.refreshSession();
+            session = refreshed.data?.session;
+        }
+        if (!session) return true;
 
-        const uid = data.session.user.id;
+        const uid = session.user.id;
         const { data: prof, error: profErr } = await supabaseClient
             .from("member_profiles")
             .select("approval_status")
@@ -575,11 +650,13 @@ async function initializeSupabaseOrders() {
 
         isSupabaseOrdersEnabled = true;
         await loadOrdersFromSupabase();
+        subscribeOrdersRealtime();
         syncFleetNavVisibility();
         return true;
     } catch (err) {
         console.warn("[h2go] supabase orders initialization skipped:", err?.message || err);
         isSupabaseOrdersEnabled = false;
+        teardownOrdersRealtime();
         syncFleetNavVisibility();
         return true;
     }
@@ -4919,6 +4996,7 @@ window.addEventListener('storage', (e) => {
 // 로그아웃
 document.getElementById('logoutBtn')?.addEventListener('click', () => {
     if (!confirm("로그아웃하시겠습니까?")) return;
+    teardownOrdersRealtime();
     if (supabaseClient) {
         supabaseClient.auth.signOut().catch(() => {});
     }

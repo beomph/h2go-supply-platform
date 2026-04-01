@@ -492,6 +492,14 @@ body.theme-light .insight-tooltip-panel {
     line-height: 1.25;
 }
 
+/* "(납품일 기준)" — 로컬 시각 라벨(`.insight-clock-label`)과 동일한 단계로 축소 */
+.order-card-insight-tiles.dashboard-hero-insight-tiles .insight-stat-label-suffix {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.055em;
+    color: var(--text-muted);
+}
+
 .dashboard-hero-insight-tiles .insight-stat-value {
     font-size: 1.02rem;
 }
@@ -536,7 +544,8 @@ body.theme-light .insight-tooltip-panel {
     min-height: 5.25rem;
     width: 100%;
     border-radius: 0 0 12px 12px;
-    background: linear-gradient(180deg, rgba(148, 163, 184, 0.07) 0%, transparent 14%);
+    /* 뒤쪽 배너·텍스트 비치 방지 */
+    background: var(--bg-card);
 }
 
 /* 목록: 항상 슬롯 안에서 absolute — max-height만 바꿔 펼침 애니메이션 */
@@ -550,8 +559,7 @@ body.theme-light .insight-tooltip-panel {
     max-height: 5.25rem;
     overflow: hidden;
     -webkit-overflow-scrolling: touch;
-    /* 카드(surface-soft)와 이어지게 — 흰색 슬래브 제거 */
-    background: transparent;
+    background: var(--bg-card);
     background-clip: padding-box;
     border: none;
     border-radius: 0 0 13px 13px;
@@ -600,20 +608,20 @@ body.theme-light .insight-tooltip-panel {
 }
 
 .dashboard-order-notifications--beside-title .dashboard-order-notif-item {
-    background: color-mix(in srgb, var(--surface-soft) 92%, rgba(59, 130, 246, 0.12));
+    background: color-mix(in srgb, var(--bg-card) 93%, rgba(59, 130, 246, 0.14));
     border: 1px solid color-mix(in srgb, var(--surface-soft-border, var(--border-color)) 100%, transparent);
     box-shadow: none;
 }
 
 .dashboard-order-notifications--beside-title .dashboard-order-notif-item:hover {
-    background: color-mix(in srgb, var(--surface-soft) 78%, rgba(59, 130, 246, 0.18));
+    background: color-mix(in srgb, var(--bg-card) 88%, rgba(59, 130, 246, 0.2));
     border-color: color-mix(in srgb, var(--border-color) 55%, var(--h2-blue, #3b82f6) 45%);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
 
 .dashboard-order-notifications--beside-title .dashboard-order-notif-item--unread {
     border-left: none;
-    background: color-mix(in srgb, var(--h2-blue, #3b82f6) 14%, var(--surface-soft));
+    background: color-mix(in srgb, var(--h2-blue, #3b82f6) 16%, var(--bg-card));
     box-shadow: inset 3px 0 0 0 color-mix(in srgb, var(--h2-blue, #3b82f6) 65%, transparent);
 }
 
@@ -629,6 +637,8 @@ body.theme-light .insight-tooltip-panel {
     padding: 0.52rem 0.62rem 0.42rem;
     border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
     box-shadow: 0 6px 28px rgba(0, 0, 0, 0.14);
+    background: var(--bg-card);
+    isolation: isolate;
 }
 
 .dashboard-order-notifications--beside-title .dashboard-order-notifications-strip-header {
@@ -4833,7 +4843,7 @@ body.theme-light .dashboard-order-notif-item--unread {
 }
 
 body.theme-light .dashboard-order-notifications--beside-title .dashboard-order-notif-item--unread {
-    background: color-mix(in srgb, var(--h2-blue, #3b82f6) 16%, var(--surface-soft));
+    background: color-mix(in srgb, var(--h2-blue, #3b82f6) 16%, var(--bg-card, #fff));
 }
 
 .dashboard-order-notif-text {

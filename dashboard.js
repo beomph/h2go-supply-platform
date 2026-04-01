@@ -352,6 +352,10 @@ function readOrdersFromStorage() {
 }
 
 let orders = readOrdersFromStorage();
+if (pruneOrdersChangeHistoryInPlace()) {
+    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+    queueOrdersSyncToSupabase();
+}
 let currentUser = { type: 'consumer', name: '수요자 A' };
 let pendingApprovalOrderId = null;
 let pendingCancelApprovalOrderId = null;
@@ -508,7 +512,32 @@ function deserializeSupabaseOrder(row) {
     return out;
 }
 
+/** 로컬 자정 기준: 오늘 00:00보다 7일 이전 00:00 이전에 찍힌 이력은 알림에서 제외·저장 시 정리 */
+function getOrderNotifHistoryRetentionCutoffMs() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    return start.getTime() - 7 * 24 * 60 * 60 * 1000;
+}
+
+function pruneOrdersChangeHistoryInPlace() {
+    const cutoff = getOrderNotifHistoryRetentionCutoffMs();
+    let changed = false;
+    for (const o of orders) {
+        if (!o || !Array.isArray(o.changeHistory) || !o.changeHistory.length) continue;
+        const next = o.changeHistory.filter((h) => {
+            const t = new Date(h.at).getTime();
+            return Number.isFinite(t) && t >= cutoff;
+        });
+        if (next.length !== o.changeHistory.length) {
+            o.changeHistory = next;
+            changed = true;
+        }
+    }
+    return changed;
+}
+
 function saveOrdersToStorage() {
+    pruneOrdersChangeHistoryInPlace();
     localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
     queueOrdersSyncToSupabase();
 }
@@ -592,7 +621,7 @@ async function loadOrdersFromSupabase() {
         if (o && o.id && !dbIds.has(String(o.id))) merged.push(o);
     }
     orders = sortOrdersByRequestTime(merged);
-    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+    saveOrdersToStorage();
     lastOrdersSnapshot = deepClone(orders);
 }
 
@@ -4036,6 +4065,7 @@ function formatHistoryNotification(order, h, viewerRole) {
 function collectAllOrderNotificationsForRole(role) {
     const me = String(currentUser?.name || "").trim();
     if (!me) return [];
+    const cutoff = getOrderNotifHistoryRetentionCutoffMs();
     const out = [];
     for (const order of orders) {
         if (!order?.id) continue;
@@ -4044,7 +4074,7 @@ function collectAllOrderNotificationsForRole(role) {
         const hist = Array.isArray(order.changeHistory) ? order.changeHistory : [];
         for (const h of hist) {
             const ts = new Date(h.at).getTime();
-            if (!Number.isFinite(ts)) continue;
+            if (!Number.isFinite(ts) || ts < cutoff) continue;
             const formatted = formatHistoryNotification(order, h, role);
             if (!formatted) continue;
             out.push({

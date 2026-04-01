@@ -1,36 +1,5 @@
 // H2GO — 튜브트레일러(T/T) · 운반기사 등록 (Supabase)
-
-const AUTH_KEY = "h2go_auth";
-const THEME_KEY = "h2go_theme";
-const DEFAULT_SUPABASE_URL = "https://zbihunanzjgyceqfegka.supabase.co";
-const SUPABASE_ANON_KEY_STORAGE = "h2go_supabase_anon_key";
-
-function safeJsonParse(raw, fallback) {
-    try {
-        return JSON.parse(raw);
-    } catch (_) {
-        return fallback;
-    }
-}
-
-function getSupabaseUrl() {
-    const fromWindow = String(window.H2GO_SUPABASE_URL || "").trim();
-    if (fromWindow) return fromWindow;
-    return DEFAULT_SUPABASE_URL;
-}
-
-function getSupabaseAnonKey() {
-    const fromWindow = String(window.H2GO_SUPABASE_ANON_KEY || "").trim();
-    if (fromWindow) return fromWindow;
-    return String(localStorage.getItem(SUPABASE_ANON_KEY_STORAGE) || "").trim();
-}
-
-function getSupabaseClient() {
-    if (!window.supabase || typeof window.supabase.createClient !== "function") return null;
-    const anonKey = getSupabaseAnonKey();
-    if (!anonKey) return null;
-    return window.supabase.createClient(getSupabaseUrl(), anonKey);
-}
+// 공통 상수·유틸: js/h2go-utils.js 참고
 
 function getAuth() {
     const a = safeJsonParse(localStorage.getItem(AUTH_KEY) || "null", null);
@@ -39,10 +8,6 @@ function getAuth() {
     const name = String(a.name || "").trim();
     if (!id || !name) return null;
     return { ...a, id, name, supabaseUserId: a.supabaseUserId || null };
-}
-
-function redirectToLogin() {
-    window.location.href = "index.html";
 }
 
 let supabaseClient = null;
@@ -60,41 +25,6 @@ function setFleetStatus(message, kind) {
     el.textContent = message;
     el.classList.remove("transport-status-banner--error", "transport-status-banner--ok");
     el.classList.add(kind === "ok" ? "transport-status-banner--ok" : "transport-status-banner--error");
-}
-
-function applyThemeClass(themeClass) {
-    const body = document.body;
-    if (!body) return;
-    const next = themeClass === "theme-light" ? "theme-light" : "theme-dark";
-    body.classList.remove("theme-light", "theme-dark");
-    body.classList.add(next);
-    try {
-        localStorage.setItem(THEME_KEY, next);
-    } catch (_) {}
-    const btn = document.getElementById("themeToggle");
-    if (btn) {
-        const isLight = next === "theme-light";
-        btn.dataset.theme = isLight ? "light" : "dark";
-        const labelEl = btn.querySelector(".theme-toggle-label");
-        if (labelEl) labelEl.textContent = isLight ? "Light" : "Dark";
-        btn.setAttribute("aria-label", isLight ? "다크 모드로 전환" : "라이트 모드로 전환");
-    }
-}
-
-function initTheme() {
-    let stored = null;
-    try {
-        stored = localStorage.getItem(THEME_KEY);
-    } catch (_) {}
-    const initial = stored === "theme-light" || stored === "theme-dark" ? stored : "theme-dark";
-    applyThemeClass(initial);
-    const btn = document.getElementById("themeToggle");
-    if (btn) {
-        btn.addEventListener("click", () => {
-            const current = document.body.classList.contains("theme-light") ? "theme-light" : "theme-dark";
-            applyThemeClass(current === "theme-light" ? "theme-dark" : "theme-light");
-        });
-    }
 }
 
 function formatDateDisplay(iso) {

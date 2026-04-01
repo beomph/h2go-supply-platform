@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "H2GO Dev Server (Frontend + Chat API)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["openai_test_server.py"],
+      "port": 3000
+    }
+  ]
+}

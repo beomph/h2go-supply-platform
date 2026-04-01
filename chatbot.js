@@ -48,7 +48,6 @@ if (!chatbotFab || !chatbotPanel || !chatbotForm || !chatbotInput) {
 
     let apiConfig = {
         base: "",
-        mode: "chat", // "chat" | "respond"
     };
 
     function getPreferredBase() {
@@ -85,17 +84,17 @@ if (!chatbotFab || !chatbotPanel || !chatbotForm || !chatbotInput) {
 
         // 1) 같은 오리진(상대경로) 시도
         if (await checkChatHealth("")) {
-            apiConfig = { base: "", mode: "chat" };
+            apiConfig = { base: "" };
             return apiConfig;
         }
 
         // 2) 파이썬 테스트 서버(기본 3000) 시도
         if (await checkChatHealth(preferred)) {
-            apiConfig = { base: preferred, mode: "chat" };
+            apiConfig = { base: preferred };
             return apiConfig;
         }
 
-        apiConfig = { base: preferred || "http://127.0.0.1:3000", mode: "chat" };
+        apiConfig = { base: preferred || "http://127.0.0.1:3000" };
         return apiConfig;
     }
 
@@ -184,11 +183,8 @@ if (!chatbotFab || !chatbotPanel || !chatbotForm || !chatbotInput) {
 
         try {
             const cfg = await detectApi();
-            const url = cfg.mode === "respond" ? `${cfg.base}/api/respond` : `${cfg.base}/api/chat`;
-            const body =
-                cfg.mode === "respond"
-                    ? { input: content, model: "gpt-4.1-mini", temperature: 0.7 }
-                    : { messages: chatState.messages, model: "gpt-4.1-mini", temperature: 0.7 };
+            const url = `${cfg.base}/api/chat`;
+            const body = { messages: chatState.messages, model: "gpt-4.1-mini", temperature: 0.7 };
 
             let accessCode = getAccessCode();
             let lastError = null;

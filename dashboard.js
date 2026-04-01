@@ -1,7 +1,8 @@
 // H2GO 대시보드 - 수소거래 플랫폼
 
 // ========== 로그인 상태 확인 ==========
-const AUTH_KEY = "h2go_auth";
+// AUTH_KEY, THEME_KEY, safeJsonParse, getSupabaseUrl/AnonKey/Client,
+// applyThemeClass, initTheme, redirectToLogin → js/h2go-utils.js
 
 function normalizeMemberAuthorityDash(raw) {
     const s = String(raw || "").trim();
@@ -46,25 +47,8 @@ function rolesFromBusinessPartiesDash(parties, preferredActive) {
     if (!roles.includes(active)) active = roles[0];
     return { roles, activeRole: active };
 }
-const THEME_KEY = "h2go_theme";
 const ORDER_ADDRESS_HISTORY_PREFIX = "h2go_order_address_history_v1";
-const DEFAULT_SUPABASE_URL = "https://zbihunanzjgyceqfegka.supabase.co";
-const SUPABASE_ANON_KEY_STORAGE = "h2go_supabase_anon_key";
 const ORDERS_STORAGE_KEY = "h2go_orders";
-
-function getSupabaseUrl() {
-    const fromWindow = String(window.H2GO_SUPABASE_URL || "").trim();
-    if (fromWindow) return fromWindow;
-    return DEFAULT_SUPABASE_URL;
-}
-
-function safeJsonParse(raw, fallback) {
-    try {
-        return JSON.parse(raw);
-    } catch (_) {
-        return fallback;
-    }
-}
 
 function uniqueNames(arr) {
     const seen = new Set();
@@ -372,21 +356,6 @@ const dashboardStatFilters = {
     consumer: 'all',
     supplier: 'all',
 };
-
-function getSupabaseAnonKey() {
-    const fromWindow = String(window.H2GO_SUPABASE_ANON_KEY || "").trim();
-    if (fromWindow) return fromWindow;
-    const fromStorage = String(localStorage.getItem(SUPABASE_ANON_KEY_STORAGE) || "").trim();
-    if (fromStorage) return fromStorage;
-    return "";
-}
-
-function getSupabaseClient() {
-    if (!window.supabase || typeof window.supabase.createClient !== "function") return null;
-    const anonKey = getSupabaseAnonKey();
-    if (!anonKey) return null;
-    return window.supabase.createClient(getSupabaseUrl(), anonKey);
-}
 
 function toIsoDateTimeFromOrder(order) {
     const key = getOrderDateTimeSortKey(order);
@@ -932,50 +901,6 @@ async function maybeSaveConsumerTransportAssets(ttRaw, driverName, saveTt, saveD
                 console.warn("[h2go] save consumer driver:", error.message || error);
             }
         }
-    }
-}
-
-// ========== 테마(라이트/다크) ==========
-function applyThemeClass(themeClass) {
-    const body = document.body;
-    if (!body) return;
-    const next = themeClass === 'theme-light' ? 'theme-light' : 'theme-dark';
-    body.classList.remove('theme-light', 'theme-dark');
-    body.classList.add(next);
-    try {
-        localStorage.setItem(THEME_KEY, next);
-    } catch (_) {}
-    updateThemeToggleUI(next);
-}
-
-function updateThemeToggleUI(themeClass) {
-    const btn = document.getElementById('themeToggle');
-    if (!btn) return;
-    const isLight = themeClass === 'theme-light';
-    btn.dataset.theme = isLight ? 'light' : 'dark';
-    const labelEl = btn.querySelector('.theme-toggle-label');
-    if (labelEl) {
-        labelEl.textContent = isLight ? 'Light' : 'Dark';
-    }
-    btn.setAttribute('aria-label', isLight ? '다크 모드로 전환' : '라이트 모드로 전환');
-}
-
-function initTheme() {
-    let stored = null;
-    try {
-        stored = localStorage.getItem(THEME_KEY);
-    } catch (_) {}
-    const initial = stored === 'theme-light' || stored === 'theme-dark' ? stored : 'theme-dark';
-    applyThemeClass(initial);
-
-    const btn = document.getElementById('themeToggle');
-    if (btn) {
-        btn.addEventListener('click', () => {
-            const current = document.body.classList.contains('theme-light') ? 'theme-light' : 'theme-dark';
-            const next = current === 'theme-light' ? 'theme-dark' : 'theme-light';
-            applyThemeClass(next);
-        });
-        updateThemeToggleUI(initial);
     }
 }
 

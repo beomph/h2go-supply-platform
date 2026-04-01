@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "description": "H2GO 수소 거래 플랫폼",
   "scripts": {
-    "naver-mail": "node naver-mail-send.js",
+    "gmail": "node gmail-send.js",
     "figma-mcp:socket": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/figma-mcp-socket.ps1",
     "supabase:ping": "node scripts/supabase_ping.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.0",
     "dotenv": "^16.3.1",
-    "playwright": "^1.40.0"
+    "nodemailer": "^8.0.4"
   }
 }

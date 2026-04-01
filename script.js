@@ -2,28 +2,10 @@
 // Auth는 Supabase를 사용하고, 앱 세션 정보는 기존 대시보드 호환을 위해 localStorage에 보관한다.
 // 회원가입: Edge `h2go-submit-signup-request` → 관리자 메일 승인 → `h2go-approve-signup`에서 Auth·프로필 생성. (URL·키는 /h2go-config.js 가 우선)
 
-const AUTH_KEY = "h2go_auth";
-const THEME_KEY = "h2go_theme";
-/** /h2go-config.js 에 H2GO_SUPABASE_URL 이 없을 때만 사용 */
-const DEFAULT_SUPABASE_URL = "https://zbihunanzjgyceqfegka.supabase.co";
-const SUPABASE_ANON_KEY_STORAGE = "h2go_supabase_anon_key";
-
-function getSupabaseUrl() {
-    const fromWindow = String(window.H2GO_SUPABASE_URL || "").trim();
-    if (fromWindow) return fromWindow;
-    return DEFAULT_SUPABASE_URL;
-}
+const AUTH_KEY = "h2go_auth"; // h2go-utils.js 와 공유
 
 const MEMBER_AUTHORITIES = new Set(["admin", "manager", "monitoring"]);
 const BUSINESS_PARTIES = new Set(["supplier", "transporter", "consumer"]);
-
-function safeJsonParse(raw, fallback) {
-    try {
-        return JSON.parse(raw);
-    } catch (_) {
-        return fallback;
-    }
-}
 
 function normalizeId(id) {
     return String(id || "").trim().toLowerCase();
@@ -122,61 +104,8 @@ function getAuth() {
     };
 }
 
-function updateThemeToggleUI(themeClass) {
-    const btn = document.getElementById("themeToggle");
-    if (!btn) return;
-    const isLight = themeClass === "theme-light";
-    btn.dataset.theme = isLight ? "light" : "dark";
-    const labelEl = btn.querySelector(".theme-toggle-label");
-    if (labelEl) labelEl.textContent = isLight ? "Light" : "Dark";
-    btn.setAttribute("aria-label", isLight ? "다크 모드로 전환" : "라이트 모드로 전환");
-}
-
-function applyThemeClass(themeClass) {
-    const body = document.body;
-    if (!body) return;
-    const next = themeClass === "theme-light" ? "theme-light" : "theme-dark";
-    body.classList.remove("theme-light", "theme-dark");
-    body.classList.add(next);
-    try {
-        localStorage.setItem(THEME_KEY, next);
-    } catch (_) {}
-    updateThemeToggleUI(next);
-}
-
-function initTheme() {
-    let stored = null;
-    try {
-        stored = localStorage.getItem(THEME_KEY);
-    } catch (_) {}
-    const initial = stored === "theme-light" || stored === "theme-dark" ? stored : "theme-dark";
-    applyThemeClass(initial);
-    const btn = document.getElementById("themeToggle");
-    if (btn) {
-        btn.addEventListener("click", () => {
-            const current = document.body.classList.contains("theme-light") ? "theme-light" : "theme-dark";
-            applyThemeClass(current === "theme-light" ? "theme-dark" : "theme-light");
-        });
-    }
-}
-
 function toAuthEmail(loginId) {
     return `${normalizeId(loginId)}@h2go.local`;
-}
-
-function getSupabaseAnonKey() {
-    const fromWindow = String(window.H2GO_SUPABASE_ANON_KEY || "").trim();
-    if (fromWindow) return fromWindow;
-    const fromStorage = String(localStorage.getItem(SUPABASE_ANON_KEY_STORAGE) || "").trim();
-    if (fromStorage) return fromStorage;
-    return "";
-}
-
-function getSupabaseClient() {
-    if (!window.supabase || typeof window.supabase.createClient !== "function") return null;
-    const anonKey = getSupabaseAnonKey();
-    if (!anonKey) return null;
-    return window.supabase.createClient(getSupabaseUrl(), anonKey);
 }
 
 /** Supabase URL에서 project ref로 Providers(Email) 설정 페이지 링크 */

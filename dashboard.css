@@ -4836,6 +4836,19 @@ body.theme-light .dashboard-order-notif-actor {
     min-width: 0;
     font-weight: 700;
     color: var(--text-white, var(--text-primary));
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.dashboard-order-notif-id {
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    opacity: 0.85;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 body.theme-light .dashboard-order-notif-item--unread {

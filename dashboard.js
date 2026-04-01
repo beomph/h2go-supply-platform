@@ -3921,69 +3921,73 @@ function formatHistoryNotification(order, h, viewerRole) {
     const otherParty =
         viewerRole === "consumer" ? order.supplierName || "공급자" : order.consumerName || "수요자";
 
+    const ttStr = (arr) =>
+        Array.isArray(arr) && arr.length ? arr.filter(Boolean).join(", ") : "";
+
     switch (et) {
         case "created":
-            return { title: "새 주문", text: `${oid} · ${otherParty}에게 주문이 전달되었습니다.` };
+            return { title: "새 주문", orderId: oid, text: otherParty };
         case "status_changed": {
             const toLab = d.to ? getStatusLabel(normalizeStatus(d.to)) : "상태 변경";
-            return { title: "주문 상태 변경", text: `${oid} · ${toLab}` };
+            return { title: "주문 상태 변경", orderId: oid, text: toLab };
         }
         case "change_requested": {
             const by = h.actor === "supplier" ? "공급자" : "수요자";
             let extra = "";
             if (d.proposed && order) {
-                try {
-                    extra = summarizeChange(order, d.proposed);
-                } catch (_) {}
+                try { extra = summarizeChange(order, d.proposed); } catch (_) {}
             }
-            return { title: "납품 변경 요청", text: `${oid} · ${by} 요청${extra ? ` · ${extra}` : ""}` };
+            return { title: "납품 변경 요청", orderId: oid, text: `${by}${extra ? ` · ${extra}` : ""}` };
         }
         case "change_approved":
-            return { title: "변경 요청 승인", text: `${oid} · 변경이 반영되었습니다.` };
+            return { title: "변경 요청 승인", orderId: oid, text: "변경 반영됨" };
         case "change_rejected": {
-            const sum = d.summary ? ` · 요청 내용: ${d.summary}` : "";
-            return { title: "변경 요청 반려", text: `${oid} · 변경이 반려되었습니다.${sum}` };
+            const sum = d.summary ? ` · ${d.summary}` : "";
+            return { title: "변경 요청 반려", orderId: oid, text: `반려됨${sum}` };
         }
         case "change_request_cancelled":
-            return { title: "변경 요청 취소", text: `${oid} · 대기 중이던 변경 요청이 취소되었습니다.` };
+            return { title: "변경 요청 취소", orderId: oid, text: "대기 중 요청 취소됨" };
         case "cancel_requested": {
-            const r = d.reason ? ` · 사유: ${d.reason}` : "";
-            return { title: "취소 요청", text: `${oid} · 상대방이 주문 취소를 요청했습니다.${r}` };
+            const r = d.reason ? ` · ${d.reason}` : "";
+            return { title: "취소 요청", orderId: oid, text: `상대방 요청${r}` };
         }
         case "cancel_approved":
-            return { title: "취소 승인", text: `${oid} · 주문이 취소되었습니다.` };
+            return { title: "취소 승인", orderId: oid, text: "주문 취소됨" };
         case "cancel_rejected": {
-            const r = d.reason ? ` (${d.reason})` : "";
-            return { title: "취소 요청 반려", text: `${oid} · 취소 요청이 반려되었습니다.${r}` };
+            const r = d.reason ? ` · ${d.reason}` : "";
+            return { title: "취소 요청 반려", orderId: oid, text: `반려됨${r}` };
         }
         case "cancelled_immediately":
-            return { title: "즉시 취소", text: `${oid} · 주문이 즉시 취소되었습니다.` };
+            return { title: "즉시 취소", orderId: oid, text: "주문 취소됨" };
         case "transport_started": {
-            const drv = d.driverName ? ` · 기사 ${d.driverName}` : "";
-            return { title: "실차 운송 시작", text: `${oid} · 실차 운송이 시작되었습니다.${drv}` };
+            const tt = ttStr(d.trailerNumbers);
+            const drv = d.driverName ? `기사 ${d.driverName}` : "";
+            const detail = [tt, drv].filter(Boolean).join(" · ") || "—";
+            return { title: "실차 운송 시작", orderId: oid, text: detail };
         }
-        case "empty_leg_started":
-            return { title: "공차 운송 시작", text: `${oid} · 공차 운송이 시작되었습니다.` };
+        case "empty_leg_started": {
+            const tt = ttStr(d.trailerNumbers);
+            const drv = d.driverName ? `기사 ${d.driverName}` : "";
+            const detail = [tt, drv].filter(Boolean).join(" · ") || "—";
+            return { title: "공차 운송 시작", orderId: oid, text: detail };
+        }
         case "ex_factory_charge_completed":
             if (viewerRole === "consumer") {
-                return {
-                    title: "출하 가능 시각",
-                    text: `${oid} · 공급자가 충전 완료 시각을 등록했습니다. 주문 카드에서 확인하세요.`,
-                };
+                return { title: "출하 가능 시각", orderId: oid, text: "주문 카드에서 확인" };
             }
-            return { title: "충전 완료 등록", text: `${oid} · 충전 완료 시각이 저장되었습니다.` };
+            return { title: "충전 완료 등록", orderId: oid, text: "충전 완료 시각 저장됨" };
         case "ex_factory_charge_updated":
-            return { title: "충전 완료 시각 수정", text: `${oid} · 충전 완료 시각이 변경되었습니다.` };
+            return { title: "충전 완료 시각 수정", orderId: oid, text: "충전 완료 시각 변경됨" };
         case "delivery_qty_settled":
-            return { title: "물량 정산", text: `${oid} · 실차 도착 물량이 정산되었습니다.` };
+            return { title: "물량 정산", orderId: oid, text: "실차 도착 물량 정산 완료" };
         case "ex_factory_consumer_flow":
-            return { title: "유량계 질량 입력", text: `${oid} · 출하도 유량 정보가 반영되었습니다.` };
+            return { title: "유량계 질량 입력", orderId: oid, text: "출하도 유량 정보 반영됨" };
         case "delivery_chain_prev_updated":
-            return { title: "연속 납품 연계", text: `${oid} · 직전 주문과 물량이 연계되었습니다.` };
+            return { title: "연속 납품 연계", orderId: oid, text: "직전 주문 물량 연계됨" };
         case "tt_outbound_confirmed":
-            return { title: "T/T 출고 확인", text: `${oid} · 출고 물량·서명이 확인되었습니다.` };
+            return { title: "T/T 출고 확인", orderId: oid, text: "출고 물량·서명 확인됨" };
         default:
-            return { title: "주문 이벤트", text: `${oid} · ${et}` };
+            return { title: "주문 이벤트", orderId: oid, text: et };
     }
 }
 
@@ -4043,7 +4047,9 @@ function renderOneOrderNotifPanel(role, cardId, listId) {
         <li class="dashboard-order-notif-item${unreadClass}" data-order-id="${oid}" data-notif-at="${oAt}" tabindex="0" role="button" aria-label="${ariaGo}">
             <span class="dashboard-order-notif-actor">${escapeNotificationText(actorLabel)}</span>
             <span class="dashboard-order-notif-time">${escapeNotificationText(formatNotifListTime(it.atIso))}</span>
-            <span class="dashboard-order-notif-title">${escapeNotificationText(it.title)}</span>
+            <span class="dashboard-order-notif-title">
+                ${escapeNotificationText(it.title)}<span class="dashboard-order-notif-id">${oid}</span>
+            </span>
             <span class="dashboard-order-notif-text">${escapeNotificationText(it.text)}</span>
         </li>`;
         })

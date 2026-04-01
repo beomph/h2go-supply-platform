@@ -556,6 +556,8 @@ body.theme-light .insight-tooltip-panel {
     border: none;
     border-radius: 0 0 13px 13px;
     box-shadow: none;
+    /* 목록 시작만 살짝 구분 */
+    border-top: 1px solid color-mix(in srgb, var(--border-color) 22%, transparent);
     transition:
         max-height 0.48s cubic-bezier(0.22, 1, 0.36, 1),
         box-shadow 0.4s ease,
@@ -856,6 +858,11 @@ body.theme-light .insight-tooltip-panel {
         flex: 1 1 auto;
         max-width: none;
         width: 100%;
+    }
+
+    .dashboard-order-notif-item {
+        min-height: 2.75rem;
+        padding: 0.58rem 0.52rem;
     }
 
     .my-orders-header-title-row--toolbar-inline {
@@ -4751,14 +4758,20 @@ td .order-status:not(.order-status--action) {
     font-size: 0.68rem;
 }
 
+.dashboard-order-notifications-list--compact .dashboard-order-notif-actor {
+    font-size: 0.65rem;
+    max-width: 5.2rem;
+}
+
 .dashboard-order-notif-item {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: minmax(0, 5.5rem) minmax(0, 1fr);
     grid-template-rows: auto auto;
-    column-gap: 0.65rem;
-    row-gap: 0.12rem;
+    column-gap: 0.55rem;
+    row-gap: 0.1rem;
     position: relative;
     padding: 0.5rem 0.55rem;
+    min-height: 2.5rem;
     border-radius: 12px;
     background: var(--bg-card);
     border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
@@ -4779,19 +4792,38 @@ td .order-status:not(.order-status--action) {
     outline-offset: 2px;
 }
 
-.dashboard-order-notif-time {
+.dashboard-order-notif-actor {
     grid-column: 1;
-    grid-row: 1 / -1;
+    grid-row: 1;
     align-self: start;
     font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-primary, var(--text-white));
+    line-height: 1.25;
+    max-width: 5.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.theme-light .dashboard-order-notif-actor {
+    color: var(--text-primary);
+}
+
+.dashboard-order-notif-time {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+    font-size: 0.65rem;
     color: var(--text-muted);
     white-space: nowrap;
-    padding-top: 0.06rem;
+    padding-top: 0;
 }
 
 .dashboard-order-notif-title {
     grid-column: 2;
     grid-row: 1;
+    min-width: 0;
     font-weight: 700;
     color: var(--text-white, var(--text-primary));
 }
@@ -4807,12 +4839,40 @@ body.theme-light .dashboard-order-notifications--beside-title .dashboard-order-n
 .dashboard-order-notif-text {
     grid-column: 2;
     grid-row: 2;
+    min-width: 0;
     color: var(--text-muted);
     font-size: 0.76rem;
 }
 
 body.theme-light .dashboard-order-notif-title {
     color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-order-notifications--beside-title .dashboard-order-notifications-list--scroll {
+        transition: none;
+    }
+
+    .dashboard-order-notifications--beside-title:hover .dashboard-order-notifications-list--scroll,
+    .dashboard-order-notifications--beside-title:focus-within .dashboard-order-notifications-list--scroll {
+        transition: none;
+    }
+
+    .dashboard-order-notifications--beside-title {
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .dashboard-order-notif-item {
+        transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .dashboard-order-notif-item:hover {
+        transform: none;
+    }
+
+    .dashboard-order-notifications-card.dashboard-order-notifications--has-unread {
+        animation: none;
+    }
 }
 
 .order-actions--supplier .btn-small {

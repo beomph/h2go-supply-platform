@@ -3945,6 +3945,21 @@ function formatNotifListTime(iso) {
     return d.toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
+/** 이력 actor(consumer|supplier|system|기타) → 화면에 쓸 사용자·역할 표시명 */
+function formatActorNameForNotif(order, h) {
+    const raw = String(h?.actor ?? "").trim();
+    if (!raw || raw === "system") return "시스템";
+    if (raw === "consumer") {
+        const n = String(order?.consumerName ?? "").trim();
+        return n || "수요자";
+    }
+    if (raw === "supplier") {
+        const n = String(order?.supplierName ?? "").trim();
+        return n || "공급자";
+    }
+    return raw || "—";
+}
+
 function formatHistoryNotification(order, h, viewerRole) {
     const et = h.eventType;
     const d = h.details || {};
@@ -4034,6 +4049,7 @@ function collectAllOrderNotificationsForRole(role) {
             if (!formatted) continue;
             out.push({
                 ...formatted,
+                actorLabel: formatActorNameForNotif(order, h),
                 ts,
                 atIso: h.at,
                 orderId: order.id,
@@ -4066,8 +4082,11 @@ function renderOneOrderNotifPanel(role, cardId, listId) {
             const unreadClass = unread ? " dashboard-order-notif-item--unread" : "";
             const oid = escapeNotificationText(String(it.orderId ?? ""));
             const oAt = escapeNotificationText(String(it.atIso ?? ""));
+            const actorLabel = String(it.actorLabel ?? "—");
+            const ariaGo = `${escapeNotificationText(actorLabel)} · ${escapeNotificationText(it.title)} 상세로 이동`;
             return `
-        <li class="dashboard-order-notif-item${unreadClass}" data-order-id="${oid}" data-notif-at="${oAt}" tabindex="0" role="button" aria-label="${escapeNotificationText(it.title)} 상세로 이동">
+        <li class="dashboard-order-notif-item${unreadClass}" data-order-id="${oid}" data-notif-at="${oAt}" tabindex="0" role="button" aria-label="${ariaGo}">
+            <span class="dashboard-order-notif-actor">${escapeNotificationText(actorLabel)}</span>
             <span class="dashboard-order-notif-time">${escapeNotificationText(formatNotifListTime(it.atIso))}</span>
             <span class="dashboard-order-notif-title">${escapeNotificationText(it.title)}</span>
             <span class="dashboard-order-notif-text">${escapeNotificationText(it.text)}</span>

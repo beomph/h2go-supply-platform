@@ -2,8 +2,6 @@
 // Auth는 Supabase를 사용하고, 앱 세션 정보는 기존 대시보드 호환을 위해 localStorage에 보관한다.
 // 회원가입: Edge `h2go-submit-signup-request` → 관리자 메일 승인 → `h2go-approve-signup`에서 Auth·프로필 생성. (URL·키는 /h2go-config.js 가 우선)
 
-const AUTH_KEY = "h2go_auth"; // h2go-utils.js 와 공유
-
 const MEMBER_AUTHORITIES = new Set(["admin", "manager", "monitoring"]);
 const BUSINESS_PARTIES = new Set(["supplier", "transporter", "consumer"]);
 

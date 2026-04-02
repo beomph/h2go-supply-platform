@@ -435,6 +435,10 @@ Phase 4 — 운영 안정화 및 확장 (지속)
   - 구매·판매「주문 현황」: 모바일에서도 데스크톱과 동일한 **7열** 표 형태(주문상태 열이 아래 행으로 떨어지지 않음)를 유지하고, `.orders-table-hscroll` 한 곳에 가로 스크롤을 두어 헤더·카드 열이 맞춤. Supabase 연동 시 `loadOrdersFromSupabase`가 `h2go_orders` 조회 결과만으로 `orders`/localStorage를 갱신해 웹·모바일 목록이 DB와 동일하게 보이도록 함(로컬에만 있던 주문을 병합하던 동작 제거).
   - `dashboard.css`, `dashboard.js`
 
+- 2026-03-31 (UI)
+  - 출하도 주문 카드 푸터: **납품주소 텍스트 미표시**(7열 정렬은 빈 칸 유지). 모바일: 히어로·주문 현황 헤더 사이 **세로 여백 축소**. 주문 알림 클릭 시 카드 **펄스 하이라이트**(`order-notif-pulse`).
+  - `dashboard.js`, `dashboard.css`
+
 - 2026-04-08
   - 주문 카드에서 **물량확인증** 별도 버튼 제거. 카드 본문 클릭 시 기존과 같이 물량확인증 모달 표시(`dashboard.js`, `dashboard.css`).
 

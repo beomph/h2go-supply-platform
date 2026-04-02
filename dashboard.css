@@ -1275,6 +1275,36 @@ body.theme-dark .supplier-orders-card {
     .dashboard-main {
         padding: 1.1rem 1rem 3rem;
     }
+
+    /* 주문 현황만 있는 화면: 히어로(제목·인사이트)와 본문(주문 현황) 사이 세로 여백 축소 */
+    #consumerView.active > .view-header--dashboard-top,
+    #supplierView.active > .view-header--dashboard-top {
+        margin-bottom: 0.6rem;
+    }
+
+    #consumerView.active > .view-header,
+    #supplierView.active > .view-header {
+        margin-bottom: 0.75rem;
+    }
+
+    #consumerView.active .view-header-main-col,
+    #supplierView.active .view-header-main-col {
+        gap: 0.45rem;
+    }
+
+    #consumerView.active .consumer-content--orders-only,
+    #supplierView.active .consumer-content--orders-only {
+        margin-top: 0;
+    }
+
+    .consumer-order-stack--compact .my-orders-header-title-row--toolbar-inline {
+        padding-bottom: 0.3rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .consumer-order-stack--compact .my-orders-header {
+        margin-bottom: 0.4rem;
+    }
 }
 
 .dashboard-view {
@@ -3773,6 +3803,15 @@ body.theme-light .order-item .order-card-footer-grid .order-footer-cell--address
     max-width: 100%;
 }
 
+/* 출하도: 납품주소 미입력 — 푸터 해당 열은 빈 칸(열 정렬 유지) */
+.order-footer-cell--address-ex-factory-skip {
+    min-height: 0;
+    padding: 0;
+    border: none;
+    visibility: hidden;
+    pointer-events: none;
+}
+
 .order-footer-driver {
     font-size: 0.8rem;
     font-weight: 700;
@@ -5252,6 +5291,45 @@ body.theme-light .order-item--notif-focus {
     box-shadow:
         0 0 0 1px rgba(37, 99, 235, 0.28),
         0 12px 28px rgba(37, 99, 235, 0.12);
+}
+
+@keyframes order-notif-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.35);
+    }
+    40% {
+        box-shadow:
+            0 0 0 3px rgba(59, 130, 246, 0.2),
+            0 6px 22px rgba(59, 130, 246, 0.14);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+    }
+}
+
+.order-item--notif-pulse {
+    animation: order-notif-pulse 1.05s ease-out 2;
+    border-radius: 10px;
+    position: relative;
+    z-index: 1;
+}
+
+body.theme-light .order-item--notif-pulse {
+    animation-name: order-notif-pulse-light;
+}
+
+@keyframes order-notif-pulse-light {
+    0% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.22);
+    }
+    40% {
+        box-shadow:
+            0 0 0 3px rgba(37, 99, 235, 0.14),
+            0 6px 20px rgba(37, 99, 235, 0.1);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+    }
 }
 
 .order-item-clickable:hover {

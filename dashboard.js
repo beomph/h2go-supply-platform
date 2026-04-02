@@ -1607,6 +1607,8 @@ function buildOrderCardEtaCells(order, travelTimeText, viewer = "consumer") {
 function buildOrderCardFooterGridHtml({
     orderId,
     deliveryAddress,
+    /** false: 출하도 — 납품주소 미사용, 해당 열은 빈 칸(열 정렬 유지) */
+    showDeliveryAddressColumn = true,
     /** 카드 하단 주소 열에 넣을 문자열(미지정 시 deliveryAddress) — 구매: 공급자 출하 주소, 판매: 납품지 등 */
     footerAddressDisplay,
     driverLine,
@@ -1630,11 +1632,13 @@ function buildOrderCardFooterGridHtml({
     const titleAttr = addrRaw
         ? ` title="${escapeBannerHtml(addrRaw).replace(/"/g, "&quot;")}"`
         : "";
-    const addressBlock = addrRaw
-        ? `<div class="order-footer-address-wrap"><span class="order-footer-address"${titleAttr}>${escapeBannerHtml(
-              addrRaw
-          )}</span></div>`
-        : `<div class="order-footer-address-wrap"><span class="order-footer-address order-footer-address--empty">—</span></div>`;
+    const addressBlock = showDeliveryAddressColumn
+        ? addrRaw
+            ? `<div class="order-footer-address-wrap"><span class="order-footer-address"${titleAttr}>${escapeBannerHtml(
+                  addrRaw
+              )}</span></div>`
+            : `<div class="order-footer-address-wrap"><span class="order-footer-address order-footer-address--empty">—</span></div>`
+        : "";
     const gridExtra = "order-card-footer-grid--unified";
     const memoRaw = String(memoText || "").trim();
     const memoBlock = memoRaw
@@ -1644,12 +1648,16 @@ function buildOrderCardFooterGridHtml({
         String(footerStatusActionsHtml || "").trim() !== ""
             ? `<div class="order-banner-cell order-footer-cell order-footer-cell--status-actions"><div class="order-footer-status-actions-inner">${footerStatusActionsHtml}</div></div>`
             : `<div class="order-banner-cell order-footer-cell order-footer-cell--status-gap"></div>`;
+    const addressCell =
+        showDeliveryAddressColumn
+            ? `<div class="order-banner-cell order-footer-cell order-footer-cell--address">${addressBlock}</div>`
+            : `<div class="order-banner-cell order-footer-cell order-footer-cell--address order-footer-cell--address-ex-factory-skip" aria-hidden="true"></div>`;
     return `<div class="order-card-footer-grid ${gridExtra}">
         <div class="order-banner-cell order-footer-cell order-footer-cell--id">
             <span class="order-card-order-id">주문번호 ${escapeBannerHtml(orderId)}</span>
             ${memoBlock}
         </div>
-        <div class="order-banner-cell order-footer-cell order-footer-cell--address">${addressBlock}</div>
+        ${addressCell}
         <div class="order-banner-cell order-footer-cell order-footer-cell--tt">${driverInner}${noteBlock}</div>
         <div class="order-banner-cell order-footer-cell order-footer-cell--eta">${etaFooterHtml}</div>
         <div class="order-banner-cell order-footer-cell">${shipmentFooterHtml}</div>
@@ -2541,6 +2549,7 @@ function renderConsumerView() {
         const footerGridConsumer = buildOrderCardFooterGridHtml({
             orderId: order.id,
             deliveryAddress: order.address,
+            showDeliveryAddressColumn: order.supplyCondition !== "ex_factory",
             footerAddressDisplay: getOrderSupplierAddressDisplay(order),
             driverLine: driverLineC,
             transportNoteHtml: emptyReturnNoteFooterC,
@@ -2825,6 +2834,7 @@ function renderSupplierOrdersCards() {
         const footerGridSupplier = buildOrderCardFooterGridHtml({
             orderId: o.id,
             deliveryAddress: o.address,
+            showDeliveryAddressColumn: o.supplyCondition !== "ex_factory",
             footerAddressDisplay: o.address,
             driverLine,
             transportNoteHtml: emptyReturnNoteFooterS,
@@ -3869,10 +3879,12 @@ function focusDashboardOrderFromNotif(role, orderId) {
                     el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
                 }
             }
-            el.classList.remove("order-item--notif-focus");
+            el.classList.remove("order-item--notif-focus", "order-item--notif-pulse");
             void el.offsetWidth;
-            el.classList.add("order-item--notif-focus");
-            window.setTimeout(() => el.classList.remove("order-item--notif-focus"), 2600);
+            el.classList.add("order-item--notif-pulse");
+            const clearPulse = () => el.classList.remove("order-item--notif-pulse");
+            el.addEventListener("animationend", clearPulse, { once: true });
+            window.setTimeout(clearPulse, 4500);
         });
     };
 

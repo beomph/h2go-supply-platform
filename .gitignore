@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+h2go-config.js
 # 로컬 anon 키 (supabase-config.example.js 는 예시만 커밋)
 js/supabase-config.js
 

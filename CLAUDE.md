@@ -1,88 +1,122 @@
-# H2GO 수소거래 플랫폼 — Claude 작업 가이드
+# CLAUDE.md
 
-## 프로젝트 개요
-수소 공급망 B2B 플랫폼. 수요자(구매)·공급자(판매) 대시보드. 운송자 대시보드는 미구현.
-- **배포**: Render (`render.yaml`) / GitHub: `beomph/h2go-supply-platform`
-- **DB**: Supabase (`h2go_orders`, `member_profiles`, `h2go_tube_trailers`, `h2go_transport_drivers`)
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 핵심 파일 맵
+## Project Overview
 
-### 진입점
-| 파일 | 역할 |
-|------|------|
-| `index.html` + `script.js` | 로그인·회원가입 |
-| `dashboard.html` + `dashboard.js` | 구매·판매 대시보드 (메인) |
-| `transport-assets.html` + `transport-assets.js` | T/T·운송기사 관리 |
-| `물량확인증_양식.html` | 인쇄용 물량확인증 |
-| `openai_test_server.py` | AI 챗봇 + 정적파일 서버 (port 3000) |
+H2GO is a hydrogen trading/supply chain platform. It consists of a Python HTTP server (backend), vanilla JS/HTML/CSS (frontend), Supabase (auth + database), and an OpenAI-powered chatbot.
 
-### 공유 유틸
-| 파일 | 역할 |
-|------|------|
-| `js/h2go-utils.js` | AUTH_KEY·THEME_KEY·safeJsonParse·getSupabaseUrl/AnonKey/Client·applyThemeClass·initTheme·redirectToLogin |
-| `js/supabase-client.js` | Supabase 클라이언트 ES모듈 |
+## Commands
 
-### 스타일
-| 파일 | 역할 |
-|------|------|
-| `styles.css` | 전역·인증 페이지 스타일 |
-| `dashboard.css` | 대시보드 전용 스타일 |
-| `transport-assets.css` | 운송자산 페이지 스타일 |
-| `figma-tokens.css` | 디자인 토큰 (Figma 동기화) |
+### Local Development (Windows PowerShell)
 
-## dashboard.js 주요 함수 위치 (5,500줄)
-
-| 함수/섹션 | 위치 | 설명 |
-|-----------|------|------|
-| `getAuth()` | ~line 195 | 로그인 세션 읽기 |
-| `getSupabaseClient()` | `js/h2go-utils.js` | Supabase 클라이언트 |
-| `fetchApprovedSupplierDirectoryUsernames()` | ~line 103 | 공급자 목록 조회 |
-| `readRegisteredSuppliers()` | ~line 91 | 등록 공급자 읽기 |
-| `formatHistoryNotification()` | ~line 3917 | 알림 메시지 포맷 (title·orderId·text 반환) |
-| `renderOneOrderNotifPanel()` | ~line 4000 | 알림 패널 HTML 렌더링 |
-| `renderConsumerView()` | 대시보드 구매화면 렌더 |
-| `renderSupplierView()` | 대시보드 판매화면 렌더 |
-| `applyThemeClass()` / `initTheme()` | `js/h2go-utils.js` | 테마 토글 |
-| `appendOrderChangeHistory()` | 주문 이력 추가 |
-| `saveOrdersToStorage()` | localStorage + Supabase 동기화 |
-
-## 모달 목록 (dashboard.html)
-| ID | 용도 |
-|----|------|
-| `newOrderModal` | 새 주문 생성 |
-| `qtyConfirmModal` | 물량확인증 (iframe) |
-| `exFactoryChargeModal` | 충전 완료 시각 입력 |
-| `transportStartModal` | 운송 시작 (T/T·기사) |
-| `orderMapModal` | 배송 경로 지도 (Leaflet) |
-| `changeRequestModal` | 납품 변경 요청 |
-| `changeApprovalModal` | 변경 요청 승인·반려 |
-| `cancelApprovalModal` | 취소 요청 승인·반려 |
-| `supplierSelectModal` | 공급자 선택 |
-| `deliverySettlementModal` | 도착도 물량 정산 |
-| `exFactoryFlowKgModal` | 출하도 유량계 입력 |
-| `transportAssetPickModal` | 운송자원 선택 |
-
-## 주문 상태 흐름
-```
-pending → accepted → in_transit → completed
-                 ↘ empty_in_transit → empty_arrived → in_transit (출하도)
-cancelled / cancel_requested → cancel_approved
+Set environment variables before running:
+```powershell
+$env:OPENAI_API_KEY="your_key_here"
+$env:H2GO_SUPABASE_URL="https://xxxx.supabase.co"
+$env:H2GO_SUPABASE_ANON_KEY="sb_anon_key_here"
+$env:H2GO_CHAT_ACCESS_CODE="optional_access_code"  # optional
 ```
 
-## 환경변수 (.env — gitignore됨)
-```
-GMAIL_USER=drphb1104@gmail.com
-GMAIL_APP_PASSWORD=          ← 앱 비밀번호 미입력 상태
-```
-
-## npm 스크립트
-```
-npm run gmail          # Gmail 테스트 발송 (gmail-send.js)
-npm run supabase:ping  # Supabase 연결 확인
+Install Python dependencies:
+```bash
+python -m pip install -r requirements.txt
 ```
 
-## 작업 규칙
-- `.env`는 gitignore — 절대 커밋 안 됨
-- `figma-tokens.css`, `scripts/figma-mcp-socket.ps1` — 미추적 파일, 커밋 불필요
-- 푸시 전 `git status`로 `.env` 포함 여부 반드시 확인
-- remote: `origin` → `https://github.com/beomph/h2go-supply-platform.git`
+Run the server (serves on http://127.0.0.1:3000/):
+```bash
+python openai_test_server.py
+```
+
+Test Supabase connection:
+```bash
+npm run supabase:ping
+```
+
+### Utility Scripts
+
+```bash
+npm run figma-mcp:socket     # Start Figma MCP WebSocket bridge (port 3055)
+npm run naver-mail            # Send email via Naver SMTP
+python scripts/parse_prd_openai.py       # Parse PRD into tasks
+python scripts/generate_sample_data.py  # Generate test data
+```
+
+## Architecture
+
+### Request Flow
+
+```
+Browser (index.html / dashboard.html)
+  → GET /h2go-config.js        # Server injects Supabase URL + anon key at runtime
+  → Supabase Auth (signup/login via @supabase/supabase-js)
+  → Dashboard loads
+  → POST /api/chat             # Chatbot requests (OpenAI key never sent to browser)
+```
+
+### Backend: `openai_test_server.py`
+
+Single Python file serving as the entire backend:
+- Serves all static files (HTML/JS/CSS)
+- `GET /h2go-config.js` — dynamically injects Supabase config from env vars
+- `POST /api/chat` and `POST /api/respond` — proxies to OpenAI ChatCompletion with per-IP rate limiting (default: 12 req/60 sec, controlled by `H2GO_RATE_WINDOW_SEC` / `H2GO_RATE_MAX`)
+- `GET /api/health`, `GET /api/verify` — health check and access code verification
+
+### Frontend Files
+
+| File | Purpose |
+|------|---------|
+| `index.html` + `script.js` + `styles.css` | Landing page, login/registration, Supabase auth |
+| `dashboard.html` + `dashboard.js` + `dashboard.css` | Main app UI — order management, role switching |
+| `chatbot.js` | Chat widget, calls `/api/chat`, session-based access code |
+| `transport-assets.html/js/css` | Transport vehicle tracking with Leaflet.js maps |
+| `figma-tokens.css` | CSS design tokens (sourced from Figma) |
+
+### Database (Supabase)
+
+Key tables:
+- `auth.users` — Supabase built-in auth
+- `member_profiles` — Extended user info: `business_parties`, `authority` (admin/manager/monitoring), `login_id`, `username`
+- `h2go_orders` — Full order lifecycle with change history, T/T numbers, delivery confirmation
+- `h2go_transport_assets` — Transport vehicle/asset registry
+
+Setup scripts are in `scripts/supabase_*.sql`.
+
+### User Roles
+
+Two primary business roles (set at registration, switchable):
+- **Supplier** (`판매` mode) — manages sales, registers in supplier directory
+- **Consumer** (`구매` mode) — places orders, views supplier directory
+- **Transporter** — purchase mode only
+
+Authority levels: admin / manager / monitoring
+
+### Deployment (Render)
+
+Config in `render.yaml`. Build: `pip install -r requirements.txt`. Start: `python openai_test_server.py`. All secrets are set as Render env vars (never in code).
+
+## Cursor Rules (from `.cursor/rules/`)
+
+- **git-push-default**: Always commit and push to `origin/main` after changes. Set git config at repo scope if needed.
+- **prd-auto-update**: Update `.taskmaster/docs/prd.txt` after any code changes. Format: 3–7 line summaries with WHAT/WHY/WHO-WHERE. No secrets in PRD.
+- **figma-mcp**: Use TalkToFigma MCP via WebSocket on port 3055. Call `/join_channel` before any Figma commands.
+
+## Skill routing
+
+When the user's request matches an available skill, ALWAYS invoke it using the Skill
+tool as your FIRST action. Do NOT answer directly, do NOT use other tools first.
+The skill has specialized workflows that produce better results than ad-hoc answers.
+
+Key routing rules:
+- Product ideas, "is this worth building", brainstorming → invoke office-hours
+- Bugs, errors, "why is this broken", 500 errors → invoke investigate
+- Ship, deploy, push, create PR → invoke ship
+- QA, test the site, find bugs → invoke qa
+- Code review, check my diff → invoke review
+- Update docs after shipping → invoke document-release
+- Weekly retro → invoke retro
+- Design system, brand → invoke design-consultation
+- Visual audit, design polish → invoke design-review
+- Architecture review → invoke plan-eng-review
+- Save progress, checkpoint, resume → invoke checkpoint
+- Code quality, health check → invoke health

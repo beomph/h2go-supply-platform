@@ -1,0 +1,73 @@
+/**
+ * H2GO × Figma 라이브러리 토큰
+ * ----------------------------------------
+ * Figma에서 팀 라이브러리(Variables / Text·Effect 스타일)를 쓸 때
+ * 동일한 이름의 컬렉션을 두고 값만 교체하면 이 CSS와 동기화하기 쉽습니다.
+ *
+ * 권장 Figma Variable 그룹 예시:
+ *   Foundation/space/*, Foundation/radius/*, Foundation/elevation/*
+ *   Semantic/color/*, Semantic/text/*
+ *
+ * MCP로 라이브러리를 읽을 때는 해당 파일을 연 뒤 프레임을 선택하거나
+ * 로컬 컴포넌트가 노출되는 페이지를 열어 주세요.
+ */
+:root {
+    /* ----- Foundation: Spacing (4px 그리드, Auto-layout 단위와 대응) ----- */
+    --fig-space-0: 0;
+    --fig-space-1: 0.25rem;   /* 4px */
+    --fig-space-2: 0.5rem;    /* 8px */
+    --fig-space-3: 0.75rem;   /* 12px */
+    --fig-space-4: 1rem;      /* 16px */
+    --fig-space-5: 1.25rem;   /* 20px */
+    --fig-space-6: 1.5rem;    /* 24px */
+    --fig-space-8: 2rem;      /* 32px */
+    --fig-space-10: 2.5rem;   /* 40px */
+    --fig-space-12: 3rem;     /* 48px */
+    --fig-space-16: 4rem;     /* 64px */
+
+    /* ----- Foundation: Radius ----- */
+    --fig-radius-xs: 6px;
+    --fig-radius-sm: 8px;
+    --fig-radius-md: 12px;
+    --fig-radius-lg: 16px;
+    --fig-radius-xl: 20px;
+    --fig-radius-2xl: 24px;
+    --fig-radius-pill: 9999px;
+
+    /* ----- Foundation: Elevation (Effect style) ----- */
+    --fig-elevation-none: none;
+    --fig-elevation-s: 0 1px 2px rgba(0, 0, 0, 0.22), 0 1px 3px rgba(0, 0, 0, 0.14);
+    --fig-elevation-m: 0 4px 14px rgba(0, 0, 0, 0.22);
+    --fig-elevation-l: 0 12px 40px rgba(15, 23, 42, 0.2);
+    --fig-elevation-l-dark: 0 24px 64px rgba(0, 0, 0, 0.45);
+
+    /* ----- Foundation: Typography (대부분 UI 키트 기본: Inter) ----- */
+    --fig-font-family-sans: "Inter", system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+    --fig-font-family-display: "Inter", var(--fig-font-family-sans);
+    --fig-font-size-caption: 0.75rem;
+    --fig-font-size-label: 0.875rem;
+    --fig-font-size-body: 1rem;
+    --fig-font-size-title-s: 1.125rem;
+    --fig-font-size-title-m: 1.25rem;
+    --fig-font-size-title-l: 1.5rem;
+    --fig-font-size-display: clamp(1.75rem, 4vw, 2.5rem);
+    --fig-line-height-body: 1.5;
+    --fig-line-height-tight: 1.25;
+    --fig-letter-spacing-ui: -0.01em;
+
+    --fig-weight-regular: 400;
+    --fig-weight-medium: 500;
+    --fig-weight-semibold: 600;
+    --fig-weight-bold: 700;
+    --fig-weight-extrabold: 800;
+
+    /* ----- Semantic: 컴포넌트 속성 (Figma 컴포넌트 프로퍼티와 매핑) ----- */
+    --fig-comp-button-radius: var(--fig-radius-sm);
+    --fig-comp-button-py: 0.625rem;
+    --fig-comp-button-px: 1.25rem;
+    --fig-comp-input-radius: var(--fig-radius-sm);
+    --fig-comp-card-radius: var(--fig-radius-2xl);
+    --fig-comp-chip-radius: var(--fig-radius-pill);
+    --fig-comp-nav-height: 3.5rem;
+    --fig-focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.45);
+}

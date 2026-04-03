@@ -10,7 +10,21 @@
       "Read(//c/Users/Hanbeom Park/.claude/skills/gstack/**)",
       "Bash(bash ./setup)",
       "WebSearch",
-      "Skill(design-review)"
+      "Skill(design-review)",
+      "Bash(curl:*)",
+      "Bash('/c/Users/Hanbeom Park/.claude/skills/gstack/browse/dist/browse' goto http://127.0.0.1:3000/)",
+      "Bash($B screenshot:*)",
+      "Bash(mkdir -p '/c/Users/Hanbeom Park/Desktop/claude/h2go-supply-platform/.gstack/design-audit-20260403/screenshots')",
+      "Bash('/c/Users/Hanbeom Park/.claude/skills/gstack/browse/dist/browse' screenshot '/c/Users/Hanbeom Park/Desktop/claude/h2go-supply-platform/.gstack/design-audit-20260403/screenshots/first-impression.png')",
+      "Bash('/c/Users/Hanbeom Park/.claude/skills/gstack/browse/dist/browse' js 'JSON.stringify\\([...new Set\\([...document.querySelectorAll\\('\\\\''*'\\\\''\\)].slice\\(0,500\\).map\\(e => getComputedStyle\\(e\\).fontFamily\\)\\)].slice\\(0,10\\)\\)')",
+      "Bash('/c/Users/Hanbeom Park/.claude/skills/gstack/browse/dist/browse' js 'JSON.stringify\\([...new Set\\([...document.querySelectorAll\\('\\\\''*'\\\\''\\)].slice\\(0,500\\).flatMap\\(e => [getComputedStyle\\(e\\).color, getComputedStyle\\(e\\).backgroundColor]\\).filter\\(c => c !== '\\\\''rgba\\(0, 0, 0, 0\\)'\\\\''\\)\\)].slice\\(0,20\\)\\)')",
+      "Bash('/c/Users/Hanbeom Park/.claude/skills/gstack/browse/dist/browse' js 'JSON.stringify\\([...document.querySelectorAll\\('\\\\''h1,h2,h3,h4,h5,h6'\\\\''\\)].map\\(h => \\({tag:h.tagName, text:h.textContent.trim\\(\\).slice\\(0,50\\), size:getComputedStyle\\(h\\).fontSize, weight:getComputedStyle\\(h\\).fontWeight}\\)\\)\\)')",
+      "Bash('/c/Users/Hanbeom Park/.claude/skills/gstack/browse/dist/browse' js 'JSON.stringify\\([...document.querySelectorAll\\('\\\\''a,button,input,[role=button]'\\\\''\\)].filter\\(e => {const r=e.getBoundingClientRect\\(\\); return r.width>0 && \\(r.width<44||r.height<44\\)}\\).map\\(e => \\({tag:e.tagName, text:\\(e.textContent||'\\\\'''\\\\''\\).trim\\(\\).slice\\(0,30\\), w:Math.round\\(e.getBoundingClientRect\\(\\).width\\), h:Math.round\\(e.getBoundingClientRect\\(\\).height\\)}\\)\\).slice\\(0,20\\)\\)')",
+      "Bash($B responsive:*)",
+      "Bash('/c/Users/Hanbeom Park/.claude/skills/gstack/browse/dist/browse' goto http://127.0.0.1:3000/dashboard.html)",
+      "Bash('/c/Users/Hanbeom Park/.claude/skills/gstack/browse/dist/browse' url)",
+      "Bash('/c/Users/Hanbeom Park/.claude/skills/gstack/browse/dist/browse' screenshot '/c/Users/Hanbeom Park/Desktop/claude/h2go-supply-platform/.gstack/design-audit-20260403/screenshots/dashboard-direct.png')",
+      "Skill(checkpoint)"
     ]
   }
 }

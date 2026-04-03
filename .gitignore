@@ -34,3 +34,4 @@ node_modules/
 .taskmaster/state.json
 .taskmaster/tasks/*.bak_*
 
+.gstack/

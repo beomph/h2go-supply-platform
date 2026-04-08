@@ -5665,59 +5665,6 @@ body.theme-light .order-item--notif-pulse {
     gap: 1rem;
 }
 
-/* 주문 지도 모달 */
-#orderMapModal.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(4px);
-    z-index: 2000;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-}
-
-#orderMapModal.modal.active {
-    display: flex;
-}
-
-.modal-content-map {
-    max-width: 700px;
-    width: 100%;
-}
-
-#orderMapInfo {
-    padding: 1rem;
-    background: var(--bg-dark);
-    border-radius: 8px;
-    margin-bottom: 1rem;
-}
-
-.map-info-row {
-    margin-bottom: 0.5rem;
-    font-size: 0.95rem;
-}
-
-.map-info-row:last-child {
-    margin-bottom: 0;
-}
-
-.map-info-row--muted {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    line-height: 1.35;
-}
-
-.order-map-container {
-    height: 400px;
-    border-radius: 8px;
-    overflow: hidden;
-    background: var(--bg-dark);
-}
 
 .order-row {
     cursor: pointer;

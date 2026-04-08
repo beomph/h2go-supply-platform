@@ -2492,7 +2492,6 @@ function renderConsumerView() {
             ${canCancelChangeRequest ? `<button type="button" class="btn btn-small btn-secondary" data-action="cancel-change-request" data-id="${order.id}">변경요청 취소</button>` : ''}
             ${showChangeBtn ? `<button type="button" class="btn btn-small" data-action="request-change" data-id="${order.id}">변경</button>` : ''}
             ${canRequestCancel ? `<button type="button" class="btn btn-small btn-secondary" data-action="request-cancel" data-id="${order.id}">${immediateCancelable ? '즉시 취소' : '취소'}</button>` : ''}
-            ${order.supplyCondition === 'delivery' ? `<button type="button" class="btn btn-small btn-secondary" data-action="open-order-map" data-id="${order.id}">지도·출하/회차</button>` : ''}
         `.trim();
         const decisionButtons = `
             ${canApproveChange && !seenChangeReview ? `<button type="button" class="btn btn-small btn-primary" data-action="review-change-request" data-id="${order.id}">확인</button>` : ''}
@@ -2938,9 +2937,6 @@ function renderSupplierView() {
     renderOrderNotificationPanels();
 }
 
-// ========== 주문 지도 모달 ==========
-let orderMapInstance = null;
-
 function isoToDatetimeLocalValue(iso) {
     const d = parseIsoToDate(iso);
     if (!d) return "";
@@ -3061,92 +3057,6 @@ function applyExFactoryChargeFromModal() {
     lastOrdersSnapshot = deepClone(orders);
     closeExFactoryChargeModal();
     alert(mode === "create" ? `공차 도착이 등록되었습니다. 충전 완료: ${formatCalendarDateTimeFromDate(local)}` : "충전 완료 시각이 수정되었습니다.");
-}
-
-function openOrderMapModal(orderId) {
-    const order = orders.find(o => o.id === orderId);
-    if (!order) return;
-
-    const destCoords = getCoordinatesFromAddress(order.address);
-    const travelTimeMin = getOrderTravelTimeMinutes(order);
-    const isExFactory = order.supplyCondition === 'ex_factory';
-    const shipPlan = formatShipmentDateTime(order, { viewer: "consumer" });
-    const retPlan = formatReturnDateTime(order, { viewer: "consumer" });
-    const planRows =
-        !isExFactory && shipPlan && retPlan
-            ? `<div class="map-info-row"><strong>출하·회차(계획):</strong> ${escapeBannerHtml(shipPlan)} → ${escapeBannerHtml(
-                  retPlan
-              )}</div>
-        <div class="map-info-row map-info-row--muted">카드에서는 납품 약속과 혼동을 줄이기 위해 숨깁니다. 여기서만 참고하세요.</div>`
-            : "";
-
-    document.getElementById('orderMapTitle').textContent = isExFactory ? `주문 ${order.id} - 출하지 픽업` : `주문 ${order.id} - 튜브트레일러 배송 경로`;
-    document.getElementById('orderMapInfo').innerHTML = `
-        <div class="map-info-row"><strong>수요처:</strong> ${order.consumerName}</div>
-        <div class="map-info-row"><strong>공급조건:</strong> ${getSupplyConditionLabel(order)}</div>
-        <div class="map-info-row"><strong>${isExFactory ? '픽업지' : '납품지'}:</strong> ${order.address}</div>
-        <div class="map-info-row"><strong>트레일러:</strong> ${order.tubeTrailers}대</div>
-        <div class="map-info-row"><strong>${isExFactory ? "구간당 편도(공차·실차 추정)" : "생산지→수요처 운송시간"}:</strong> 약 ${travelTimeMin}분</div>
-        ${planRows}
-    `;
-
-    document.getElementById('orderMapModal').classList.add('active');
-
-    // 기존 map 제거
-    const mapEl = document.getElementById('orderMap');
-    mapEl.innerHTML = '';
-
-    if (typeof L !== 'undefined') {
-        const map = L.map('orderMap').setView([37.45, 126.9], 10);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
-
-        // 생산지 마커
-        const prodIcon = L.divIcon({
-            className: 'custom-marker prod-marker',
-            html: '<div class="marker-pin prod">🏭</div>',
-            iconSize: [32, 32],
-            iconAnchor: [16, 32]
-        });
-        L.marker([PRODUCTION_SITE.lat, PRODUCTION_SITE.lng], { icon: prodIcon })
-            .addTo(map)
-            .bindPopup(`<b>${PRODUCTION_SITE.name}</b><br>생산지`);
-
-        // 수요처 마커 (튜브트레일러 도착지)
-        const destIcon = L.divIcon({
-            className: 'custom-marker dest-marker',
-            html: '<div class="marker-pin dest">🚛</div>',
-            iconSize: [32, 32],
-            iconAnchor: [16, 32]
-        });
-        L.marker([destCoords.lat, destCoords.lng], { icon: destIcon })
-            .addTo(map)
-            .bindPopup(`<b>${order.address}</b><br>수요처 (트레일러 ${order.tubeTrailers}대)`);
-
-        // 경로선
-        L.polyline([
-            [PRODUCTION_SITE.lat, PRODUCTION_SITE.lng],
-            [destCoords.lat, destCoords.lng]
-        ], { color: '#3B82F6', weight: 3, dashArray: '5, 10' }).addTo(map);
-
-        map.fitBounds([
-            [PRODUCTION_SITE.lat, PRODUCTION_SITE.lng],
-            [destCoords.lat, destCoords.lng]
-        ], { padding: [50, 50] });
-
-        orderMapInstance = map;
-    } else {
-        mapEl.innerHTML = '<div class="empty-state"><p>지도를 불러올 수 없습니다.</p></div>';
-    }
-}
-
-function closeOrderMapModal() {
-    document.getElementById('orderMapModal').classList.remove('active');
-    if (orderMapInstance) {
-        orderMapInstance.remove();
-        orderMapInstance = null;
-    }
 }
 
 // ========== 주문 상세 팝업 ==========
@@ -5010,9 +4920,6 @@ document.getElementById("cancelApprovalModal")?.addEventListener("click", (e) =>
 document.getElementById('changeRequestModal').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) e.target.classList.remove('active');
 });
-document.getElementById('orderMapModal').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeOrderMapModal();
-});
 document.getElementById('changeApprovalModal').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) e.target.classList.remove('active');
 });
@@ -5021,11 +4928,9 @@ document.getElementById('changeApprovalModal').addEventListener('click', (e) => 
 document.querySelectorAll('.modal-content').forEach(el => {
     el.addEventListener('click', e => e.stopPropagation());
 });
-document.querySelector('#orderMapModal .modal-close')?.addEventListener('click', closeOrderMapModal);
 document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (document.getElementById('orderMapModal').classList.contains('active')) closeOrderMapModal();
-    else if (document.getElementById('qtyConfirmModal').classList.contains('active')) closeQtyConfirmModal();
+    if (document.getElementById('qtyConfirmModal').classList.contains('active')) closeQtyConfirmModal();
     else if (document.getElementById('transportAssetPickModal')?.classList.contains('active')) closeTransportAssetPickModal();
     else if (document.getElementById('transportStartModal').classList.contains('active')) closeTransportStartModal();
     else if (document.getElementById('deliverySettlementModal')?.classList.contains('active')) closeDeliverySettlementModal();
@@ -5187,9 +5092,6 @@ document.addEventListener('click', (e) => {
         if (normalizeStatus(order.status) !== 'empty_arrived') return;
         if (order.changeRequest?.status === 'pending' || order.cancelRequest?.status === 'pending') return;
         openExFactoryChargeModal(orderId, 'edit');
-    } else if (action === 'open-order-map') {
-        if (!order || order.supplyCondition !== 'delivery') return;
-        openOrderMapModal(orderId);
     } else if (action === 'advance-status') {
         if (!order) return;
         const actor = getActorForOrder(order);
